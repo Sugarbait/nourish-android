@@ -1,0 +1,209 @@
+'use client';
+
+import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Check, Zap, Star, Crown, Sparkles, RefreshCcw } from 'lucide-react';
+import { CREDIT_PACKAGES, CreditPackage, CreditData, addCreditPackage, activateSubscription, saveCredits } from '@/lib/credits';
+import { useToast } from '@/hooks/use-toast';
+
+interface PricingModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  credits: CreditData;
+  onCreditsUpdate: (data: CreditData) => void;
+}
+
+const PACK_ICONS: Record<CreditPackage, React.ReactNode> = {
+  starter: <Zap className="h-6 w-6" />,
+  value:   <Star className="h-6 w-6" />,
+  pro:     <Crown className="h-6 w-6" />,
+};
+
+const PACK_COLORS: Record<CreditPackage, string> = {
+  starter: 'from-blue-500/20 to-blue-600/10 border-blue-500/30',
+  value:   'from-violet-500/20 to-violet-600/10 border-violet-500/30',
+  pro:     'from-amber-500/20 to-amber-600/10 border-amber-500/30',
+};
+
+const PACK_ICON_COLORS: Record<CreditPackage, string> = {
+  starter: 'text-blue-400 bg-blue-500/10',
+  value:   'text-violet-400 bg-violet-500/10',
+  pro:     'text-amber-400 bg-amber-500/10',
+};
+
+export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate }: PricingModalProps) {
+  const { toast } = useToast();
+
+  const handleBuyPack = (pkg: CreditPackage) => {
+    // In a real app, this would open Stripe Checkout.
+    // For this static build, we simulate the purchase immediately as a demo.
+    const updated = addCreditPackage(credits, pkg);
+    saveCredits(updated);
+    onCreditsUpdate(updated);
+    const pack = CREDIT_PACKAGES[pkg];
+    toast({
+      title: `${pack.label} Pack Activated!`,
+      description: `Added ${pack.credits} credits to your account. Use them for meal scans or AI coaching.`,
+    });
+  };
+
+  const handleSubscribe = () => {
+    if (credits.subscription?.active) {
+      toast({ title: 'Already subscribed', description: 'Your monthly plan is already active.' });
+      return;
+    }
+    const updated = activateSubscription(credits);
+    saveCredits(updated);
+    onCreditsUpdate(updated);
+    toast({
+      title: 'Monthly Pro Activated!',
+      description: 'Added 40 credits to your pool. Enjoy Nourish Pro! Renews in 30 days.',
+    });
+  };
+
+  const isSubscribed = credits.subscription?.active === true;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="text-center pb-2">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <DialogTitle className="text-xl font-bold">Get More Credits</DialogTitle>
+          </div>
+          <DialogDescription>
+            Top up your credits to keep scanning meals and chatting with your AI coach.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Free tier reminder */}
+        <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-muted/30 p-4 mb-2">
+          <div className="text-2xl leading-none">🎁</div>
+          <div>
+            <p className="font-semibold text-sm">Free Daily Scan (always included)</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Every day you get <strong>1 free meal scan</strong> — no purchase needed. Resets at midnight. AI coach is available to subscribers.
+            </p>
+          </div>
+        </div>
+
+        {/* Monthly Subscription */}
+        <div className={`relative rounded-xl border-2 p-5 bg-gradient-to-br ${isSubscribed ? 'from-green-500/10 to-green-600/5 border-green-500/50' : 'from-primary/10 to-primary/5 border-primary/40'}`}>
+          {!isSubscribed && (
+            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-0.5">
+              Recommended
+            </Badge>
+          )}
+          {isSubscribed && (
+            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white px-3 py-0.5">
+              Active Plan
+            </Badge>
+          )}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <RefreshCcw className="h-4 w-4 text-primary" />
+                Monthly Pro
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                40 credits per month — use them for meal scans or AI coaching. Credits <strong>roll over</strong> — never lose unused credits.
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {[
+                  '40 credits/mo for scans & AI coaching',
+                  'Use credits however you need them',
+                  'Credits roll over month to month',
+                  'Priority support',
+                ].map(f => (
+                  <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Check className="h-3.5 w-3.5 text-primary shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-2xl font-bold">$3.99</div>
+              <div className="text-xs text-muted-foreground">/month</div>
+              <Button
+                size="sm"
+                className="mt-3 w-full"
+                onClick={handleSubscribe}
+                disabled={isSubscribed}
+                variant={isSubscribed ? 'outline' : 'default'}
+              >
+                {isSubscribed ? 'Subscribed' : 'Subscribe'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="relative my-1">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border/50" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-background px-3 text-xs text-muted-foreground">Or buy a one-time credit pack</span>
+          </div>
+        </div>
+
+        {/* One-time packs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {(Object.keys(CREDIT_PACKAGES) as CreditPackage[]).map((pkg) => {
+            const pack = CREDIT_PACKAGES[pkg];
+            return (
+              <div
+                key={pkg}
+                className={`relative rounded-xl border bg-gradient-to-br p-4 flex flex-col gap-3 ${PACK_COLORS[pkg]}`}
+              >
+                {pack.badge && (
+                  <Badge variant="secondary" className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs px-2 py-0">
+                    {pack.badge}
+                  </Badge>
+                )}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${PACK_ICON_COLORS[pkg]}`}>
+                  {PACK_ICONS[pkg]}
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm">{pack.label}</h4>
+                  <p className="text-2xl font-bold mt-0.5">{pack.price}</p>
+                  <p className="text-xs text-muted-foreground mt-1">one-time</p>
+                </div>
+                <ul className="space-y-1 flex-1">
+                  <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check className="h-3 w-3 text-green-500 shrink-0" />
+                    {pack.credits} credits
+                  </li>
+                  <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check className="h-3 w-3 text-green-500 shrink-0" />
+                    Scans &amp; AI coaching
+                  </li>
+                  <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check className="h-3 w-3 text-green-500 shrink-0" />
+                    Never expires
+                  </li>
+                </ul>
+                <Button size="sm" className="w-full" onClick={() => handleBuyPack(pkg)}>
+                  Buy Now
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Cost transparency note */}
+        <p className="text-center text-xs text-muted-foreground mt-2 pb-1">
+          Secure checkout via Stripe &bull; Instant delivery
+        </p>
+      </DialogContent>
+    </Dialog>
+  );
+}
