@@ -28,7 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head />
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <ConvexClientProvider>
           <ThemeProvider
