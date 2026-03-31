@@ -67,12 +67,13 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     }
   }, [open]);
 
+  // Handles OAuth redirect (browser returns from provider with auth already set)
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && open) {
       onOpenChange(false);
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router, onOpenChange]);
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setTab(defaultTab);
@@ -94,6 +95,8 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
         await signIn('password', { email, password, flow: 'signIn' });
         toast({ title: 'Welcome back!', description: 'Signed in successfully.' });
       }
+      onOpenChange(false);
+      router.push('/dashboard');
     } catch (err: any) {
       toast({
         title: 'Error',
@@ -125,7 +128,8 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     try {
       await signIn('password', { email, code: resetCode, newPassword, flow: 'reset-verification' });
       toast({ title: 'Password updated!', description: 'You are now signed in.' });
-      setResetView(null);
+      onOpenChange(false);
+      router.push('/dashboard');
     } catch (err: any) {
       toast({ title: 'Error', description: err?.message ?? 'Invalid or expired code.', variant: 'destructive' });
     } finally {
