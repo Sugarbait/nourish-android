@@ -1,5 +1,7 @@
 'use client';
 
+const BUILD_VERSION = "1.0.3";
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import {
@@ -950,6 +952,7 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
                         </Button>
                       </SheetClose>
                     )}
+                    <p className="text-center text-xs text-muted-foreground mt-4">Build {BUILD_VERSION}</p>
                   </form>
                 </Form>
               </SheetContent>

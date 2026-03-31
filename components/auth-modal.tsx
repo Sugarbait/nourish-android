@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useConvexAuth } from 'convex/react';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthModalProps) {
+  const router = useRouter();
   const { signIn } = useAuthActions();
   const { isAuthenticated } = useConvexAuth();
   const { toast } = useToast();
@@ -66,8 +68,11 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   }, [open]);
 
   useEffect(() => {
-    if (isAuthenticated && open) onOpenChange(false);
-  }, [isAuthenticated]);
+    if (isAuthenticated) {
+      onOpenChange(false);
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router, onOpenChange]);
 
   useEffect(() => {
     setTab(defaultTab);
