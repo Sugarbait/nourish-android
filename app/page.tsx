@@ -69,7 +69,7 @@ export default function SplashPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) router.push('/dashboard');
+    if (!isLoading && isAuthenticated) window.location.href = '/dashboard';
   }, [isAuthenticated, isLoading]);
 
   const openSignUp = () => { setAuthTab('signup'); setAuthOpen(true); };

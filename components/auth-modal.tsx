@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useConvexAuth } from 'convex/react';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,6 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthModalProps) {
-  const router = useRouter();
   const { signIn } = useAuthActions();
   const { isAuthenticated } = useConvexAuth();
   const { toast } = useToast();
@@ -71,7 +69,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   useEffect(() => {
     if (isAuthenticated && open) {
       onOpenChange(false);
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }
   }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -96,7 +94,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
         toast({ title: 'Welcome back!', description: 'Signed in successfully.' });
       }
       onOpenChange(false);
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err: any) {
       toast({
         title: 'Error',
@@ -129,7 +127,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
       await signIn('password', { email, code: resetCode, newPassword, flow: 'reset-verification' });
       toast({ title: 'Password updated!', description: 'You are now signed in.' });
       onOpenChange(false);
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err: any) {
       toast({ title: 'Error', description: err?.message ?? 'Invalid or expired code.', variant: 'destructive' });
     } finally {
