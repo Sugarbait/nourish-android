@@ -62,15 +62,15 @@ function PricingCard({ name, price, period, features, cta, highlight, onCta }: {
 }
 
 export default function SplashPage() {
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signup');
   const [mobileMenu, setMobileMenu] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) router.push('/dashboard');
-  }, [isAuthenticated]);
+    if (!isLoading && isAuthenticated) router.push('/dashboard');
+  }, [isAuthenticated, isLoading]);
 
   const openSignUp = () => { setAuthTab('signup'); setAuthOpen(true); };
   const openSignIn = () => { setAuthTab('signin'); setAuthOpen(true); };

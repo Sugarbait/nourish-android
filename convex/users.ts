@@ -7,6 +7,23 @@ const todayKey = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+/** Get the current authenticated user's info from the users table (OAuth data). */
+export const getCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return null;
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+    return {
+      _id: user._id,
+      name: (user as any).name ?? null,
+      email: (user as any).email ?? null,
+      image: (user as any).image ?? null,
+    };
+  },
+});
+
 /** Get the current user's profile (creates defaults if missing). */
 export const getProfile = query({
   args: {},

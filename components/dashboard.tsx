@@ -49,7 +49,8 @@ import { GuestUpsellModal } from '@/components/guest-upsell-modal';
 import { GoalCelebration } from '@/components/goal-celebration';
 import { AuthModal } from '@/components/auth-modal';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { useConvexAuth } from 'convex/react';
+import { useConvexAuth, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -201,6 +202,7 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
   const { toast } = useToast();
   const { signOut } = useAuthActions();
   const { isAuthenticated } = useConvexAuth();
+  const currentUser = useQuery(api.users.getCurrentUser);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -294,6 +296,17 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
     setIsMounted(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync OAuth user data (name, avatar) into local profile state
+  useEffect(() => {
+    if (currentUser) {
+      setProfile(prev => ({
+        ...prev,
+        name: prev.name || currentUser.name || '',
+        avatar: prev.avatar || currentUser.image || '',
+      }));
+    }
+  }, [currentUser]);
 
   // Save data to localStorage whenever it changes
   useEffect(() => {
