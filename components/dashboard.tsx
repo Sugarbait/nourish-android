@@ -48,6 +48,8 @@ import { NoCreditsModal } from '@/components/no-credits-modal';
 import { GuestUpsellModal } from '@/components/guest-upsell-modal';
 import { GoalCelebration } from '@/components/goal-celebration';
 import { AuthModal } from '@/components/auth-modal';
+import { useAuthActions } from '@convex-dev/auth/react';
+import { useConvexAuth } from 'convex/react';
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -197,6 +199,8 @@ function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, child
 
 export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
   const { toast } = useToast();
+  const { signOut } = useAuthActions();
+  const { isAuthenticated } = useConvexAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -234,6 +238,7 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
   const [guestUpsellOpen, setGuestUpsellOpen] = useState(false);
   const [guestUpsellType, setGuestUpsellType] = useState<'scan' | 'coach'>('scan');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signup');
 
   const [celebrationGoal, setCelebrationGoal] = useState<{ name: string; emoji: string; message: string } | null>(null);
   const celebratedRef = useRef<Set<string>>(new Set());
@@ -688,8 +693,9 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
 
             <Dialog open={isManualEntryOpen} onOpenChange={setManualEntryOpen}>
               <DialogTrigger asChild>
-                  <Button size="sm" className="rounded-full text-xs px-3 sm:text-sm sm:px-4 h-8 sm:h-9">
-                      <Plus className="mr-1.5 h-3.5 w-3.5" /> Manual Entry
+                  <Button size="sm" className="rounded-full h-8 sm:h-9 px-2.5 sm:px-4">
+                      <Plus className="h-3.5 w-3.5 sm:mr-1.5" />
+                      <span className="hidden sm:inline text-xs sm:text-sm">Manual Entry</span>
                   </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
@@ -766,15 +772,34 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
                   </Form>
               </DialogContent>
             </Dialog>
-            <ModeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full text-xs px-3 h-8 hidden sm:flex items-center gap-1.5"
-              onClick={() => { setIsPricingOpen(true); }}
-            >
-              <CreditCard className="h-3.5 w-3.5" /> Pricing
-            </Button>
+            {isGuest ? (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-8 px-2.5"
+                  onClick={() => { setAuthModalTab('signin'); setIsAuthModalOpen(true); }}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  size="sm"
+                  className="text-xs h-8 px-2.5"
+                  onClick={() => { setAuthModalTab('signup'); setIsAuthModalOpen(true); }}
+                >
+                  Sign Up
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full text-xs px-3 h-8 hidden sm:flex items-center gap-1.5"
+                onClick={() => { setIsPricingOpen(true); }}
+              >
+                <CreditCard className="h-3.5 w-3.5" /> Pricing
+              </Button>
+            )}
             <Sheet open={isProfileOpen} onOpenChange={setIsProfileOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 p-0">
@@ -889,12 +914,29 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
                       </SheetClose>
                     </div>
 
+                    <div className="flex items-center justify-between pt-2 pb-1">
+                      <span className="text-sm text-muted-foreground">Appearance</span>
+                      <ModeToggle />
+                    </div>
+
                     <SheetFooter className="pt-2">
                       <SheetClose asChild>
                         <Button type="button" variant="outline" className="w-full">Cancel</Button>
                       </SheetClose>
                       <Button type="submit" className="w-full">Save Profile</Button>
                     </SheetFooter>
+                    {isAuthenticated && (
+                      <SheetClose asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="w-full mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => signOut()}
+                        >
+                          <Power className="h-4 w-4 mr-2" /> Sign Out
+                        </Button>
+                      </SheetClose>
+                    )}
                   </form>
                 </Form>
               </SheetContent>
@@ -1056,6 +1098,74 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
                         )}
                     </CardFooter>
                 )}
+            </Card>
+
+             <Card className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                        <div className="flex items-center gap-2"><Flame className="text-orange-400"/> Today's Summary</div>
+                    </CardTitle>
+                    <CardDescription>Your progress towards your daily goals for {format(selectedDate, 'PPP')}.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5 pb-6">
+                    {/* Big calories ring */}
+                    <div className="flex flex-col items-center gap-1 pt-2">
+                        <CircularProgress value={intake.calories} max={goals.calories} color="#f97316" size={148} strokeWidth={13}>
+                            <span className="text-3xl font-black tracking-tight">{intake.calories}</span>
+                            <span className="text-[11px] text-muted-foreground font-semibold">/ {goals.calories} kcal</span>
+                        </CircularProgress>
+                        <span className="text-sm font-semibold flex items-center gap-1.5 mt-1 text-orange-400"><Flame className="h-4 w-4" />Calories</span>
+                    </div>
+                    {/* Macro rings row */}
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-col items-center gap-1.5">
+                            <CircularProgress value={intake.protein} max={goals.protein} color="#ef4444" size={80} strokeWidth={7}>
+                                <span className="text-base font-bold">{intake.protein}g</span>
+                            </CircularProgress>
+                            <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Drumstick className="h-3 w-3 text-red-400"/>Protein</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1.5">
+                            <CircularProgress value={intake.carbs} max={goals.carbs} color="#eab308" size={80} strokeWidth={7}>
+                                <span className="text-base font-bold">{intake.carbs}g</span>
+                            </CircularProgress>
+                            <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Wheat className="h-3 w-3 text-yellow-400"/>Carbs</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1.5">
+                            <CircularProgress value={intake.fat} max={goals.fat} color="#a855f7" size={80} strokeWidth={7}>
+                                <span className="text-base font-bold">{intake.fat}g</span>
+                            </CircularProgress>
+                            <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Beef className="h-3 w-3 text-purple-400"/>Fat</span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="shadow-xl rounded-2xl border-border/50">
+                <CardHeader>
+                     <CardTitle className="flex items-center gap-2 text-xl font-bold"><GlassWater className="text-blue-400"/> Water Tracker</CardTitle>
+                    <CardDescription>Log your water intake for {format(selectedDate, 'PPP')}.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 pb-5">
+                    <div className="flex justify-center gap-2 flex-wrap">
+                        {Array.from({ length: goals.water }).map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleWaterChange(i < dailyData.water ? -(dailyData.water - i) : i + 1 - dailyData.water)}
+                                className={`w-10 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                                    i < dailyData.water
+                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105'
+                                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                                }`}
+                            >
+                                <GlassWater className="h-5 w-5" />
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex justify-between items-center text-sm px-1">
+                        <span className="text-muted-foreground font-medium">{dailyData.water} of {goals.water} glasses</span>
+                        {dailyData.water >= goals.water && <span className="text-blue-400 font-semibold">✨ Great hydration!</span>}
+                    </div>
+                </CardContent>
             </Card>
 
             <Card className="shadow-xl rounded-2xl border-border/50">
@@ -1244,74 +1354,6 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
                   + Tap to adjust goals
                 </button>
               </CardContent>
-            </Card>
-
-             <Card className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-xl font-bold">
-                        <div className="flex items-center gap-2"><Flame className="text-orange-400"/> Today's Summary</div>
-                    </CardTitle>
-                    <CardDescription>Your progress towards your daily goals for {format(selectedDate, 'PPP')}.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-5 pb-6">
-                    {/* Big calories ring */}
-                    <div className="flex flex-col items-center gap-1 pt-2">
-                        <CircularProgress value={intake.calories} max={goals.calories} color="#f97316" size={148} strokeWidth={13}>
-                            <span className="text-3xl font-black tracking-tight">{intake.calories}</span>
-                            <span className="text-[11px] text-muted-foreground font-semibold">/ {goals.calories} kcal</span>
-                        </CircularProgress>
-                        <span className="text-sm font-semibold flex items-center gap-1.5 mt-1 text-orange-400"><Flame className="h-4 w-4" />Calories</span>
-                    </div>
-                    {/* Macro rings row */}
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="flex flex-col items-center gap-1.5">
-                            <CircularProgress value={intake.protein} max={goals.protein} color="#ef4444" size={80} strokeWidth={7}>
-                                <span className="text-base font-bold">{intake.protein}g</span>
-                            </CircularProgress>
-                            <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Drumstick className="h-3 w-3 text-red-400"/>Protein</span>
-                        </div>
-                        <div className="flex flex-col items-center gap-1.5">
-                            <CircularProgress value={intake.carbs} max={goals.carbs} color="#eab308" size={80} strokeWidth={7}>
-                                <span className="text-base font-bold">{intake.carbs}g</span>
-                            </CircularProgress>
-                            <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Wheat className="h-3 w-3 text-yellow-400"/>Carbs</span>
-                        </div>
-                        <div className="flex flex-col items-center gap-1.5">
-                            <CircularProgress value={intake.fat} max={goals.fat} color="#a855f7" size={80} strokeWidth={7}>
-                                <span className="text-base font-bold">{intake.fat}g</span>
-                            </CircularProgress>
-                            <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Beef className="h-3 w-3 text-purple-400"/>Fat</span>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="shadow-xl rounded-2xl border-border/50">
-                <CardHeader>
-                     <CardTitle className="flex items-center gap-2 text-xl font-bold"><GlassWater className="text-blue-400"/> Water Tracker</CardTitle>
-                    <CardDescription>Log your water intake for {format(selectedDate, 'PPP')}.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 pb-5">
-                    <div className="flex justify-center gap-2 flex-wrap">
-                        {Array.from({ length: goals.water }).map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => handleWaterChange(i < dailyData.water ? -(dailyData.water - i) : i + 1 - dailyData.water)}
-                                className={`w-10 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                                    i < dailyData.water
-                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105'
-                                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                                }`}
-                            >
-                                <GlassWater className="h-5 w-5" />
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex justify-between items-center text-sm px-1">
-                        <span className="text-muted-foreground font-medium">{dailyData.water} of {goals.water} glasses</span>
-                        {dailyData.water >= goals.water && <span className="text-blue-400 font-semibold">✨ Great hydration!</span>}
-                    </div>
-                </CardContent>
             </Card>
 
             <Card className="shadow-xl rounded-2xl border-border/50">
@@ -1520,7 +1562,7 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
       />
 
       {/* Auth Modal (for guest sign-up from within dashboard) */}
-      <AuthModal open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen} />
+      <AuthModal open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen} defaultTab={authModalTab} />
 
       {/* Pricing Modal (full pricing page) */}
       <PricingModal

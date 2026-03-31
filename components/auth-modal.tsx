@@ -47,6 +47,10 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetView, setResetView] = useState<'request' | 'verify' | null>(null);
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const passwordsMatch = tab === 'signup' ? confirmPassword === '' || password === confirmPassword : true;
   const confirmTouched = confirmPassword.length > 0;
@@ -91,6 +95,34 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
         description: err?.message ?? 'Something went wrong. Please try again.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await signIn('password', { email, flow: 'reset' });
+      setResetView('verify');
+      toast({ title: 'Check your email', description: 'A reset code has been sent to your email address.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message ?? 'Something went wrong.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await signIn('password', { email, code: resetCode, newPassword, flow: 'reset-verification' });
+      toast({ title: 'Password updated!', description: 'You are now signed in.' });
+      setResetView(null);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message ?? 'Invalid or expired code.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -170,6 +202,87 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               </p>
             </div>
 
+            {/* Forgot password — request reset */}
+            {resetView === 'request' && (
+              <form onSubmit={handleResetRequest} className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-bold">Reset your password</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Enter your email and we'll send you a reset code.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="reset-email" className="text-xs">Email</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-10 text-sm"
+                    required
+                  />
+                </div>
+                <Button type="submit" disabled={loading} className="w-full h-10 font-semibold">
+                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</> : 'Send Reset Code'}
+                </Button>
+                <button type="button" onClick={() => setResetView(null)} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors text-center">
+                  ← Back to sign in
+                </button>
+              </form>
+            )}
+
+            {/* Forgot password — verify code & set new password */}
+            {resetView === 'verify' && (
+              <form onSubmit={handleResetVerify} className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-bold">Enter reset code</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Check your email for the code we sent you.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="reset-code" className="text-xs">Reset Code</Label>
+                  <Input
+                    id="reset-code"
+                    type="text"
+                    placeholder="Enter code"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value)}
+                    className="h-10 text-sm tracking-widest"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-password" className="text-xs">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showNewPassword ? 'text' : 'password'}
+                      placeholder="Min 8 characters"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="h-10 text-sm pr-10"
+                      required
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button type="submit" disabled={loading} className="w-full h-10 font-semibold">
+                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Updating…</> : 'Set New Password'}
+                </Button>
+                <button type="button" onClick={() => setResetView('request')} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors text-center">
+                  ← Resend code
+                </button>
+              </form>
+            )}
+
+            {/* Normal sign in / sign up flow */}
+            {!resetView && <>
+
             {/* OAuth buttons */}
             <div className="space-y-2 mb-4">
               <button
@@ -225,7 +338,18 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-xs">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-xs">Password</Label>
+                  {tab === 'signin' && (
+                    <button
+                      type="button"
+                      onClick={() => { setResetView('request'); setResetCode(''); setNewPassword(''); }}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
@@ -310,6 +434,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               {' '}and{' '}
               <a href="/privacy" className="hover:underline">Privacy Policy</a>.
             </p>
+            </>}
           </div>
         </div>
       </div>
