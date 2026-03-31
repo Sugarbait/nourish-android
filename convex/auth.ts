@@ -23,7 +23,7 @@ if (process.env.AUTH_MICROSOFT_ENTRA_ID_CLIENT_ID) {
   providers.push(MicrosoftEntraId({
     clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_CLIENT_ID,
     clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_CLIENT_SECRET,
-    issuer: `https://login.microsoftonline.com/${process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID ?? "common"}/v2.0`,
+    issuer: `https://login.microsoftonline.com/common/v2.0`,
   }));
 }
 
