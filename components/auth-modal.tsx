@@ -327,14 +327,26 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
             <div className="space-y-2 mb-4">
               <button
                 type="button"
-                onClick={() => signIn('google', { redirectTo: '/dashboard/' })}
+                onClick={async () => {
+                  try {
+                    await signIn('google', { redirectTo: '/dashboard/' });
+                  } catch {
+                    toast({ title: 'Google sign-in failed', description: 'Something went wrong. Please try again.', variant: 'destructive' });
+                  }
+                }}
                 className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium"
               >
                 <GoogleIcon /> Continue with Google
               </button>
               <button
                 type="button"
-                onClick={() => signIn('microsoft-entra-id', { redirectTo: '/dashboard/' })}
+                onClick={async () => {
+                  try {
+                    await signIn('microsoft-entra-id', { redirectTo: '/dashboard/' });
+                  } catch {
+                    toast({ title: 'Microsoft sign-in failed', description: 'Something went wrong. Please try again.', variant: 'destructive' });
+                  }
+                }}
                 className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium"
               >
                 <MicrosoftIcon /> Continue with Microsoft
