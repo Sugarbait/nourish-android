@@ -34,6 +34,39 @@ interface AuthModalProps {
   defaultTab?: 'signin' | 'signup';
 }
 
+function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 'resetVerify'): string {
+  const raw = (err?.message ?? '').toLowerCase();
+
+  // Sign-in specific
+  if (context === 'signIn') {
+    if (raw.includes('invalid') || raw.includes('wrong') || raw.includes('incorrect') || raw.includes('password') || raw.includes('credentials') || raw.includes('unauthorized') || raw.includes('not found') || raw.includes('no user'))
+      return 'The email or password you entered is incorrect. Please try again.';
+  }
+
+  // Sign-up specific
+  if (context === 'signUp') {
+    if (raw.includes('already') || raw.includes('exists') || raw.includes('duplicate') || raw.includes('taken'))
+      return 'An account with this email already exists. Try signing in instead.';
+    if (raw.includes('password') || raw.includes('weak'))
+      return 'Please choose a stronger password (at least 8 characters).';
+  }
+
+  // Reset request
+  if (context === 'reset') {
+    if (raw.includes('not found') || raw.includes('no user') || raw.includes('invalid'))
+      return "We couldn't find an account with that email address.";
+  }
+
+  // Reset verify
+  if (context === 'resetVerify') {
+    if (raw.includes('invalid') || raw.includes('expired') || raw.includes('code') || raw.includes('token'))
+      return 'That code is incorrect or has expired. Please request a new one.';
+  }
+
+  // Generic fallback — never show raw Convex message
+  return 'Something went wrong. Please try again in a moment.';
+}
+
 export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthModalProps) {
   const { signIn } = useAuthActions();
   const { isAuthenticated } = useConvexAuth();
@@ -97,8 +130,8 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
       window.location.href = '/dashboard';
     } catch (err: any) {
       toast({
-        title: 'Error',
-        description: err?.message ?? 'Something went wrong. Please try again.',
+        title: tab === 'signin' ? 'Sign in failed' : 'Sign up failed',
+        description: getFriendlyError(err, tab === 'signin' ? 'signIn' : 'signUp'),
         variant: 'destructive',
       });
     } finally {
@@ -114,7 +147,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
       setResetView('verify');
       toast({ title: 'Check your email', description: 'A reset code has been sent to your email address.' });
     } catch (err: any) {
-      toast({ title: 'Error', description: err?.message ?? 'Something went wrong.', variant: 'destructive' });
+      toast({ title: 'Could not send reset code', description: getFriendlyError(err, 'reset'), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -129,7 +162,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
       onOpenChange(false);
       window.location.href = '/dashboard';
     } catch (err: any) {
-      toast({ title: 'Error', description: err?.message ?? 'Invalid or expired code.', variant: 'destructive' });
+      toast({ title: 'Password reset failed', description: getFriendlyError(err, 'resetVerify'), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
