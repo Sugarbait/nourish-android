@@ -326,7 +326,7 @@ export default function SplashPage() {
             <FeatureCard icon={<BarChart2 className="h-5 w-5" />} title="Macro Tracking" desc="Track calories, protein, carbs and fat effortlessly across breakfast, lunch, dinner and snacks." />
             <FeatureCard icon={<Droplets className="h-5 w-5" />} title="Water Tracking" desc="Stay hydrated with a simple tap-to-log tracker that keeps you on target all day." />
             <FeatureCard icon={<RefreshCcw className="h-5 w-5" />} title="Rolling Credits" desc="Monthly credits that roll over — never lose what you've paid for." />
-            <FeatureCard icon={<Shield className="h-5 w-5" />} title="Secure & Private" desc="Your data stays yours. Backed by Convex's real-time database with end-to-end security." />
+            <FeatureCard icon={<Shield className="h-5 w-5" />} title="Secure & Private" desc="Your data stays yours — protected with end-to-end security and stored safely in the cloud." />
           </div>
         </div>
       </section>
