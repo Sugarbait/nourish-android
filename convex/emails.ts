@@ -4,7 +4,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import nodemailer from "nodemailer";
 
-const SITE_URL = "https://nourishapp.digitalac.app";
+const SITE_URL = "https://nourishai.digitalac.app";
 
 export const sendVerificationEmail = internalAction({
   args: {
