@@ -63,6 +63,7 @@ export const sendVerificationEmail = internalAction({
           <!-- Body -->
           <tr>
             <td style="padding:0 36px 36px;">
+              <p style="margin:0 0 6px;font-size:12px;color:#525252;">${email}</p>
               <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#f5f5f5;letter-spacing:-0.4px;">Verify your email</h1>
               <p style="margin:0 0 20px;font-size:14px;color:#a3a3a3;line-height:1.6;">
                 Hi ${firstName}, welcome to Nourish! Click the button below to verify your email address and activate your account.
