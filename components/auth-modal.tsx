@@ -111,54 +111,6 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     setConfirmPassword('');
   }, [defaultTab]);
 
-  // Handle Microsoft OAuth redirect — check hash for id_token on mount
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash.includes('id_token=')) return;
-
-    const params = new URLSearchParams(hash.replace(/^#/, ''));
-    const idToken = params.get('id_token');
-    if (!idToken) return;
-
-    // Clean the URL hash
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
-
-    // Decode the JWT payload
-    try {
-      const base64Url = idToken.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      const decoded = JSON.parse(jsonPayload);
-
-      setLoading(true);
-      (async () => {
-        try {
-          const msEmail = decoded.preferred_username || decoded.email || decoded.upn;
-          const result = await createOrUpdateOAuthUser({
-            provider: 'microsoft',
-            providerId: decoded.oid || decoded.sub,
-            email: msEmail,
-            name: decoded.name,
-            avatarUrl: undefined,
-          });
-          saveAuthToStorage(result.userId as string, result.name, result.avatarUrl);
-          window.location.href = '/dashboard/';
-        } catch (err: any) {
-          toast({ title: 'Microsoft sign-in failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
-          setLoading(false);
-        }
-      })();
-    } catch (err) {
-      console.error('[Microsoft OAuth] Failed to decode token:', err);
-      toast({ title: 'Microsoft sign-in failed', description: 'Invalid token received.', variant: 'destructive' });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setLoading(true);
@@ -190,7 +142,8 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
 
   const handleMicrosoftSignIn = () => {
     const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '26865529-0a14-449e-8540-caddf613fa35';
-    const redirectUri = window.location.href.split('#')[0];
+    // Always redirect back to root — page.tsx handles the id_token hash there
+    const redirectUri = window.location.origin + '/';
     const nonce = Math.random().toString(36).substring(7);
     sessionStorage.setItem('ms_oauth_nonce', nonce);
     const msAuthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email')}&nonce=${encodeURIComponent(nonce)}&response_mode=fragment`;

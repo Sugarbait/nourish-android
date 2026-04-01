@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAction } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { AuthModal } from '@/components/auth-modal';
 import {
   Leaf, Camera, Brain, BarChart2, Droplets, Star,
@@ -63,11 +65,55 @@ export default function SplashPage() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signup');
   const [mobileMenu, setMobileMenu] = useState(false);
+  const createOrUpdateOAuthUser = useAction(api.auth.createOrUpdateOAuthUser);
 
+  // Redirect already-logged-in users
   useEffect(() => {
     const userId = localStorage.getItem('nourish_user_id');
-    if (userId) window.location.href = '/dashboard/';
+    if (userId) { window.location.href = '/dashboard/'; return; }
   }, []);
+
+  // Handle Microsoft OAuth redirect — id_token lands in the URL hash on this page
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.includes('id_token=')) return;
+
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const idToken = params.get('id_token');
+    if (!idToken) return;
+
+    // Clean the hash immediately
+    window.history.replaceState(null, '', window.location.pathname);
+
+    try {
+      const base64Url = idToken.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+      );
+      const decoded = JSON.parse(jsonPayload);
+      const msEmail = decoded.preferred_username || decoded.email || decoded.upn || '';
+      const msName = decoded.name || '';
+      const msId = decoded.oid || decoded.sub || '';
+
+      createOrUpdateOAuthUser({
+        provider: 'microsoft',
+        providerId: msId,
+        email: msEmail,
+        name: msName,
+        avatarUrl: undefined,
+      }).then((result) => {
+        localStorage.setItem('nourish_user_id', result.userId as string);
+        if (result.name) localStorage.setItem('nourish_user_name', result.name);
+        if (result.avatarUrl) localStorage.setItem('nourish_user_avatar', result.avatarUrl);
+        window.location.href = '/dashboard/';
+      }).catch((err) => {
+        console.error('[Microsoft OAuth] Convex error:', err);
+      });
+    } catch (err) {
+      console.error('[Microsoft OAuth] Failed to decode token:', err);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openSignUp = () => { setAuthTab('signup'); setAuthOpen(true); };
   const openSignIn = () => { setAuthTab('signin'); setAuthOpen(true); };
