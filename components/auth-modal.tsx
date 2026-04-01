@@ -63,12 +63,14 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
   return 'Something went wrong. Please try again in a moment.';
 }
 
-function saveAuthToStorage(userId: string, name: string | null, avatarUrl: string | null) {
+function saveAuthToStorage(userId: string, name: string | null, avatarUrl: string | null, email?: string) {
   localStorage.setItem('nourish_user_id', userId);
   if (name) localStorage.setItem('nourish_user_name', name);
   else localStorage.removeItem('nourish_user_name');
   if (avatarUrl) localStorage.setItem('nourish_user_avatar', avatarUrl);
   else localStorage.removeItem('nourish_user_avatar');
+  if (email) localStorage.setItem('nourish_user_email', email);
+  else localStorage.removeItem('nourish_user_email');
 }
 
 export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthModalProps) {
@@ -128,7 +130,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
           name: profile.name,
           avatarUrl: profile.picture || undefined,
         });
-        saveAuthToStorage(result.userId as string, result.name, result.avatarUrl);
+        saveAuthToStorage(result.userId as string, result.name, result.avatarUrl, profile.email);
         window.location.href = '/dashboard/';
       } catch (err: any) {
         toast({ title: 'Google sign-in failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
@@ -160,11 +162,11 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     try {
       if (tab === 'signup') {
         const result = await createAccount({ name, email, password });
-        saveAuthToStorage(result.userId as string, name, null);
+        saveAuthToStorage(result.userId as string, name, null, email);
         toast({ title: 'Welcome to Nourish!', description: 'Your account has been created.' });
       } else {
         const result = await loginUser({ email, password });
-        saveAuthToStorage(result.userId as string, result.name, result.avatarUrl);
+        saveAuthToStorage(result.userId as string, result.name, result.avatarUrl, email);
         toast({ title: 'Welcome back!', description: 'Signed in successfully.' });
       }
       onOpenChange(false);

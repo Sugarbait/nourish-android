@@ -106,6 +106,7 @@ export default function SplashPage() {
         localStorage.setItem('nourish_user_id', result.userId as string);
         if (result.name) localStorage.setItem('nourish_user_name', result.name);
         if (result.avatarUrl) localStorage.setItem('nourish_user_avatar', result.avatarUrl);
+        if (msEmail) localStorage.setItem('nourish_user_email', msEmail);
         window.location.href = '/dashboard/';
       }).catch((err) => {
         console.error('[Microsoft OAuth] Convex error:', err);

@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.2.2";
+const BUILD_VERSION = "1.2.3";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -219,6 +219,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // Read user display info from localStorage
   const userName = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_name') : null;
   const userAvatar = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_avatar') : null;
+  const userEmail = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_email') : null;
 
   // Handle Microsoft OAuth redirect on dashboard — check hash for id_token
   useEffect(() => {
@@ -916,23 +917,42 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     </div>
                     <div className="text-center">
                       <SheetTitle>{profile.name || 'Your Profile'}</SheetTitle>
-                      <SheetDescription>Tap photo to change • Manage your personal details</SheetDescription>
+                      {userEmail && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{userEmail}</p>
+                      )}
+                      <SheetDescription className="mt-0.5">Tap photo to change • Manage your personal details</SheetDescription>
                     </div>
                   </div>
                 </SheetHeader>
+                {isGuest && (
+                  <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-3">
+                    <p className="text-sm font-semibold">Create an account to save your profile</p>
+                    <p className="text-xs text-muted-foreground">Sign in or sign up to personalise your goals, track your progress and keep your data safe.</p>
+                    <SheetClose asChild>
+                      <Button className="w-full" onClick={() => { setAuthModalTab('signup'); setIsAuthModalOpen(true); }}>
+                        Sign Up Free
+                      </Button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Button variant="outline" className="w-full" onClick={() => { setAuthModalTab('signin'); setIsAuthModalOpen(true); }}>
+                        Sign In
+                      </Button>
+                    </SheetClose>
+                  </div>
+                )}
                 <Form {...profileForm}>
                   <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-4 mt-2">
                     <FormField control={profileForm.control} name="name" render={({ field }) => (
-                      <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your name" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your name" {...field} disabled={isGuest} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="age" render={({ field }) => (
-                      <FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" placeholder="e.g. 28" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" placeholder="e.g. 28" {...field} disabled={isGuest} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="weight" render={({ field }) => (
-                      <FormItem><FormLabel>Weight</FormLabel><FormControl><Input placeholder="e.g. 165 lbs or 75 kg" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Weight</FormLabel><FormControl><Input placeholder="e.g. 165 lbs or 75 kg" {...field} disabled={isGuest} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="height" render={({ field }) => (
-                      <FormItem><FormLabel>Height</FormLabel><FormControl><Input placeholder="e.g. 5'10&quot; or 178 cm" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Height</FormLabel><FormControl><Input placeholder="e.g. 5'10&quot; or 178 cm" {...field} disabled={isGuest} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="activityLevel" render={({ field }) => (
                       <FormItem><FormLabel>Activity Level</FormLabel>
@@ -995,7 +1015,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                       <SheetClose asChild>
                         <Button type="button" variant="outline" className="w-full">Cancel</Button>
                       </SheetClose>
-                      <Button type="submit" className="w-full">Save Profile</Button>
+                      {!isGuest && <Button type="submit" className="w-full">Save Profile</Button>}
                     </SheetFooter>
                     {isAuthenticated && (
                       <SheetClose asChild>
@@ -1007,6 +1027,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                             localStorage.removeItem('nourish_user_id');
                             localStorage.removeItem('nourish_user_name');
                             localStorage.removeItem('nourish_user_avatar');
+                            localStorage.removeItem('nourish_user_email');
                             window.location.href = '/';
                           }}
                         >
