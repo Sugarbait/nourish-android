@@ -223,7 +223,7 @@ export default function SplashPage() {
           </div>
 
           {/* Headings */}
-          <h1 className="relative uppercase text-5xl sm:text-6xl md:text-[4.5rem] lg:text-[5.5rem] xl:text-7xl font-black tracking-tight leading-[1.05]">
+          <h1 className="relative uppercase text-4xl sm:text-6xl md:text-[4.5rem] lg:text-[5.5rem] xl:text-7xl font-black tracking-tight leading-[1.05]">
             Snap a <GradientText>Photo.</GradientText><br />
             <span className="inline-block mt-1 sm:mt-2">Know Your</span><br />
             <span className="inline-block mt-1 sm:mt-2"><GradientText>Nutrition.</GradientText></span><br />
