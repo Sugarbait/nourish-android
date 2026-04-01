@@ -31,12 +31,31 @@ export const createUser = internalMutation({
     authProvider: v.optional(v.string()),
     oauthProviderId: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
+    emailVerified: v.optional(v.boolean()),
+    verificationToken: v.optional(v.string()),
+    verificationTokenExpiry: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("users", {
       ...args,
       createdAt: Date.now(),
     });
+  },
+});
+
+export const updateUserVerification = internalMutation({
+  args: {
+    userId: v.id("users"),
+    emailVerified: v.optional(v.boolean()),
+    verificationToken: v.optional(v.string()),
+    verificationTokenExpiry: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, emailVerified, verificationToken, verificationTokenExpiry }) => {
+    const patch: any = {};
+    if (emailVerified !== undefined) patch.emailVerified = emailVerified;
+    if (verificationToken !== undefined) patch.verificationToken = verificationToken;
+    if (verificationTokenExpiry !== undefined) patch.verificationTokenExpiry = verificationTokenExpiry;
+    await ctx.db.patch(userId, patch);
   },
 });
 

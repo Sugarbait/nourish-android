@@ -12,9 +12,11 @@ import type * as aiMessages from "../aiMessages.js";
 import type * as auth from "../auth.js";
 import type * as authInternal from "../authInternal.js";
 import type * as check from "../check.js";
+import type * as emails from "../emails.js";
 import type * as http from "../http.js";
 import type * as meals from "../meals.js";
 import type * as users from "../users.js";
+import type * as verifyEmail from "../verifyEmail.js";
 import type * as waterLogs from "../waterLogs.js";
 
 import type {
@@ -28,9 +30,11 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authInternal: typeof authInternal;
   check: typeof check;
+  emails: typeof emails;
   http: typeof http;
   meals: typeof meals;
   users: typeof users;
+  verifyEmail: typeof verifyEmail;
   waterLogs: typeof waterLogs;
 }>;
 

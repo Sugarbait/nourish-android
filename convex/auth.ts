@@ -21,6 +21,10 @@ export const loginUser: ReturnType<typeof action> = action({
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw new Error("Invalid email or password.");
 
+    if (user.emailVerified === false) {
+      throw new Error("Please verify your email before signing in. Check your inbox for the verification link.");
+    }
+
     return {
       userId: user._id as unknown as string,
       name: user.name ?? null,
@@ -29,27 +33,39 @@ export const loginUser: ReturnType<typeof action> = action({
   },
 });
 
-/** Create a new account with email + password. Returns { userId } */
+/** Create a new account with email + password. Returns { userId, pendingVerification: true } */
 export const createAccount: ReturnType<typeof action> = action({
   args: {
     name: v.string(),
     email: v.string(),
     password: v.string(),
   },
-  handler: async (ctx, { name, email, password }): Promise<{ userId: string }> => {
+  handler: async (ctx, { name, email, password }): Promise<{ userId: string; pendingVerification: boolean }> => {
     const existing = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
     if (existing) throw new Error("An account with this email already exists.");
 
     if (password.length < 8) throw new Error("Password must be at least 8 characters.");
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomUUID();
+    const verificationTokenExpiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+
     const userId = await ctx.runMutation(internal.authInternal.createUser, {
       email,
       name,
       passwordHash,
+      emailVerified: false,
+      verificationToken,
+      verificationTokenExpiry,
     });
 
-    return { userId: userId as unknown as string };
+    await ctx.runAction(internal.emails.sendVerificationEmail, {
+      email,
+      name,
+      token: verificationToken,
+    });
+
+    return { userId: userId as unknown as string, pendingVerification: true };
   },
 });
 

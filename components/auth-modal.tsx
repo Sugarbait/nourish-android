@@ -7,7 +7,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Leaf, Eye, EyeOff, Loader2, X } from 'lucide-react';
+import { Leaf, Eye, EyeOff, Loader2, X, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Brand SVG icons
@@ -90,6 +90,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(false);
   const [resetView, setResetView] = useState<'request' | 'verify' | null>(null);
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -161,16 +162,16 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     setLoading(true);
     try {
       if (tab === 'signup') {
-        const result = await createAccount({ name, email, password });
-        saveAuthToStorage(result.userId as string, name, null, email);
-        toast({ title: 'Welcome to Nourish!', description: 'Your account has been created.' });
+        await createAccount({ name, email, password });
+        // Show "check your email" view — do NOT save to localStorage or redirect yet
+        setPendingVerification(true);
       } else {
         const result = await loginUser({ email, password });
         saveAuthToStorage(result.userId as string, result.name, result.avatarUrl, email);
         toast({ title: 'Welcome back!', description: 'Signed in successfully.' });
+        onOpenChange(false);
+        window.location.href = '/dashboard/';
       }
-      onOpenChange(false);
-      window.location.href = '/dashboard/';
     } catch (err: any) {
       toast({
         title: tab === 'signin' ? 'Sign in failed' : 'Sign up failed',
@@ -286,8 +287,42 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               </p>
             </div>
 
+            {/* Email verification pending */}
+            {pendingVerification && (
+              <div className="text-center py-2">
+                <div className="flex justify-center mb-4">
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mail className="h-7 w-7 text-primary" />
+                  </div>
+                </div>
+                <h2 className="text-lg font-bold mb-2">Check your email</h2>
+                <p className="text-sm text-muted-foreground mb-1">
+                  We've sent a verification link to
+                </p>
+                <p className="text-sm font-semibold text-foreground mb-4 break-all">{email}</p>
+                <p className="text-xs text-muted-foreground mb-6">
+                  Click the link in your email to activate your account. The link expires in 24 hours.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-10"
+                  onClick={() => {
+                    setPendingVerification(false);
+                    setTab('signin');
+                    setEmail('');
+                    setPassword('');
+                    setConfirmPassword('');
+                    setName('');
+                  }}
+                >
+                  Back to Sign In
+                </Button>
+              </div>
+            )}
+
             {/* Forgot password — request reset */}
-            {resetView === 'request' && (
+            {!pendingVerification && resetView === 'request' && (
               <form onSubmit={handleResetRequest} className="space-y-4">
                 <div>
                   <h2 className="text-lg font-bold">Reset your password</h2>
@@ -315,7 +350,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
             )}
 
             {/* Forgot password — verify code & set new password */}
-            {resetView === 'verify' && (
+            {!pendingVerification && resetView === 'verify' && (
               <form onSubmit={handleResetVerify} className="space-y-4">
                 <div>
                   <h2 className="text-lg font-bold">Enter reset code</h2>
@@ -365,7 +400,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
             )}
 
             {/* Normal sign in / sign up flow */}
-            {!resetView && <>
+            {!pendingVerification && !resetView && <>
 
             {/* OAuth buttons */}
             <div className="space-y-2 mb-4">

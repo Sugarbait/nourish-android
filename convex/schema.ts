@@ -11,6 +11,9 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     resetCode: v.optional(v.string()),
     resetCodeExpiry: v.optional(v.number()),
+    emailVerified: v.optional(v.boolean()),
+    verificationToken: v.optional(v.string()),
+    verificationTokenExpiry: v.optional(v.number()),
     createdAt: v.optional(v.number()),
     // Legacy fields from @convex-dev/auth — kept for backward compatibility with existing data
     image: v.optional(v.string()),
