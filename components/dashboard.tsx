@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.2.5";
+const BUILD_VERSION = "1.2.6";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -877,9 +877,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 p-0">
                   <Avatar className="h-8 w-8">
-                    {profile.avatar && <AvatarImage src={profile.avatar} alt="Profile" className="object-cover" />}
+                    {!isGuest && profile.avatar && <AvatarImage src={profile.avatar} alt="Profile" className="object-cover" />}
                     <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                      {profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
+                      {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -889,9 +889,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                   <div className="flex flex-col items-center gap-3 pb-4">
                     <div className="relative group cursor-pointer" onClick={() => document.getElementById('avatar-upload')?.click()}>
                       <Avatar className="h-20 w-20">
-                        {profile.avatar && <AvatarImage src={profile.avatar} alt="Profile" className="object-cover" />}
+                        {!isGuest && profile.avatar && <AvatarImage src={profile.avatar} alt="Profile" className="object-cover" />}
                         <AvatarFallback className="bg-primary/10 text-primary text-3xl font-bold">
-                          {profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-10 w-10" />}
+                          {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-10 w-10" />}
                         </AvatarFallback>
                       </Avatar>
                       <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -916,7 +916,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                       />
                     </div>
                     <div className="text-center">
-                      <SheetTitle>{profile.name || 'Your Profile'}</SheetTitle>
+                      <SheetTitle>{isGuest ? 'Guest' : profile.name || 'Your Profile'}</SheetTitle>
                       {userEmail && (
                         <p className="text-xs text-muted-foreground mt-0.5">{userEmail}</p>
                       )}
