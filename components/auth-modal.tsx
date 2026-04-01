@@ -145,11 +145,11 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
 
   const handleMicrosoftSignIn = () => {
     const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '26865529-0a14-449e-8540-caddf613fa35';
-    // Always redirect back to root — page.tsx handles the id_token hash there
     const redirectUri = window.location.origin + '/';
     const nonce = Math.random().toString(36).substring(7);
     sessionStorage.setItem('ms_oauth_nonce', nonce);
-    const msAuthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email')}&nonce=${encodeURIComponent(nonce)}&response_mode=fragment`;
+    // Request id_token + token so we can fetch the Graph API profile photo
+    const msAuthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=id_token%20token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email User.Read')}&nonce=${encodeURIComponent(nonce)}&response_mode=fragment`;
     window.location.href = msAuthUrl;
   };
 

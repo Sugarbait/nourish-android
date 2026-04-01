@@ -53,15 +53,12 @@ const todayKey = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-// TESTING MODE: infinite credits
-const TESTING = true;
-
 export const defaultCreditData = (): CreditData => ({
-  credits: TESTING ? 9999 : 0,
+  credits: 0,
   lastFreeDate: '',
   dailyFreeMealUsed: false,
   dailyFreeAIUsed: false,
-  subscription: TESTING ? { active: true, plan: 'monthly', expiresAt: null } : null,
+  subscription: null,
 });
 
 export function loadCredits(): CreditData {
@@ -136,7 +133,6 @@ export function availableAICredits(data: CreditData): number {
  * Also writes a cookie so clearing localStorage alone cannot bypass the daily limit.
  */
 export function consumeMealCredit(data: CreditData): CreditData | null {
-  if (TESTING) return data;
   if (!data.dailyFreeMealUsed) {
     const today = todayKey();
     setCookie(FREE_MEAL_COOKIE, today);
@@ -154,7 +150,6 @@ export function consumeMealCredit(data: CreditData): CreditData | null {
  * Returns updated CreditData on success, or null if no credits available.
  */
 export function consumeAICredit(data: CreditData): CreditData | null {
-  if (TESTING) return data;
   const pool = Number(data.credits) || 0;
   if (pool > 0) {
     return { ...data, credits: pool - 1 };

@@ -95,22 +95,45 @@ export default function SplashPage() {
       const msEmail = decoded.preferred_username || decoded.email || decoded.upn || '';
       const msName = decoded.name || '';
       const msId = decoded.oid || decoded.sub || '';
+      const accessToken = params.get('access_token');
 
-      createOrUpdateOAuthUser({
-        provider: 'microsoft',
-        providerId: msId,
-        email: msEmail,
-        name: msName,
-        avatarUrl: undefined,
-      }).then((result) => {
-        localStorage.setItem('nourish_user_id', result.userId as string);
-        if (result.name) localStorage.setItem('nourish_user_name', result.name);
-        if (result.avatarUrl) localStorage.setItem('nourish_user_avatar', result.avatarUrl);
-        if (msEmail) localStorage.setItem('nourish_user_email', msEmail);
-        window.location.href = '/dashboard/';
-      }).catch((err) => {
-        console.error('[Microsoft OAuth] Convex error:', err);
-      });
+      // Try to fetch profile photo from Microsoft Graph API
+      (async () => {
+        let avatarUrl: string | undefined;
+        if (accessToken) {
+          try {
+            const photoRes = await fetch('https://graph.microsoft.com/v1.0/me/photo/$value', {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            if (photoRes.ok) {
+              const blob = await photoRes.blob();
+              avatarUrl = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+            }
+          } catch { /* avatar fetch failed, continue without it */ }
+        }
+
+        try {
+          const result = await createOrUpdateOAuthUser({
+            provider: 'microsoft',
+            providerId: msId,
+            email: msEmail,
+            name: msName,
+            avatarUrl,
+          });
+          localStorage.setItem('nourish_user_id', result.userId as string);
+          if (result.name) localStorage.setItem('nourish_user_name', result.name);
+          const finalAvatar = avatarUrl || result.avatarUrl;
+          if (finalAvatar) localStorage.setItem('nourish_user_avatar', finalAvatar);
+          if (msEmail) localStorage.setItem('nourish_user_email', msEmail);
+          window.location.href = '/dashboard/';
+        } catch (err) {
+          console.error('[Microsoft OAuth] Convex error:', err);
+        }
+      })();
     } catch (err) {
       console.error('[Microsoft OAuth] Failed to decode token:', err);
     }
