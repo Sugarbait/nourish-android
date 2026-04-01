@@ -224,11 +224,11 @@ export default function SplashPage() {
 
           {/* Headings */}
           <h1 className="relative uppercase text-5xl sm:text-6xl md:text-[4.5rem] lg:text-[5.5rem] xl:text-7xl font-black tracking-tight leading-[1.05]">
-            Eat <GradientText>Smart</GradientText><br />
-            <span className="inline-block mt-1 sm:mt-2">the plan that</span><br />
-            <span className="inline-block mt-1 sm:mt-2">gets you</span><br />
+            Snap a <GradientText>Photo.</GradientText><br />
+            <span className="inline-block mt-1 sm:mt-2">Know Your</span><br />
+            <span className="inline-block mt-1 sm:mt-2"><GradientText>Nutrition.</GradientText></span><br />
             <span className="relative inline-block mt-1 sm:mt-2 pb-2 md:pb-3">
-              <GradientText>results.</GradientText>
+              Hit Your <GradientText>Goals.</GradientText>
               <div className="absolute -bottom-1 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-400/0 via-primary/60 to-teal-400/0 rounded-full" />
             </span>
           </h1>
