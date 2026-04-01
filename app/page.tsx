@@ -391,6 +391,7 @@ export default function SplashPage() {
             <img src="/logo.png" alt="Nourish" className="h-7 w-auto" />
             <span className="opacity-50">· © {new Date().getFullYear()}</span>
           </div>
+          <span>Get more apps on <a href="https://www.digitalac.app" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">www.Digitalac.app</a></span>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
             <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>

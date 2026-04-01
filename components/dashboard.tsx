@@ -1698,6 +1698,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       <footer className="border-t border-border/40 mt-8 py-5 px-4">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} Nourish. All rights reserved.</span>
+          <span>Get more apps on <a href="https://www.digitalac.app" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">www.Digitalac.app</a></span>
           <div className="flex gap-5">
             <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
             <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>

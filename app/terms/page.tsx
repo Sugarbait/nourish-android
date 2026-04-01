@@ -177,8 +177,9 @@ export default function TermsPage() {
       </main>
 
       <footer className="border-t border-white/5 py-8 px-4 mt-10">
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-xs text-muted-foreground">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} Nourish. All rights reserved.</span>
+          <span>Get more apps on <a href="https://www.digitalac.app" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">www.Digitalac.app</a></span>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
             <Link href="/terms" className="hover:text-foreground">Terms</Link>
