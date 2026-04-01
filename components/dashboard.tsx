@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.2.6";
+const BUILD_VERSION = "1.2.7";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1669,6 +1669,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         onOpenChange={setIsPricingOpen}
         credits={credits}
         onCreditsUpdate={(updated) => setCredits(updated)}
+        isGuest={isGuest}
+        onRequestSignIn={() => { setAuthModalTab('signin'); setIsAuthModalOpen(true); }}
       />
 
       {/* Goal Celebration */}
@@ -1688,6 +1690,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         credits={credits}
         onCreditsUpdate={(updated) => setCredits(updated)}
         onShowPricing={() => setIsPricingOpen(true)}
+        isGuest={isGuest}
+        onRequestSignIn={() => { setAuthModalTab('signin'); setIsAuthModalOpen(true); }}
       />
 
       {/* Footer */}

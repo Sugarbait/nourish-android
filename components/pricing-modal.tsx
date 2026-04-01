@@ -19,6 +19,8 @@ interface PricingModalProps {
   onOpenChange: (open: boolean) => void;
   credits: CreditData;
   onCreditsUpdate: (data: CreditData) => void;
+  isGuest?: boolean;
+  onRequestSignIn?: () => void;
 }
 
 const PACK_ICONS: Record<CreditPackage, React.ReactNode> = {
@@ -39,12 +41,20 @@ const PACK_ICON_COLORS: Record<CreditPackage, string> = {
   pro:     'text-amber-400 bg-amber-500/10',
 };
 
-export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate }: PricingModalProps) {
+export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isGuest, onRequestSignIn }: PricingModalProps) {
   const { toast } = useToast();
 
   const handleBuyPack = (pkg: CreditPackage) => {
-    // In a real app, this would open Stripe Checkout.
-    // For this static build, we simulate the purchase immediately as a demo.
+    if (isGuest) {
+      toast({ title: 'Sign in required', description: 'Please sign in to purchase credits.' });
+      onOpenChange(false);
+      setTimeout(() => onRequestSignIn?.(), 400);
+      return;
+    }
+    if (!credits.subscription?.active) {
+      toast({ title: 'Subscription required', description: 'Subscribe to Monthly Pro first before topping up with credit packs.' });
+      return;
+    }
     const updated = addCreditPackage(credits, pkg);
     saveCredits(updated);
     onCreditsUpdate(updated);
@@ -56,6 +66,12 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate }: P
   };
 
   const handleSubscribe = () => {
+    if (isGuest) {
+      toast({ title: 'Sign in required', description: 'Please sign in to subscribe.' });
+      onOpenChange(false);
+      setTimeout(() => onRequestSignIn?.(), 400);
+      return;
+    }
     if (credits.subscription?.active) {
       toast({ title: 'Already subscribed', description: 'Your monthly plan is already active.' });
       return;
@@ -83,6 +99,20 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate }: P
             Top up your credits to keep scanning meals and chatting with your AI coach.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Guest notice */}
+        {isGuest && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 mb-2">
+            <div className="text-2xl leading-none">🔒</div>
+            <div>
+              <p className="font-semibold text-sm">Sign in required</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                You need an account to subscribe or purchase credits.{' '}
+                <button onClick={() => { onOpenChange(false); setTimeout(() => onRequestSignIn?.(), 400); }} className="text-primary underline underline-offset-2">Sign in or sign up</button>
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Free tier reminder */}
         <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-muted/30 p-4 mb-2">
@@ -154,6 +184,13 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate }: P
             <span className="bg-background px-3 text-xs text-muted-foreground">Or buy a one-time credit pack</span>
           </div>
         </div>
+
+        {!isGuest && !isSubscribed && (
+          <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            <span>🔒</span>
+            <span>Credit packs are available to subscribers. Subscribe to Monthly Pro first.</span>
+          </div>
+        )}
 
         {/* One-time packs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

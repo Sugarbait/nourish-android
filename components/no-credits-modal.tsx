@@ -14,6 +14,10 @@ interface NoCreditsModalProps {
   onCreditsUpdate: (data: CreditData) => void;
   /** Called when user wants to see full pricing / one-time packs */
   onShowPricing: () => void;
+  /** Whether the user is a guest (not signed in) */
+  isGuest?: boolean;
+  /** Called when a guest clicks subscribe — should open sign-in modal */
+  onRequestSignIn?: () => void;
 }
 
 const CONTENT = {
@@ -45,6 +49,8 @@ export function NoCreditsModal({
   credits,
   onCreditsUpdate,
   onShowPricing,
+  isGuest,
+  onRequestSignIn,
 }: NoCreditsModalProps) {
   const { toast } = useToast();
   // 'closed' | 'opening' | 'open' | 'closing'
@@ -66,6 +72,11 @@ export function NoCreditsModal({
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
   const handleSubscribe = () => {
+    if (isGuest) {
+      close();
+      setTimeout(() => onRequestSignIn?.(), 400);
+      return;
+    }
     if (credits.subscription?.active) {
       toast({ title: 'Already subscribed!', description: 'Your Monthly Pro plan is already active.' });
       close();
@@ -239,7 +250,7 @@ export function NoCreditsModal({
               className="nai-shimmer-btn w-full rounded-xl py-3.5 px-6 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95 flex items-center justify-center gap-2"
             >
               <RefreshCcw className="h-4 w-4" />
-              {content.cta} — $3.99/mo
+              {isGuest ? 'Sign In to Subscribe' : `${content.cta} — $3.99/mo`}
             </button>
 
             {/* Secondary action */}
