@@ -1,17 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { auth } from "./auth";
 
 export const getWaterForDate = query({
-  args: { date: v.string() },
-  handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return 0;
-
+  args: { userId: v.id("users"), date: v.string() },
+  handler: async (ctx, { userId, date }) => {
     const log = await ctx.db
       .query("waterLogs")
       .withIndex("by_userId_date", (q) =>
-        q.eq("userId", userId).eq("date", args.date)
+        q.eq("userId", userId).eq("date", date)
       )
       .first();
 
@@ -20,25 +16,22 @@ export const getWaterForDate = query({
 });
 
 export const setWaterGlasses = mutation({
-  args: { date: v.string(), glasses: v.number() },
-  handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+  args: { userId: v.id("users"), date: v.string(), glasses: v.number() },
+  handler: async (ctx, { userId, date, glasses }) => {
     const existing = await ctx.db
       .query("waterLogs")
       .withIndex("by_userId_date", (q) =>
-        q.eq("userId", userId).eq("date", args.date)
+        q.eq("userId", userId).eq("date", date)
       )
       .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { glasses: args.glasses });
+      await ctx.db.patch(existing._id, { glasses });
     } else {
       await ctx.db.insert("waterLogs", {
         userId,
-        date: args.date,
-        glasses: args.glasses,
+        date,
+        glasses,
       });
     }
   },

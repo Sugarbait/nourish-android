@@ -1,13 +1,9 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { auth } from "./auth";
 
 export const getMessages = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return [];
-
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
     return await ctx.db
       .query("aiMessages")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -18,28 +14,23 @@ export const getMessages = query({
 
 export const addMessage = mutation({
   args: {
+    userId: v.id("users"),
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
   },
-  handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+  handler: async (ctx, { userId, role, content }) => {
     await ctx.db.insert("aiMessages", {
       userId,
-      role: args.role,
-      content: args.content,
+      role,
+      content,
       createdAt: Date.now(),
     });
   },
 });
 
 export const clearMessages = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
     const messages = await ctx.db
       .query("aiMessages")
       .withIndex("by_userId", (q) => q.eq("userId", userId))

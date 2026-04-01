@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.1.3";
+const BUILD_VERSION = "1.2.1";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -50,8 +50,7 @@ import { NoCreditsModal } from '@/components/no-credits-modal';
 import { GuestUpsellModal } from '@/components/guest-upsell-modal';
 import { GoalCelebration } from '@/components/goal-celebration';
 import { AuthModal } from '@/components/auth-modal';
-import { useAuthActions } from '@convex-dev/auth/react';
-import { useConvexAuth, useQuery } from 'convex/react';
+import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -200,11 +199,69 @@ function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, child
   );
 }
 
-export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
+export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean }) {
   const { toast } = useToast();
-  const { signOut } = useAuthActions();
-  const { isAuthenticated } = useConvexAuth();
-  const currentUser = useQuery(api.users.getCurrentUser);
+  const createOrUpdateOAuthUser = useAction(api.auth.createOrUpdateOAuthUser);
+
+  // Auth state from localStorage
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const id = localStorage.getItem('nourish_user_id');
+    setUserId(id);
+    setIsAuthLoading(false);
+  }, []);
+
+  const isAuthenticated = !!userId;
+  const isGuest = !isAuthenticated;
+
+  // Read user display info from localStorage
+  const userName = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_name') : null;
+  const userAvatar = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_avatar') : null;
+
+  // Handle Microsoft OAuth redirect on dashboard — check hash for id_token
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.includes('id_token=')) return;
+
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const idToken = params.get('id_token');
+    if (!idToken) return;
+
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+    try {
+      const base64Url = idToken.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+      );
+      const decoded = JSON.parse(jsonPayload);
+
+      (async () => {
+        try {
+          const msEmail = decoded.preferred_username || decoded.email || decoded.upn;
+          const result = await createOrUpdateOAuthUser({
+            provider: 'microsoft',
+            providerId: decoded.oid || decoded.sub,
+            email: msEmail,
+            name: decoded.name,
+            avatarUrl: undefined,
+          });
+          localStorage.setItem('nourish_user_id', result.userId as string);
+          if (result.name) localStorage.setItem('nourish_user_name', result.name);
+          if (result.avatarUrl) localStorage.setItem('nourish_user_avatar', result.avatarUrl);
+          setUserId(result.userId as string);
+        } catch (err: any) {
+          toast({ title: 'Microsoft sign-in failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
+        }
+      })();
+    } catch (err) {
+      console.error('[Microsoft OAuth] Failed to decode token:', err);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -299,16 +356,16 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync OAuth user data (name, avatar) into local profile state
+  // Sync OAuth user data (name, avatar) into local profile state from localStorage
   useEffect(() => {
-    if (currentUser) {
+    if (userName || userAvatar) {
       setProfile(prev => ({
         ...prev,
-        name: prev.name || currentUser.name || '',
-        avatar: prev.avatar || currentUser.image || '',
+        name: prev.name || userName || '',
+        avatar: prev.avatar || userAvatar || '',
       }));
     }
-  }, [currentUser]);
+  }, [userName, userAvatar]);
 
   // Save data to localStorage whenever it changes
   useEffect(() => {
@@ -946,7 +1003,12 @@ export function Dashboard({ isGuest = false }: { isGuest?: boolean }) {
                           type="button"
                           variant="ghost"
                           className="w-full mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => signOut()}
+                          onClick={() => {
+                            localStorage.removeItem('nourish_user_id');
+                            localStorage.removeItem('nourish_user_name');
+                            localStorage.removeItem('nourish_user_avatar');
+                            window.location.href = '/';
+                          }}
                         >
                           <Power className="h-4 w-4 mr-2" /> Sign Out
                         </Button>

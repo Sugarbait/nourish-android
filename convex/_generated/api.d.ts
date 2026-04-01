@@ -10,6 +10,7 @@
 
 import type * as aiMessages from "../aiMessages.js";
 import type * as auth from "../auth.js";
+import type * as authInternal from "../authInternal.js";
 import type * as check from "../check.js";
 import type * as http from "../http.js";
 import type * as meals from "../meals.js";
@@ -25,6 +26,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   aiMessages: typeof aiMessages;
   auth: typeof auth;
+  authInternal: typeof authInternal;
   check: typeof check;
   http: typeof http;
   meals: typeof meals;

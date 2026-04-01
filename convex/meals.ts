@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { auth } from "./auth";
 
 const mealItemSchema = v.object({
   name: v.string(),
@@ -13,6 +12,7 @@ const mealItemSchema = v.object({
 
 export const logMeal = mutation({
   args: {
+    userId: v.id("users"),
     date: v.string(),
     mealType: v.union(
       v.literal("breakfast"),
@@ -29,58 +29,46 @@ export const logMeal = mutation({
     items: v.array(mealItemSchema),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+    const { userId, ...rest } = args;
     return await ctx.db.insert("meals", {
       userId,
-      ...args,
+      ...rest,
       createdAt: Date.now(),
     });
   },
 });
 
 export const getMealsForDate = query({
-  args: { date: v.string() },
-  handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return [];
-
+  args: { userId: v.id("users"), date: v.string() },
+  handler: async (ctx, { userId, date }) => {
     return await ctx.db
       .query("meals")
       .withIndex("by_userId_date", (q) =>
-        q.eq("userId", userId).eq("date", args.date)
+        q.eq("userId", userId).eq("date", date)
       )
       .collect();
   },
 });
 
 export const getMealsForDateRange = query({
-  args: { startDate: v.string(), endDate: v.string() },
-  handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return [];
-
+  args: { userId: v.id("users"), startDate: v.string(), endDate: v.string() },
+  handler: async (ctx, { userId, startDate, endDate }) => {
     const all = await ctx.db
       .query("meals")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect();
 
     return all.filter(
-      (m) => m.date >= args.startDate && m.date <= args.endDate
+      (m) => m.date >= startDate && m.date <= endDate
     );
   },
 });
 
 export const deleteMeal = mutation({
-  args: { mealId: v.id("meals") },
-  handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
-    const meal = await ctx.db.get(args.mealId);
+  args: { userId: v.id("users"), mealId: v.id("meals") },
+  handler: async (ctx, { userId, mealId }) => {
+    const meal = await ctx.db.get(mealId);
     if (!meal || meal.userId !== userId) throw new Error("Not found");
-
-    await ctx.db.delete(args.mealId);
+    await ctx.db.delete(mealId);
   },
 });

@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useConvexAuth } from 'convex/react';
-import { useRouter } from 'next/navigation';
 import { AuthModal } from '@/components/auth-modal';
 import {
   Leaf, Camera, Brain, BarChart2, Droplets, Star,
@@ -62,15 +60,14 @@ function PricingCard({ name, price, period, features, cta, highlight, onCta }: {
 }
 
 export default function SplashPage() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
-  const router = useRouter();
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signup');
   const [mobileMenu, setMobileMenu] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) window.location.href = '/dashboard/';
-  }, [isAuthenticated, isLoading]);
+    const userId = localStorage.getItem('nourish_user_id');
+    if (userId) window.location.href = '/dashboard/';
+  }, []);
 
   const openSignUp = () => { setAuthTab('signup'); setAuthOpen(true); };
   const openSignIn = () => { setAuthTab('signin'); setAuthOpen(true); };
@@ -172,7 +169,7 @@ export default function SplashPage() {
 
           {/* CTA Buttons */}
           <div className="relative mt-8 md:mt-10 flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto z-10">
-            <button onClick={() => router.push('/dashboard')} className="w-full sm:w-auto group relative flex items-center justify-center gap-2 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl lg:rounded-2xl bg-primary text-primary-foreground font-bold text-sm md:text-base transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(20,184,166,0.5)] hover:shadow-[0_0_60px_-15px_rgba(20,184,166,0.7)] overflow-hidden">
+            <button onClick={() => window.location.href = '/dashboard/'} className="w-full sm:w-auto group relative flex items-center justify-center gap-2 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl lg:rounded-2xl bg-primary text-primary-foreground font-bold text-sm md:text-base transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(20,184,166,0.5)] hover:shadow-[0_0_60px_-15px_rgba(20,184,166,0.7)] overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
               Start for Free <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform duration-300" />
             </button>

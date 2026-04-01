@@ -1,48 +1,41 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { auth } from "./auth";
 
 const todayKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-/** Get the current authenticated user's info from the users table (OAuth data). */
+/** Get user info by userId. */
 export const getCurrentUser = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
     const user = await ctx.db.get(userId);
     if (!user) return null;
     return {
       _id: user._id,
-      name: (user as any).name ?? null,
-      email: (user as any).email ?? null,
-      image: (user as any).image ?? null,
+      name: user.name ?? null,
+      email: user.email ?? null,
+      avatarUrl: user.avatarUrl ?? null,
     };
   },
 });
 
-/** Get the current user's profile (creates defaults if missing). */
+/** Get the user's profile (creates defaults if missing). */
 export const getProfile = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
-
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
-    // Return defaults if profile not yet created
     if (!profile) {
       const user = await ctx.db.get(userId);
       return {
         userId,
-        email: (user as any)?.email ?? "",
-        name: (user as any)?.name ?? "",
+        email: user?.email ?? "",
+        name: user?.name ?? "",
         calorieGoal: 2200,
         proteinGoal: 150,
         carbsGoal: 250,
@@ -58,6 +51,7 @@ export const getProfile = query({
 /** Upsert user profile (goals, name, etc.) */
 export const updateProfile = mutation({
   args: {
+    userId: v.id("users"),
     name: v.optional(v.string()),
     calorieGoal: v.optional(v.number()),
     proteinGoal: v.optional(v.number()),
@@ -67,11 +61,9 @@ export const updateProfile = mutation({
     dietaryRestrictions: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+    const { userId, ...rest } = args;
     const user = await ctx.db.get(userId);
-    const email = (user as any)?.email ?? "";
+    const email = user?.email ?? "";
 
     const existing = await ctx.db
       .query("profiles")
@@ -79,30 +71,27 @@ export const updateProfile = mutation({
       .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, args);
+      await ctx.db.patch(existing._id, rest);
     } else {
       await ctx.db.insert("profiles", {
         userId,
         email,
-        calorieGoal: args.calorieGoal ?? 2200,
-        proteinGoal: args.proteinGoal ?? 150,
-        carbsGoal: args.carbsGoal ?? 250,
-        fatGoal: args.fatGoal ?? 70,
-        waterGoal: args.waterGoal ?? 8,
-        name: args.name,
-        dietaryRestrictions: args.dietaryRestrictions,
+        calorieGoal: rest.calorieGoal ?? 2200,
+        proteinGoal: rest.proteinGoal ?? 150,
+        carbsGoal: rest.carbsGoal ?? 250,
+        fatGoal: rest.fatGoal ?? 70,
+        waterGoal: rest.waterGoal ?? 8,
+        name: rest.name,
+        dietaryRestrictions: rest.dietaryRestrictions,
       });
     }
   },
 });
 
-/** Ensure credits row exists for the user, resetting daily frees if needed. */
+/** Get credits for user (returns defaults if no row yet). */
 export const getCredits = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) return null;
-
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
     const credits = await ctx.db
       .query("credits")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -120,7 +109,6 @@ export const getCredits = query({
       };
     }
 
-    // Reset daily frees if it's a new day
     if (credits.lastFreeDate !== today) {
       return { ...credits, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
     }
@@ -130,18 +118,14 @@ export const getCredits = query({
 });
 
 export const consumeMealCredit = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
     const today = todayKey();
     let credits = await ctx.db
       .query("credits")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
-    // Ensure row exists
     if (!credits) {
       const id = await ctx.db.insert("credits", {
         userId,
@@ -154,7 +138,6 @@ export const consumeMealCredit = mutation({
       credits = await ctx.db.get(id) as any;
     }
 
-    // Reset daily if new day
     if (credits!.lastFreeDate !== today) {
       await ctx.db.patch(credits!._id, { lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false });
       credits = { ...credits!, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
@@ -173,11 +156,8 @@ export const consumeMealCredit = mutation({
 });
 
 export const consumeAICredit = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
     const today = todayKey();
     let credits = await ctx.db
       .query("credits")
@@ -215,13 +195,11 @@ export const consumeAICredit = mutation({
 
 export const addCredits = mutation({
   args: {
+    userId: v.id("users"),
     mealCredits: v.optional(v.number()),
     aiCredits: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+  handler: async (ctx, { userId, mealCredits, aiCredits }) => {
     const today = todayKey();
     let credits = await ctx.db
       .query("credits")
@@ -231,16 +209,16 @@ export const addCredits = mutation({
     if (!credits) {
       await ctx.db.insert("credits", {
         userId,
-        mealCredits: args.mealCredits ?? 0,
-        aiCredits: args.aiCredits ?? 0,
+        mealCredits: mealCredits ?? 0,
+        aiCredits: aiCredits ?? 0,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
       });
     } else {
       await ctx.db.patch(credits._id, {
-        mealCredits: credits.mealCredits + (args.mealCredits ?? 0),
-        aiCredits: credits.aiCredits + (args.aiCredits ?? 0),
+        mealCredits: credits.mealCredits + (mealCredits ?? 0),
+        aiCredits: credits.aiCredits + (aiCredits ?? 0),
       });
     }
   },

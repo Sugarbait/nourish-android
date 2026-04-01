@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuthActions } from '@convex-dev/auth/react';
-import { useConvexAuth } from 'convex/react';
+import { useAction } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { useGoogleLogin } from '@react-oauth/google';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Leaf, Eye, EyeOff, Loader2, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Brand SVG icons
 const GoogleIcon = () => (
@@ -26,7 +28,6 @@ const MicrosoftIcon = () => (
     <path d="M24 11.4H12.6V0H24v11.4z" fill="#FBBC09"/>
   </svg>
 );
-import { useToast } from '@/hooks/use-toast';
 
 interface AuthModalProps {
   open: boolean;
@@ -37,13 +38,11 @@ interface AuthModalProps {
 function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 'resetVerify'): string {
   const raw = (err?.message ?? '').toLowerCase();
 
-  // Sign-in specific
   if (context === 'signIn') {
     if (raw.includes('invalid') || raw.includes('wrong') || raw.includes('incorrect') || raw.includes('password') || raw.includes('credentials') || raw.includes('unauthorized') || raw.includes('not found') || raw.includes('no user'))
       return 'The email or password you entered is incorrect. Please try again.';
   }
 
-  // Sign-up specific
   if (context === 'signUp') {
     if (raw.includes('already') || raw.includes('exists') || raw.includes('duplicate') || raw.includes('taken'))
       return 'An account with this email already exists. Try signing in instead.';
@@ -51,26 +50,35 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
       return 'Please choose a stronger password (at least 8 characters).';
   }
 
-  // Reset request
   if (context === 'reset') {
     if (raw.includes('not found') || raw.includes('no user') || raw.includes('invalid'))
       return "We couldn't find an account with that email address.";
   }
 
-  // Reset verify
   if (context === 'resetVerify') {
     if (raw.includes('invalid') || raw.includes('expired') || raw.includes('code') || raw.includes('token'))
       return 'That code is incorrect or has expired. Please request a new one.';
   }
 
-  // Generic fallback — never show raw Convex message
   return 'Something went wrong. Please try again in a moment.';
 }
 
+function saveAuthToStorage(userId: string, name: string | null, avatarUrl: string | null) {
+  localStorage.setItem('nourish_user_id', userId);
+  if (name) localStorage.setItem('nourish_user_name', name);
+  else localStorage.removeItem('nourish_user_name');
+  if (avatarUrl) localStorage.setItem('nourish_user_avatar', avatarUrl);
+  else localStorage.removeItem('nourish_user_avatar');
+}
+
 export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthModalProps) {
-  const { signIn } = useAuthActions();
-  const { isAuthenticated } = useConvexAuth();
   const { toast } = useToast();
+
+  const loginUser = useAction(api.auth.loginUser);
+  const createAccount = useAction(api.auth.createAccount);
+  const createOrUpdateOAuthUser = useAction(api.auth.createOrUpdateOAuthUser);
+  const requestPasswordReset = useAction(api.auth.requestPasswordReset);
+  const resetPassword = useAction(api.auth.resetPassword);
 
   const [tab, setTab] = useState<'signin' | 'signup'>(defaultTab);
   const [email, setEmail] = useState('');
@@ -98,18 +106,96 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     }
   }, [open]);
 
-  // Handles OAuth redirect (browser returns from provider with auth already set)
-  useEffect(() => {
-    if (isAuthenticated && open) {
-      onOpenChange(false);
-      window.location.href = '/dashboard/';
-    }
-  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     setTab(defaultTab);
     setConfirmPassword('');
   }, [defaultTab]);
+
+  // Handle Microsoft OAuth redirect — check hash for id_token on mount
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.includes('id_token=')) return;
+
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const idToken = params.get('id_token');
+    if (!idToken) return;
+
+    // Clean the URL hash
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+    // Decode the JWT payload
+    try {
+      const base64Url = idToken.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      const decoded = JSON.parse(jsonPayload);
+
+      setLoading(true);
+      (async () => {
+        try {
+          const msEmail = decoded.preferred_username || decoded.email || decoded.upn;
+          const result = await createOrUpdateOAuthUser({
+            provider: 'microsoft',
+            providerId: decoded.oid || decoded.sub,
+            email: msEmail,
+            name: decoded.name,
+            avatarUrl: undefined,
+          });
+          saveAuthToStorage(result.userId as string, result.name, result.avatarUrl);
+          window.location.href = '/dashboard/';
+        } catch (err: any) {
+          toast({ title: 'Microsoft sign-in failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
+          setLoading(false);
+        }
+      })();
+    } catch (err) {
+      console.error('[Microsoft OAuth] Failed to decode token:', err);
+      toast({ title: 'Microsoft sign-in failed', description: 'Invalid token received.', variant: 'destructive' });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        if (!res.ok) throw new Error('Failed to fetch Google user info');
+        const profile = await res.json();
+
+        const result = await createOrUpdateOAuthUser({
+          provider: 'google',
+          providerId: profile.sub,
+          email: profile.email,
+          name: profile.name,
+          avatarUrl: profile.picture || undefined,
+        });
+        saveAuthToStorage(result.userId as string, result.name, result.avatarUrl);
+        window.location.href = '/dashboard/';
+      } catch (err: any) {
+        toast({ title: 'Google sign-in failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
+        setLoading(false);
+      }
+    },
+    onError: () => {
+      toast({ title: 'Google sign-in failed', description: 'Something went wrong. Please try again.', variant: 'destructive' });
+    },
+  });
+
+  const handleMicrosoftSignIn = () => {
+    const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '26865529-0a14-449e-8540-caddf613fa35';
+    const redirectUri = window.location.href.split('#')[0];
+    const nonce = Math.random().toString(36).substring(7);
+    sessionStorage.setItem('ms_oauth_nonce', nonce);
+    const msAuthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=id_token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email')}&nonce=${encodeURIComponent(nonce)}&response_mode=fragment`;
+    window.location.href = msAuthUrl;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,10 +206,12 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     setLoading(true);
     try {
       if (tab === 'signup') {
-        await signIn('password', { email, password, name, flow: 'signUp' });
+        const result = await createAccount({ name, email, password });
+        saveAuthToStorage(result.userId as string, name, null);
         toast({ title: 'Welcome to Nourish!', description: 'Your account has been created.' });
       } else {
-        await signIn('password', { email, password, flow: 'signIn' });
+        const result = await loginUser({ email, password });
+        saveAuthToStorage(result.userId as string, result.name, result.avatarUrl);
         toast({ title: 'Welcome back!', description: 'Signed in successfully.' });
       }
       onOpenChange(false);
@@ -143,9 +231,9 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn('password', { email, flow: 'reset' });
+      await requestPasswordReset({ email });
       setResetView('verify');
-      toast({ title: 'Check your email', description: 'A reset code has been sent to your email address.' });
+      toast({ title: 'Reset code ready', description: 'Enter the 6-digit code to set a new password.' });
     } catch (err: any) {
       toast({ title: 'Could not send reset code', description: getFriendlyError(err, 'reset'), variant: 'destructive' });
     } finally {
@@ -157,10 +245,11 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn('password', { email, code: resetCode, newPassword, flow: 'reset-verification' });
-      toast({ title: 'Password updated!', description: 'You are now signed in.' });
-      onOpenChange(false);
-      window.location.href = '/dashboard/';
+      await resetPassword({ email, code: resetCode, newPassword });
+      toast({ title: 'Password updated!', description: 'Please sign in with your new password.' });
+      setResetView(null);
+      setTab('signin');
+      setPassword('');
     } catch (err: any) {
       toast({ title: 'Password reset failed', description: getFriendlyError(err, 'resetVerify'), variant: 'destructive' });
     } finally {
@@ -247,7 +336,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               <form onSubmit={handleResetRequest} className="space-y-4">
                 <div>
                   <h2 className="text-lg font-bold">Reset your password</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">Enter your email and we'll send you a reset code.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Enter your email and we'll generate a reset code.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="reset-email" className="text-xs">Email</Label>
@@ -275,14 +364,14 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               <form onSubmit={handleResetVerify} className="space-y-4">
                 <div>
                   <h2 className="text-lg font-bold">Enter reset code</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">Check your email for the code we sent you.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Enter the 6-digit code to set a new password.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="reset-code" className="text-xs">Reset Code</Label>
                   <Input
                     id="reset-code"
                     type="text"
-                    placeholder="Enter code"
+                    placeholder="Enter 6-digit code"
                     value={resetCode}
                     onChange={(e) => setResetCode(e.target.value)}
                     className="h-10 text-sm tracking-widest"
@@ -327,27 +416,17 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
             <div className="space-y-2 mb-4">
               <button
                 type="button"
-                onClick={async () => {
-                  try {
-                    await signIn('google', { redirectTo: '/dashboard/' });
-                  } catch {
-                    toast({ title: 'Google sign-in failed', description: 'Something went wrong. Please try again.', variant: 'destructive' });
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium"
+                disabled={loading}
+                onClick={() => googleLogin()}
+                className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium disabled:opacity-50"
               >
                 <GoogleIcon /> Continue with Google
               </button>
               <button
                 type="button"
-                onClick={async () => {
-                  try {
-                    await signIn('microsoft-entra-id', { redirectTo: '/dashboard/' });
-                  } catch {
-                    toast({ title: 'Microsoft sign-in failed', description: 'Something went wrong. Please try again.', variant: 'destructive' });
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium"
+                disabled={loading}
+                onClick={handleMicrosoftSignIn}
+                className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium disabled:opacity-50"
               >
                 <MicrosoftIcon /> Continue with Microsoft
               </button>

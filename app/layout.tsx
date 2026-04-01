@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ConvexClientProvider } from '@/components/convex-client-provider';
+import { GoogleOAuthWrapper } from '@/components/google-oauth-wrapper';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -35,6 +36,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <ConvexClientProvider>
+          <GoogleOAuthWrapper>
           <ThemeProvider
               attribute="class"
               defaultTheme="dark"
@@ -44,6 +46,7 @@ export default function RootLayout({
               {children}
               <Toaster />
           </ThemeProvider>
+          </GoogleOAuthWrapper>
         </ConvexClientProvider>
       </body>
     </html>

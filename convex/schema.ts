@@ -1,9 +1,26 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
-  ...authTables,
+  users: defineTable({
+    email: v.string(),
+    name: v.optional(v.string()),
+    passwordHash: v.optional(v.string()),
+    authProvider: v.optional(v.string()), // 'google' | 'microsoft'
+    oauthProviderId: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    resetCode: v.optional(v.string()),
+    resetCodeExpiry: v.optional(v.number()),
+    createdAt: v.optional(v.number()),
+    // Legacy fields from @convex-dev/auth — kept for backward compatibility with existing data
+    image: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+  })
+    .index("by_email", ["email"])
+    .index("by_oauth", ["authProvider", "oauthProviderId"]),
 
   // Extended user profile
   profiles: defineTable({

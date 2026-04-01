@@ -1,32 +1,153 @@
-import { convexAuth } from "@convex-dev/auth/server";
-import { Password } from "@convex-dev/auth/providers/Password";
-import Google from "@auth/core/providers/google";
-import MicrosoftEntraId from "@auth/core/providers/microsoft-entra-id";
+"use node";
 
-const CustomPassword = Password({
-  profile: (params) => {
+import { action } from "./_generated/server";
+import { v } from "convex/values";
+import { internal } from "./_generated/api";
+import bcrypt from "bcryptjs";
+
+type AuthResult = { userId: string; name: string | null; avatarUrl: string | null };
+
+/** Sign in with email + password. Returns { userId, name, avatarUrl } */
+export const loginUser: ReturnType<typeof action> = action({
+  args: {
+    email: v.string(),
+    password: v.string(),
+  },
+  handler: async (ctx, { email, password }): Promise<AuthResult> => {
+    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
+    if (!user) throw new Error("Invalid email or password.");
+    if (!user.passwordHash) throw new Error("This account uses social login. Please sign in with Google or Microsoft.");
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) throw new Error("Invalid email or password.");
+
     return {
-      email: params.email as string,
-      name: params.name as string,
+      userId: user._id as unknown as string,
+      name: user.name ?? null,
+      avatarUrl: user.avatarUrl ?? null,
     };
   },
 });
 
-const providers: any[] = [CustomPassword];
-if (process.env.AUTH_GOOGLE_CLIENT_ID) {
-  providers.push(Google({
-    clientId: process.env.AUTH_GOOGLE_CLIENT_ID,
-    clientSecret: process.env.AUTH_GOOGLE_CLIENT_SECRET,
-  }));
-}
-if (process.env.AUTH_MICROSOFT_ENTRA_ID_CLIENT_ID) {
-  providers.push(MicrosoftEntraId({
-    clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_CLIENT_ID,
-    clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_CLIENT_SECRET,
-    issuer: `https://login.microsoftonline.com/common/v2.0`,
-  }));
-}
+/** Create a new account with email + password. Returns { userId } */
+export const createAccount: ReturnType<typeof action> = action({
+  args: {
+    name: v.string(),
+    email: v.string(),
+    password: v.string(),
+  },
+  handler: async (ctx, { name, email, password }): Promise<{ userId: string }> => {
+    const existing = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
+    if (existing) throw new Error("An account with this email already exists.");
 
-export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers,
+    if (password.length < 8) throw new Error("Password must be at least 8 characters.");
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userId = await ctx.runMutation(internal.authInternal.createUser, {
+      email,
+      name,
+      passwordHash,
+    });
+
+    return { userId: userId as unknown as string };
+  },
+});
+
+/** Upsert an OAuth user. Returns { userId, name, avatarUrl } */
+export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
+  args: {
+    provider: v.string(),
+    providerId: v.string(),
+    email: v.string(),
+    name: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, { provider, providerId, email, name, avatarUrl }): Promise<AuthResult> => {
+    const byOAuth = await ctx.runQuery(internal.authInternal.getUserByOAuth, {
+      authProvider: provider,
+      oauthProviderId: providerId,
+    });
+
+    if (byOAuth) {
+      await ctx.runMutation(internal.authInternal.updateOAuthUser, {
+        userId: byOAuth._id,
+        name,
+        avatarUrl,
+      });
+      return {
+        userId: byOAuth._id as unknown as string,
+        name: name ?? byOAuth.name ?? null,
+        avatarUrl: avatarUrl ?? byOAuth.avatarUrl ?? null,
+      };
+    }
+
+    const byEmail = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
+    if (byEmail) {
+      await ctx.runMutation(internal.authInternal.updateOAuthUser, {
+        userId: byEmail._id,
+        name: name ?? byEmail.name,
+        avatarUrl: avatarUrl ?? byEmail.avatarUrl,
+      });
+      return {
+        userId: byEmail._id as unknown as string,
+        name: name ?? byEmail.name ?? null,
+        avatarUrl: avatarUrl ?? byEmail.avatarUrl ?? null,
+      };
+    }
+
+    const userId = await ctx.runMutation(internal.authInternal.createUser, {
+      email,
+      name,
+      authProvider: provider,
+      oauthProviderId: providerId,
+      avatarUrl,
+    });
+
+    return { userId: userId as unknown as string, name: name ?? null, avatarUrl: avatarUrl ?? null };
+  },
+});
+
+/** Request a password reset — returns the 6-digit code directly. */
+export const requestPasswordReset: ReturnType<typeof action> = action({
+  args: { email: v.string() },
+  handler: async (ctx, { email }): Promise<{ code: string }> => {
+    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
+    if (!user) throw new Error("No account found with that email address.");
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 1000 * 60 * 30;
+
+    await ctx.runMutation(internal.authInternal.updateUserResetCode, {
+      userId: user._id,
+      resetCode: code,
+      resetCodeExpiry: expiry,
+    });
+
+    return { code };
+  },
+});
+
+/** Verify reset code and set new password. */
+export const resetPassword: ReturnType<typeof action> = action({
+  args: {
+    email: v.string(),
+    code: v.string(),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, { email, code, newPassword }): Promise<{ success: boolean }> => {
+    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
+    if (!user) throw new Error("No account found with that email address.");
+    if (!user.resetCode || user.resetCode !== code) throw new Error("Invalid or expired reset code.");
+    if (user.resetCodeExpiry && user.resetCodeExpiry < Date.now()) throw new Error("Reset code has expired. Please request a new one.");
+
+    if (newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await ctx.runMutation(internal.authInternal.updateUserPassword, {
+      userId: user._id,
+      passwordHash,
+    });
+
+    return { success: true };
+  },
 });
