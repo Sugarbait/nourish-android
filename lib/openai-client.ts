@@ -1,5 +1,5 @@
 const AI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
-const AI_MODEL = 'gemini-2.5-flash';
+const AI_MODEL = 'gemini-3.1-flash-lite-preview';
 const AI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent`;
 
 async function callAI(contents: any[], systemInstruction?: string): Promise<string> {
@@ -20,7 +20,10 @@ async function callAI(contents: any[], systemInstruction?: string): Promise<stri
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  // Gemini 2.5 Flash uses thinking mode by default; skip thought parts and return the actual response
+  const responsePart = parts.find((p: any) => !p.thought) || parts[0];
+  return responsePart?.text || '';
 }
 
 export async function recognizeFoodFromImage(imageDataUri: string) {

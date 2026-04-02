@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.2.7";
+const BUILD_VERSION = "1.2.8";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -34,6 +34,7 @@ import {
   Sparkle,
   Zap,
   CreditCard,
+  ChevronDown,
 } from 'lucide-react';
 import {
   CreditData,
@@ -266,6 +267,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const healthAnalysisRef = useRef<HTMLDivElement>(null);
+  const calorieRef = useRef<HTMLParagraphElement>(null);
   
   const [isMounted, setIsMounted] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
@@ -524,6 +527,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               setImagePreview(dataUri);
               stopCamera();
               runFoodRecognition(dataUri);
+              setTimeout(() => calorieRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
           }
       }
   }
@@ -549,9 +553,20 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         const dataUri = reader.result as string;
         setImagePreview(dataUri);
         runFoodRecognition(dataUri);
+        setTimeout(() => calorieRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const removeMeal = (mealId: string) => {
+    setHistory(current => ({
+      ...current,
+      [dateKey]: {
+        meals: (current[dateKey]?.meals || []).filter(m => m.id !== mealId),
+        water: current[dateKey]?.water || 0,
+      },
+    }));
   };
 
   const getMealTypeByTime = (): MealType => {
@@ -1090,6 +1105,26 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         )}
                     </div>
 
+                    {imagePreview && aiResults.length > 0 && (
+                        <div className="flex flex-col items-center gap-1">
+                            <p ref={calorieRef} className="text-center text-2xl font-bold">
+                                {aiResults.reduce((sum, item) => sum + item.calories, 0)} kcal
+                            </p>
+                            <button
+                                onClick={() => healthAnalysisRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                                className="flex flex-col items-center gap-0.5 text-xs text-muted-foreground hover:text-primary transition-colors mt-1"
+                            >
+                                <span>Full breakdown below</span>
+                                <ChevronDown className="h-4 w-4 animate-bounce" />
+                            </button>
+                        </div>
+                    )}
+                    {imagePreview && isLoadingAI && (
+                        <p ref={calorieRef} className="text-center text-2xl font-bold text-muted-foreground animate-pulse">
+                            Calculating...
+                        </p>
+                    )}
+
                     {hasCameraPermission === false && (
                         <Alert variant="destructive">
                             <AlertTitle>Camera Access Required</AlertTitle>
@@ -1145,54 +1180,65 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                 <Skeleton className="h-12 w-full" />
                             </div>
                         )}
-                        {aiResults.length > 0 && (
+                        {(isLoadingAI || aiResults.length > 0) && (
                             <div className="w-full space-y-4">
-                                {aiHealthAnalysis && (
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle className="flex items-center gap-2"><HeartPulse /> Health Analysis</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="flex flex-col sm:flex-row items-center gap-4">
-                                            <div className="relative w-24 h-24 flex-shrink-0">
-                                                <svg className="w-full h-full" viewBox="0 0 36 36">
-                                                    <path className="text-muted" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
-                                                    <path className="text-primary"
-                                                        stroke="currentColor"
-                                                        strokeWidth="3"
-                                                        strokeDasharray={`${aiHealthAnalysis.score}, 100`}
-                                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                                        fill="none"
-                                                    ></path>
-                                                </svg>
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="text-2xl font-bold">{aiHealthAnalysis.score}</span>
+                                <Card ref={healthAnalysisRef}>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2"><HeartPulse /> Health Analysis</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="flex flex-col sm:flex-row items-center gap-4">
+                                        {isLoadingAI && !aiHealthAnalysis ? (
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <span className="text-sm">Analyzing your meal...</span>
+                                            </div>
+                                        ) : aiHealthAnalysis ? (
+                                            <>
+                                                <div className="relative w-24 h-24 flex-shrink-0">
+                                                    <svg className="w-full h-full" viewBox="0 0 36 36">
+                                                        <path className="text-muted" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
+                                                        <path className="text-primary"
+                                                            stroke="currentColor"
+                                                            strokeWidth="3"
+                                                            strokeDasharray={`${aiHealthAnalysis.score}, 100`}
+                                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                            fill="none"
+                                                        ></path>
+                                                    </svg>
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <span className="text-2xl font-bold">{aiHealthAnalysis.score}</span>
+                                                    </div>
                                                 </div>
+                                                <p className="text-sm text-muted-foreground flex-1">{aiHealthAnalysis.analysis}</p>
+                                            </>
+                                        ) : null}
+                                    </CardContent>
+                                </Card>
+                                {aiResults.length > 0 && (
+                                    <>
+                                    <div className="space-y-2">
+                                        {aiResults.map((item, index) => (
+                                            <div key={index} className="flex items-center justify-between rounded-lg border p-3">
+                                                <div>
+                                                    <p className="font-medium">{item.name}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.calories} kcal</p>
+                                                </div>
+                                                <Badge variant="secondary" className="hidden sm:inline-flex">
+                                                    {item.confidence ? `~${Math.round(item.confidence * 100)}% Conf.` : 'Manual'}
+                                                </Badge>
                                             </div>
-                                            <p className="text-sm text-muted-foreground flex-1">{aiHealthAnalysis.analysis}</p>
-                                        </CardContent>
-                                    </Card>
-                                )}
-                                <div className="space-y-2">
-                                    {aiResults.map((item, index) => (
-                                        <div key={index} className="flex items-center justify-between rounded-lg border p-3">
-                                            <div>
-                                                <p className="font-medium">{item.name}</p>
-                                                <p className="text-sm text-muted-foreground">{item.calories} kcal</p>
-                                            </div>
-                                            <Badge variant="secondary" className="hidden sm:inline-flex">
-                                                {item.confidence ? `~${Math.round(item.confidence * 100)}% Conf.` : 'Manual'}
-                                            </Badge>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="w-full mt-2 flex flex-col gap-2">
-                                    <div className="flex items-center justify-center gap-2 rounded-full bg-primary/10 text-primary text-sm font-medium py-2 px-4">
-                                        <Plus className="h-4 w-4" /> Logged to {getMealTypeByTime()}
+                                        ))}
                                     </div>
-                                    <Button variant="outline" className="w-full rounded-full" onClick={resetCapture}>
-                                        <RefreshCcw className="mr-2 h-4 w-4" /> Log Another
-                                    </Button>
-                                </div>
+                                    <div className="w-full mt-2 flex flex-col gap-2">
+                                        <div className="flex items-center justify-center gap-2 rounded-full bg-primary/10 text-primary text-sm font-medium py-2 px-4">
+                                            <Plus className="h-4 w-4" /> Logged to {getMealTypeByTime()}
+                                        </div>
+                                        <Button variant="outline" className="w-full rounded-full" onClick={resetCapture}>
+                                            <RefreshCcw className="mr-2 h-4 w-4" /> Log Another
+                                        </Button>
+                                    </div>
+                                    </>
+                                )}
                             </div>
                         )}
                     </CardFooter>
@@ -1319,6 +1365,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 </li>
                                             ))}
                                         </ul>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
+                                            onClick={() => removeMeal(meal.id)}
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" /> Remove Entry
+                                        </Button>
                                     </AccordionContent>
                                 </AccordionItem>
                             ))}
