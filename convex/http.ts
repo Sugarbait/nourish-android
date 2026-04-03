@@ -3,6 +3,14 @@ import { httpAction } from "./_generated/server";
 import Stripe from "stripe";
 import { api } from "./_generated/api";
 
+// Module-level Stripe singleton — created once, reused across all HTTP handlers.
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+} else {
+  console.error("[http] STRIPE_SECRET_KEY is not set in Convex environment variables.");
+}
+
 const http = httpRouter();
 
 // ---------------------------------------------------------------------------
@@ -32,7 +40,7 @@ http.route({
     }
 
     const body = await req.text();
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
+    if (!stripe) return new Response("Stripe not initialised", { status: 500 });
 
     let event: Stripe.Event;
     try {
@@ -145,7 +153,7 @@ http.route({
       );
     }
 
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
+    if (!stripe) return new Response("Stripe not initialised", { status: 500 });
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
@@ -194,7 +202,7 @@ http.route({
       });
     }
 
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
+    if (!stripe) return new Response(JSON.stringify({ error: "Stripe not initialised" }), { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
 
     const session = await stripe.checkout.sessions.create({
       mode: mode as "payment" | "subscription",

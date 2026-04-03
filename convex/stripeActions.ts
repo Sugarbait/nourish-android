@@ -12,10 +12,21 @@ const STRIPE_PRICES: Record<string, string> = {
   pro:          "price_1TIBd9JodftDQSSFGsriUBlI",
 };
 
+// Initialise Stripe at module level so the connection is reused across
+// invocations. Guard against missing key — Convex will surface the error
+// clearly rather than a cryptic "tried N times" retry message.
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+} else {
+  console.error("[stripeActions] STRIPE_SECRET_KEY is not set in Convex environment variables.");
+}
+
 function getStripe(): Stripe {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error("STRIPE_SECRET_KEY is not set in Convex environment variables.");
-  return new Stripe(key, { apiVersion: "2024-06-20" });
+  if (!stripe) {
+    throw new Error("Stripe is not configured. Please set STRIPE_SECRET_KEY in the Convex dashboard under Settings → Environment Variables.");
+  }
+  return stripe;
 }
 
 /** Create a Stripe Checkout Session and return its URL */
@@ -29,14 +40,14 @@ export const createCheckoutSession = action({
   },
   handler: async (_ctx, args): Promise<{ url: string | null; error?: string }> => {
     try {
-      const stripe = getStripe();
+      const client = getStripe();
 
       const priceId = STRIPE_PRICES[args.priceKey];
       if (!priceId) return { url: null, error: `Unknown price key: ${args.priceKey}` };
 
       const mode = args.priceKey === "subscription" ? "subscription" : "payment";
 
-      const session = await stripe.checkout.sessions.create({
+      const session = await client.checkout.sessions.create({
         mode,
         line_items: [{ price: priceId, quantity: 1 }],
         success_url: args.successUrl,
@@ -45,6 +56,7 @@ export const createCheckoutSession = action({
         ...(args.userId        ? { client_reference_id: args.userId }   : {}),
       });
 
+      console.log(`[stripeActions] Checkout session created: ${session.id}`);
       return { url: session.url };
     } catch (err: any) {
       console.error("[stripeActions] createCheckoutSession error:", err.message);
@@ -60,13 +72,19 @@ export const getBillingPortalUrl = action({
     returnUrl:        v.string(),
   },
   handler: async (_ctx, args): Promise<{ url: string }> => {
-    const stripe = getStripe();
+    try {
+      const client = getStripe();
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer:   args.stripeCustomerId,
-      return_url: args.returnUrl,
-    });
+      const session = await client.billingPortal.sessions.create({
+        customer:   args.stripeCustomerId,
+        return_url: args.returnUrl,
+      });
 
-    return { url: session.url };
+      console.log(`[stripeActions] Billing portal session created for customer: ${args.stripeCustomerId}`);
+      return { url: session.url };
+    } catch (err: any) {
+      console.error("[stripeActions] getBillingPortalUrl error:", err.message);
+      throw new Error(`Failed to open billing portal: ${err.message}`);
+    }
   },
 });
