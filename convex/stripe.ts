@@ -151,6 +151,65 @@ export const addCreditPack = mutation({
 });
 
 // ---------------------------------------------------------------------------
+// Called by webhook on invoice.payment_succeeded (billing_reason = subscription_cycle)
+// Adds 40 renewal credits and extends the subscription expiry by 30 days.
+// ---------------------------------------------------------------------------
+export const renewSubscription = mutation({
+  args: { stripeCustomerId: v.string() },
+  handler: async (ctx, { stripeCustomerId }) => {
+    const user = await ctx.db
+      .query("users")
+      .filter((q: any) => q.eq(q.field("stripeCustomerId"), stripeCustomerId))
+      .first();
+
+    if (!user) {
+      console.error("[stripe] No user found for renewal, customerId:", stripeCustomerId);
+      return;
+    }
+
+    // Extend subscription expiry
+    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    const sub = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
+      .first();
+
+    if (sub) {
+      await ctx.db.patch(sub._id, { active: true, plan: "monthly", expiresAt: expiry });
+    } else {
+      await ctx.db.insert("subscriptions", {
+        userId: user._id,
+        plan: "monthly",
+        active: true,
+        expiresAt: expiry,
+      });
+    }
+
+    // Add 40 renewal credits
+    const today = new Date().toISOString().slice(0, 10);
+    const credits = await ctx.db
+      .query("credits")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
+      .first();
+
+    if (credits) {
+      await ctx.db.patch(credits._id, {
+        mealCredits: credits.mealCredits + SUBSCRIPTION_CREDITS,
+      });
+    } else {
+      await ctx.db.insert("credits", {
+        userId: user._id,
+        mealCredits: SUBSCRIPTION_CREDITS,
+        aiCredits: 0,
+        lastFreeDate: today,
+        dailyFreeMealUsed: false,
+        dailyFreeAIUsed: false,
+      });
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Called by webhook on customer.subscription.deleted (cancellation)
 // ---------------------------------------------------------------------------
 export const deactivateSubscription = mutation({

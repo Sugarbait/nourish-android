@@ -67,13 +67,39 @@ http.route({
       }
     }
 
-    // Handle subscription cancellations / renewals
+    // Subscription cancelled / expired
     if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : null;
       if (customerId) {
         await ctx.runMutation(api.stripe.deactivateSubscription, { stripeCustomerId: customerId });
         console.log("[stripe-webhook] Subscription cancelled for customer", customerId);
+      }
+    }
+
+    // Monthly renewal — add 40 credits for the new billing period.
+    // Skips the very first invoice (billing_reason === 'subscription_create')
+    // because checkout.session.completed already handled that one.
+    if (event.type === "invoice.payment_succeeded") {
+      const invoice = event.data.object as Stripe.Invoice;
+      const billingReason = invoice.billing_reason;
+      const customerId    = typeof invoice.customer === "string" ? invoice.customer : null;
+
+      if (customerId && billingReason === "subscription_cycle") {
+        // Extend expiry by 30 days from now and add 40 renewal credits
+        await ctx.runMutation(api.stripe.renewSubscription, { stripeCustomerId: customerId });
+        console.log("[stripe-webhook] Subscription renewed for customer", customerId);
+      }
+    }
+
+    // Renewal payment failed — deactivate until payment is resolved
+    if (event.type === "invoice.payment_failed") {
+      const invoice    = event.data.object as Stripe.Invoice;
+      const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
+
+      if (customerId) {
+        await ctx.runMutation(api.stripe.deactivateSubscription, { stripeCustomerId: customerId });
+        console.log("[stripe-webhook] Payment failed — subscription deactivated for customer", customerId);
       }
     }
 
