@@ -92,15 +92,14 @@ http.route({
       }
     }
 
-    // Renewal payment failed — deactivate until payment is resolved
+    // Renewal payment failed — log the event but do NOT deactivate immediately.
+    // Stripe's dunning process will retry the charge automatically (typically 3–4 times
+    // over several days). We only deactivate once Stripe gives up and fires
+    // customer.subscription.deleted, which is already handled above.
     if (event.type === "invoice.payment_failed") {
       const invoice    = event.data.object as Stripe.Invoice;
       const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
-
-      if (customerId) {
-        await ctx.runMutation(api.stripe.deactivateSubscription, { stripeCustomerId: customerId });
-        console.log("[stripe-webhook] Payment failed — subscription deactivated for customer", customerId);
-      }
+      console.log("[stripe-webhook] Payment failed (will retry via dunning) for customer", customerId);
     }
 
     return new Response(null, { status: 200 });

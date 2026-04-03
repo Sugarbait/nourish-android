@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.4.0";
+const BUILD_VERSION = "1.4.1";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -380,11 +380,12 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           clearInterval(poll);
 
           if (isActivated) {
-            // Merge Convex state into localStorage credit data
+            // Sync Convex state into localStorage — Convex is source of truth,
+            // so we replace (not add to) the local credit count.
             const existing = loadCredits();
             const merged = {
               ...existing,
-              credits: (existing.credits || 0) + (convexCredits?.mealCredits ?? 0),
+              credits: convexCredits?.mealCredits ?? existing.credits,
               subscription: sub?.active
                 ? { active: true, plan: 'monthly' as const, expiresAt: sub.expiresAt ? new Date(sub.expiresAt).toISOString() : null }
                 : existing.subscription,
