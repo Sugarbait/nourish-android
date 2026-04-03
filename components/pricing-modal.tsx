@@ -75,6 +75,10 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       setTimeout(() => onRequestSignIn?.(), 400);
       return;
     }
+    if (!credits.subscription?.active) {
+      toast({ title: 'Subscription required', description: 'You must be a subscriber to purchase credit top-ups.', variant: 'destructive' });
+      return;
+    }
     await checkout(pkg);
   };
 
@@ -235,8 +239,8 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
                     Never expires
                   </li>
                 </ul>
-                <Button size="sm" className="w-full" onClick={() => handleBuyPack(pkg)}>
-                  Buy Now
+                <Button size="sm" className="w-full" onClick={() => handleBuyPack(pkg)} disabled={!isGuest && !isSubscribed}>
+                  {!isGuest && !isSubscribed ? 'Subscribers Only' : 'Buy Now'}
                 </Button>
               </div>
             );

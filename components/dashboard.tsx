@@ -972,7 +972,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                       />
                     </div>
                     <div className="text-center">
-                      <SheetTitle>{isGuest ? 'Guest' : profile.name || 'Your Profile'}</SheetTitle>
+                      <SheetTitle className="flex items-center justify-center gap-2">
+                        {isGuest ? 'Guest' : profile.name || 'Your Profile'}
+                        {credits.subscription?.active && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/30">
+                            <Zap className="h-3 w-3" /> Subscriber
+                          </span>
+                        )}
+                      </SheetTitle>
                       {userEmail && (
                         <p className="text-xs text-muted-foreground mt-0.5">{userEmail}</p>
                       )}
@@ -1048,19 +1055,33 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           Free plan &bull; 1 free scan daily &bull; Subscribe to unlock AI coach
                         </p>
                       )}
-                      <SheetClose asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => { setIsPricingOpen(true); }}
-                        >
-                          <CreditCard className="h-3.5 w-3.5 mr-2" />
-                          {credits.subscription?.active ? 'Top Up Credits' : 'Subscribe'}
-                        </Button>
-                      </SheetClose>
-                      {credits.subscription?.active && userId && (
+                      {credits.subscription?.active ? (
+                        <SheetClose asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => { setIsPricingOpen(true); }}
+                          >
+                            <CreditCard className="h-3.5 w-3.5 mr-2" />
+                            Top Up Credits
+                          </Button>
+                        </SheetClose>
+                      ) : (
+                        <SheetClose asChild>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => { setIsPricingOpen(true); }}
+                          >
+                            <Zap className="h-3.5 w-3.5 mr-2" />
+                            Subscribe — $3.99/mo
+                          </Button>
+                        </SheetClose>
+                      )}
+                      {userId && (
                         <Button
                           type="button"
                           variant="ghost"
@@ -1068,7 +1089,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           className="w-full text-muted-foreground hover:text-foreground"
                           onClick={async () => {
                             if (!stripeCustomerId) {
-                              toast({ title: 'Could not open billing portal', description: 'No billing account found. Please contact support.', variant: 'destructive' });
+                              toast({ title: 'Could not open billing portal', description: 'No Stripe account linked. Subscribe first.', variant: 'destructive' });
                               return;
                             }
                             try {
@@ -1085,7 +1106,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           }}
                         >
                           <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                          Manage Subscription
+                          {credits.subscription?.active ? 'Manage / Cancel Subscription' : 'Manage Billing'}
                         </Button>
                       )}
                     </div>
