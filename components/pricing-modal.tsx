@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Zap, Star, Crown, Sparkles, RefreshCcw } from 'lucide-react';
 import { CREDIT_PACKAGES, CreditPackage, CreditData } from '@/lib/credits';
-import { redirectToStripeCheckout } from '@/lib/stripe-checkout';
 import { useToast } from '@/hooks/use-toast';
+import { useAction } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface PricingModalProps {
   open: boolean;
@@ -46,6 +47,26 @@ const PACK_ICON_COLORS: Record<CreditPackage, string> = {
 
 export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isGuest, onRequestSignIn, userId, userEmail }: PricingModalProps) {
   const { toast } = useToast();
+  const createCheckoutSession = useAction(api.stripeActions.createCheckoutSession);
+
+  const checkout = async (priceKey: string) => {
+    try {
+      const result = await createCheckoutSession({
+        priceKey,
+        successUrl: `${window.location.origin}/?checkout=success`,
+        cancelUrl:  `${window.location.origin}/`,
+        ...(userId        ? { userId }                    : {}),
+        ...(userEmail     ? { customerEmail: userEmail }  : {}),
+      });
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        toast({ title: 'Checkout failed', description: 'Could not open Stripe. Please try again.', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Checkout failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
+    }
+  };
 
   const handleBuyPack = async (pkg: CreditPackage) => {
     if (isGuest) {
@@ -54,7 +75,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       setTimeout(() => onRequestSignIn?.(), 400);
       return;
     }
-    await redirectToStripeCheckout(pkg, { userId, customerEmail: userEmail });
+    await checkout(pkg);
   };
 
   const handleSubscribe = async () => {
@@ -68,7 +89,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       toast({ title: 'Already subscribed', description: 'Your monthly plan is already active.' });
       return;
     }
-    await redirectToStripeCheckout('subscription', { userId, customerEmail: userEmail });
+    await checkout('subscription');
   };
 
   const isSubscribed = credits.subscription?.active === true;

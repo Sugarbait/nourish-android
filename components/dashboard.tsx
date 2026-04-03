@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.3.7";
+const BUILD_VERSION = "1.3.8";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -52,7 +52,7 @@ import { NoCreditsModal } from '@/components/no-credits-modal';
 import { GuestUpsellModal } from '@/components/guest-upsell-modal';
 import { GoalCelebration } from '@/components/goal-celebration';
 import { AuthModal } from '@/components/auth-modal';
-import { useAction } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -203,6 +203,7 @@ function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, child
 
 export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean }) {
   const { toast } = useToast();
+  const getBillingPortalUrl = useAction(api.stripeActions.getBillingPortalUrl);
   // Auth state from localStorage
   const [userId, setUserId] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -215,6 +216,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const isAuthenticated = !!userId;
   const isGuest = !isAuthenticated;
+  const stripeCustomerId = useQuery(api.stripe.getStripeCustomerId, userId ? { userId } : 'skip');
 
   // Read user display info from localStorage
   const userName = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_name') : null;
@@ -1064,26 +1066,20 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           size="sm"
                           className="w-full text-muted-foreground hover:text-foreground"
                           onClick={async () => {
+                            if (!stripeCustomerId) {
+                              toast({ title: 'Could not open billing portal', description: 'No billing account found. Please contact support.', variant: 'destructive' });
+                              return;
+                            }
                             try {
-                              const res = await fetch(
-                                `${process.env.NEXT_PUBLIC_CONVEX_URL}/stripe-portal`,
-                                {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    userId,
-                                    returnUrl: window.location.href,
-                                  }),
-                                }
-                              );
-                              const data = await res.json();
-                              if (data.url) {
-                                window.location.href = data.url;
-                              } else {
-                                toast({ title: 'Could not open billing portal', description: data.error ?? 'Please try again.', variant: 'destructive' });
+                              const result = await getBillingPortalUrl({
+                                stripeCustomerId,
+                                returnUrl: window.location.href,
+                              });
+                              if (result.url) {
+                                window.location.href = result.url;
                               }
-                            } catch {
-                              toast({ title: 'Could not open billing portal', description: 'Please try again later.', variant: 'destructive' });
+                            } catch (err: any) {
+                              toast({ title: 'Could not open billing portal', description: err.message || 'Please try again later.', variant: 'destructive' });
                             }
                           }}
                         >

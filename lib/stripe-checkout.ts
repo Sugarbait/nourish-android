@@ -19,7 +19,8 @@ export async function redirectToStripeCheckout(
   priceKey: StripePriceKey,
   options: CheckoutOptions = {}
 ): Promise<void> {
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  // HTTP actions are served from .convex.site, not .convex.cloud
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.replace('.convex.cloud', '.convex.site');
   if (!convexUrl) {
     console.error('NEXT_PUBLIC_CONVEX_URL is not set');
     return;
