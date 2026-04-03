@@ -143,14 +143,32 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     },
   });
 
-  const handleMicrosoftSignIn = () => {
+  const handleMicrosoftSignIn = async () => {
     const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '26865529-0a14-449e-8540-caddf613fa35';
     const redirectUri = window.location.origin + '/';
-    const nonce = Math.random().toString(36).substring(7);
-    sessionStorage.setItem('ms_oauth_nonce', nonce);
-    // Request id_token + token so we can fetch the Graph API profile photo
-    const msAuthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&response_type=id_token%20token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email User.Read')}&nonce=${encodeURIComponent(nonce)}&response_mode=fragment`;
-    window.location.href = msAuthUrl;
+
+    // Generate PKCE code verifier + challenge
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    const codeVerifier = btoa(String.fromCharCode(...Array.from(array)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier));
+    const codeChallenge = btoa(String.fromCharCode(...Array.from(new Uint8Array(digest))))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    sessionStorage.setItem('ms_pkce_verifier', codeVerifier);
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope: 'openid profile email User.Read',
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+      response_mode: 'query',
+    });
+
+    window.location.href = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

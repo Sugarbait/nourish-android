@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.3.4";
+const BUILD_VERSION = "1.3.5";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -203,8 +203,6 @@ function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, child
 
 export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean }) {
   const { toast } = useToast();
-  const createOrUpdateOAuthUser = useAction(api.auth.createOrUpdateOAuthUser);
-
   // Auth state from localStorage
   const [userId, setUserId] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -223,47 +221,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const userAvatar = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_avatar') : null;
   const userEmail = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_email') : null;
 
-  // Handle Microsoft OAuth redirect on dashboard — check hash for id_token
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash.includes('id_token=')) return;
-
-    const params = new URLSearchParams(hash.replace(/^#/, ''));
-    const idToken = params.get('id_token');
-    if (!idToken) return;
-
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
-
-    try {
-      const base64Url = idToken.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-      );
-      const decoded = JSON.parse(jsonPayload);
-
-      (async () => {
-        try {
-          const msEmail = decoded.preferred_username || decoded.email || decoded.upn;
-          const result = await createOrUpdateOAuthUser({
-            provider: 'microsoft',
-            providerId: decoded.oid || decoded.sub,
-            email: msEmail,
-            name: decoded.name,
-            avatarUrl: undefined,
-          });
-          localStorage.setItem('nourish_user_id', result.userId as string);
-          if (result.name) localStorage.setItem('nourish_user_name', result.name);
-          if (result.avatarUrl) localStorage.setItem('nourish_user_avatar', result.avatarUrl);
-          setUserId(result.userId as string);
-        } catch (err: any) {
-          toast({ title: 'Microsoft sign-in failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
-        }
-      })();
-    } catch (err) {
-      console.error('[Microsoft OAuth] Failed to decode token:', err);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Microsoft OAuth now uses PKCE auth code flow — redirect lands on '/' which handles
+  // the token exchange and then redirects here. No hash token handling needed.
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);

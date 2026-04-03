@@ -73,32 +73,59 @@ export default function SplashPage() {
     if (userId) { window.location.href = '/dashboard/'; return; }
   }, []);
 
-  // Handle Microsoft OAuth redirect — id_token lands in the URL hash on this page
+  // Handle Microsoft OAuth redirect — auth code lands in ?code= query param (PKCE flow)
   useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash.includes('id_token=')) return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const code = searchParams.get('code');
+    if (!code) return;
 
-    const params = new URLSearchParams(hash.replace(/^#/, ''));
-    const idToken = params.get('id_token');
-    if (!idToken) return;
-
-    // Clean the hash immediately
+    // Clean the URL immediately
     window.history.replaceState(null, '', window.location.pathname);
 
-    try {
-      const base64Url = idToken.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-      );
-      const decoded = JSON.parse(jsonPayload);
-      const msEmail = decoded.preferred_username || decoded.email || decoded.upn || '';
-      const msName = decoded.name || '';
-      const msId = decoded.oid || decoded.sub || '';
-      const accessToken = params.get('access_token');
+    const codeVerifier = sessionStorage.getItem('ms_pkce_verifier');
+    if (!codeVerifier) return;
+    sessionStorage.removeItem('ms_pkce_verifier');
 
-      // Try to fetch profile photo from Microsoft Graph API
-      (async () => {
+    const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '26865529-0a14-449e-8540-caddf613fa35';
+    const redirectUri = window.location.origin + '/';
+
+    (async () => {
+      try {
+        // Exchange authorization code for tokens
+        const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: clientId,
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: redirectUri,
+            code_verifier: codeVerifier,
+            scope: 'openid profile email User.Read',
+          }),
+        });
+
+        if (!tokenRes.ok) {
+          console.error('[Microsoft OAuth] Token exchange failed:', await tokenRes.text());
+          return;
+        }
+
+        const tokens = await tokenRes.json();
+        const idToken = tokens.id_token;
+        const accessToken = tokens.access_token;
+        if (!idToken) return;
+
+        const base64Url = idToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+        );
+        const decoded = JSON.parse(jsonPayload);
+        const msEmail = decoded.preferred_username || decoded.email || decoded.upn || '';
+        const msName = decoded.name || '';
+        const msId = decoded.oid || decoded.sub || '';
+
+        // Try to fetch profile photo from Microsoft Graph API
         let avatarUrl: string | undefined;
         if (accessToken) {
           try {
@@ -116,27 +143,23 @@ export default function SplashPage() {
           } catch { /* avatar fetch failed, continue without it */ }
         }
 
-        try {
-          const result = await createOrUpdateOAuthUser({
-            provider: 'microsoft',
-            providerId: msId,
-            email: msEmail,
-            name: msName,
-            avatarUrl,
-          });
-          localStorage.setItem('nourish_user_id', result.userId as string);
-          if (result.name) localStorage.setItem('nourish_user_name', result.name);
-          const finalAvatar = avatarUrl || result.avatarUrl;
-          if (finalAvatar) localStorage.setItem('nourish_user_avatar', finalAvatar);
-          if (msEmail) localStorage.setItem('nourish_user_email', msEmail);
-          window.location.href = '/dashboard/';
-        } catch (err) {
-          console.error('[Microsoft OAuth] Convex error:', err);
-        }
-      })();
-    } catch (err) {
-      console.error('[Microsoft OAuth] Failed to decode token:', err);
-    }
+        const result = await createOrUpdateOAuthUser({
+          provider: 'microsoft',
+          providerId: msId,
+          email: msEmail,
+          name: msName,
+          avatarUrl,
+        });
+        localStorage.setItem('nourish_user_id', result.userId as string);
+        if (result.name) localStorage.setItem('nourish_user_name', result.name);
+        const finalAvatar = avatarUrl || result.avatarUrl;
+        if (finalAvatar) localStorage.setItem('nourish_user_avatar', finalAvatar);
+        if (msEmail) localStorage.setItem('nourish_user_email', msEmail);
+        window.location.href = '/dashboard/';
+      } catch (err) {
+        console.error('[Microsoft OAuth] Failed:', err);
+      }
+    })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openSignUp = () => { setAuthTab('signup'); setAuthOpen(true); };
