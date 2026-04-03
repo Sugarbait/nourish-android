@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.2.9";
+const BUILD_VERSION = "1.3.0";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -357,6 +357,92 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         toast({ title: "Could not load saved data", variant: 'destructive' });
     }
     setIsMounted(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // After Stripe redirects back with ?checkout=success, poll Convex until the
+  // webhook has updated the credits/subscription, then sync into localStorage.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') !== 'success') return;
+
+    // Remove the query param so a refresh doesn't re-trigger the sync
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, '', cleanUrl);
+
+    // Poll Convex for up to 15s (webhook may take a moment to fire)
+    const currentUserId = localStorage.getItem('nourish_user_id');
+    const currentEmail  = localStorage.getItem('nourish_user_email');
+    if (!currentUserId && !currentEmail) return;
+
+    const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!CONVEX_URL) return;
+
+    let attempts = 0;
+    const MAX_ATTEMPTS = 10;
+    const INTERVAL_MS = 1500;
+
+    const poll = setInterval(async () => {
+      attempts++;
+      try {
+        // Query Convex for updated subscription state
+        const subRes = await fetch(`${CONVEX_URL}/api/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            path: 'stripe:getSubscription',
+            args: { userId: currentUserId ?? '' },
+            format: 'json',
+          }),
+        });
+        const subData = await subRes.json();
+        const sub = subData?.value;
+
+        // Query Convex for updated credits
+        const credRes = await fetch(`${CONVEX_URL}/api/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            path: 'stripe:getCreditsForSync',
+            args: { userId: currentUserId ?? '' },
+            format: 'json',
+          }),
+        });
+        const credData = await credRes.json();
+        const convexCredits = credData?.value;
+
+        const isActivated = sub?.active === true || (convexCredits && convexCredits.mealCredits > 0);
+
+        if (isActivated || attempts >= MAX_ATTEMPTS) {
+          clearInterval(poll);
+
+          if (isActivated) {
+            // Merge Convex state into localStorage credit data
+            const existing = loadCredits();
+            const merged = {
+              ...existing,
+              credits: (existing.credits || 0) + (convexCredits?.mealCredits ?? 0),
+              subscription: sub?.active
+                ? { active: true, plan: 'monthly' as const, expiresAt: sub.expiresAt ? new Date(sub.expiresAt).toISOString() : null }
+                : existing.subscription,
+            };
+            saveCredits(merged);
+            setCredits(merged);
+            toast({
+              title: '🎉 Payment successful!',
+              description: sub?.active
+                ? 'Your Nourish Pro subscription is now active.'
+                : 'Your credits have been added to your account.',
+            });
+          }
+        }
+      } catch (err) {
+        if (attempts >= MAX_ATTEMPTS) clearInterval(poll);
+      }
+    }, INTERVAL_MS);
+
+    return () => clearInterval(poll);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1725,6 +1811,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         onCreditsUpdate={(updated) => setCredits(updated)}
         isGuest={isGuest}
         onRequestSignIn={() => { setAuthModalTab('signin'); setIsAuthModalOpen(true); }}
+        userId={userId}
+        userEmail={userEmail}
       />
 
       {/* Goal Celebration */}
@@ -1746,6 +1834,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         onShowPricing={() => setIsPricingOpen(true)}
         isGuest={isGuest}
         onRequestSignIn={() => { setAuthModalTab('signin'); setIsAuthModalOpen(true); }}
+        userId={userId}
+        userEmail={userEmail}
       />
 
       {/* Footer */}

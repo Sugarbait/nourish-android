@@ -22,6 +22,8 @@ interface PricingModalProps {
   onCreditsUpdate: (data: CreditData) => void;
   isGuest?: boolean;
   onRequestSignIn?: () => void;
+  userId?: string | null;
+  userEmail?: string | null;
 }
 
 const PACK_ICONS: Record<CreditPackage, React.ReactNode> = {
@@ -42,7 +44,7 @@ const PACK_ICON_COLORS: Record<CreditPackage, string> = {
   pro:     'text-amber-400 bg-amber-500/10',
 };
 
-export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isGuest, onRequestSignIn }: PricingModalProps) {
+export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isGuest, onRequestSignIn, userId, userEmail }: PricingModalProps) {
   const { toast } = useToast();
 
   const handleBuyPack = async (pkg: CreditPackage) => {
@@ -52,7 +54,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       setTimeout(() => onRequestSignIn?.(), 400);
       return;
     }
-    await redirectToStripeCheckout(pkg);
+    await redirectToStripeCheckout(pkg, { userId, customerEmail: userEmail });
   };
 
   const handleSubscribe = async () => {
@@ -66,7 +68,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       toast({ title: 'Already subscribed', description: 'Your monthly plan is already active.' });
       return;
     }
-    await redirectToStripeCheckout('subscription');
+    await redirectToStripeCheckout('subscription', { userId, customerEmail: userEmail });
   };
 
   const isSubscribed = credits.subscription?.active === true;

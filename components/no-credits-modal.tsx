@@ -19,6 +19,8 @@ interface NoCreditsModalProps {
   isGuest?: boolean;
   /** Called when a guest clicks subscribe — should open sign-in modal */
   onRequestSignIn?: () => void;
+  userId?: string | null;
+  userEmail?: string | null;
 }
 
 const CONTENT = {
@@ -52,6 +54,8 @@ export function NoCreditsModal({
   onShowPricing,
   isGuest,
   onRequestSignIn,
+  userId,
+  userEmail,
 }: NoCreditsModalProps) {
   const { toast } = useToast();
   // 'closed' | 'opening' | 'open' | 'closing'
@@ -83,7 +87,7 @@ export function NoCreditsModal({
       close();
       return;
     }
-    await redirectToStripeCheckout('subscription');
+    await redirectToStripeCheckout('subscription', { userId, customerEmail: userEmail });
   };
 
   const handleShowPricing = () => {

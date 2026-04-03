@@ -19,8 +19,16 @@ function getStripe() {
   return stripePromise;
 }
 
+export interface CheckoutOptions {
+  /** Convex userId — passed as client_reference_id so the webhook can identify the user */
+  userId?: string | null;
+  /** User's email — pre-fills Stripe checkout and used as webhook fallback lookup */
+  customerEmail?: string | null;
+}
+
 export async function redirectToStripeCheckout(
-  priceKey: StripePriceKey
+  priceKey: StripePriceKey,
+  options: CheckoutOptions = {}
 ): Promise<void> {
   const stripe = await getStripe();
   if (!stripe) {
@@ -30,13 +38,15 @@ export async function redirectToStripeCheckout(
 
   const mode = priceKey === 'subscription' ? 'subscription' : 'payment';
   const successUrl = `${window.location.origin}/?checkout=success`;
-  const cancelUrl = `${window.location.origin}/`;
+  const cancelUrl  = `${window.location.origin}/`;
 
   const { error } = await stripe.redirectToCheckout({
     lineItems: [{ price: STRIPE_PRICES[priceKey], quantity: 1 }],
     mode,
     successUrl,
     cancelUrl,
+    ...(options.customerEmail ? { customerEmail: options.customerEmail } : {}),
+    ...(options.userId        ? { clientReferenceId: options.userId }     : {}),
   });
 
   if (error) {
