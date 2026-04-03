@@ -15,6 +15,7 @@ export default defineSchema({
     verificationToken: v.optional(v.string()),
     verificationTokenExpiry: v.optional(v.number()),
     createdAt: v.optional(v.number()),
+    stripeCustomerId: v.optional(v.string()),
     // Legacy fields from @convex-dev/auth — kept for backward compatibility with existing data
     image: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),

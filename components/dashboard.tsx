@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.3.1";
+const BUILD_VERSION = "1.3.2";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -35,6 +35,7 @@ import {
   Zap,
   CreditCard,
   ChevronDown,
+  ExternalLink,
 } from 'lucide-react';
 import {
   CreditData,
@@ -1102,9 +1103,43 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           onClick={() => { setIsPricingOpen(true); }}
                         >
                           <CreditCard className="h-3.5 w-3.5 mr-2" />
-                          {credits.subscription?.active ? 'Top Up' : 'Subscribe'}
+                          {credits.subscription?.active ? 'Top Up Credits' : 'Subscribe'}
                         </Button>
                       </SheetClose>
+                      {credits.subscription?.active && userId && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-muted-foreground hover:text-foreground"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(
+                                `${process.env.NEXT_PUBLIC_CONVEX_URL}/stripe-portal`,
+                                {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    userId,
+                                    returnUrl: window.location.href,
+                                  }),
+                                }
+                              );
+                              const data = await res.json();
+                              if (data.url) {
+                                window.location.href = data.url;
+                              } else {
+                                toast({ title: 'Could not open billing portal', description: data.error ?? 'Please try again.', variant: 'destructive' });
+                              }
+                            } catch {
+                              toast({ title: 'Could not open billing portal', description: 'Please try again later.', variant: 'destructive' });
+                            }
+                          }}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                          Manage Subscription
+                        </Button>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between pt-2 pb-1">

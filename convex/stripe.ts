@@ -20,14 +20,12 @@ async function resolveUserId(
   userId: string,
   email: string
 ): Promise<Id<"users"> | null> {
-  // Primary: direct document lookup (userId is a Convex Id string)
   if (userId) {
     try {
       const user = await ctx.db.get(userId as Id<"users">);
       if (user) return user._id;
     } catch { /* invalid id format — fall through */ }
   }
-  // Fallback: lookup by email
   if (email) {
     const user = await ctx.db
       .query("users")
@@ -45,12 +43,18 @@ export const activateSubscription = mutation({
   args: {
     userId: v.string(),
     customerEmail: v.string(),
+    stripeCustomerId: v.optional(v.string()),
   },
-  handler: async (ctx, { userId, customerEmail }) => {
+  handler: async (ctx, { userId, customerEmail, stripeCustomerId }) => {
     const uid = await resolveUserId(ctx, userId, customerEmail);
     if (!uid) {
       console.error("[stripe] User not found:", { userId, customerEmail });
       return;
+    }
+
+    // Save stripeCustomerId on the user row for future portal sessions
+    if (stripeCustomerId) {
+      await ctx.db.patch(uid, { stripeCustomerId });
     }
 
     // Upsert subscription row
@@ -71,7 +75,7 @@ export const activateSubscription = mutation({
       });
     }
 
-    // Add 40 credits to the credits pool
+    // Add 40 credits
     const today = new Date().toISOString().slice(0, 10);
     const credits = await ctx.db
       .query("credits")
@@ -102,13 +106,19 @@ export const addCreditPack = mutation({
   args: {
     userId: v.string(),
     customerEmail: v.string(),
-    amountTotal: v.number(), // Stripe amount in cents, e.g. 199
+    amountTotal: v.number(),
+    stripeCustomerId: v.optional(v.string()),
   },
-  handler: async (ctx, { userId, customerEmail, amountTotal }) => {
+  handler: async (ctx, { userId, customerEmail, amountTotal, stripeCustomerId }) => {
     const uid = await resolveUserId(ctx, userId, customerEmail);
     if (!uid) {
       console.error("[stripe] User not found:", { userId, customerEmail });
       return;
+    }
+
+    // Save stripeCustomerId if present
+    if (stripeCustomerId) {
+      await ctx.db.patch(uid, { stripeCustomerId });
     }
 
     const amount = AMOUNT_TO_CREDITS[amountTotal];
@@ -141,7 +151,35 @@ export const addCreditPack = mutation({
 });
 
 // ---------------------------------------------------------------------------
-// Query: get subscription state for a user (called on checkout success)
+// Called by webhook on customer.subscription.deleted (cancellation)
+// ---------------------------------------------------------------------------
+export const deactivateSubscription = mutation({
+  args: { stripeCustomerId: v.string() },
+  handler: async (ctx, { stripeCustomerId }) => {
+    // Find the user by stripeCustomerId
+    const user = await ctx.db
+      .query("users")
+      .filter((q: any) => q.eq(q.field("stripeCustomerId"), stripeCustomerId))
+      .first();
+
+    if (!user) {
+      console.error("[stripe] No user found for stripeCustomerId:", stripeCustomerId);
+      return;
+    }
+
+    const sub = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
+      .first();
+
+    if (sub) {
+      await ctx.db.patch(sub._id, { active: false, plan: null });
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Query: get subscription state (called on checkout success)
 // ---------------------------------------------------------------------------
 export const getSubscription = query({
   args: { userId: v.string() },
@@ -160,7 +198,7 @@ export const getSubscription = query({
 });
 
 // ---------------------------------------------------------------------------
-// Query: get credits for a user (called on checkout success to sync localStorage)
+// Query: get credits (called on checkout success to sync localStorage)
 // ---------------------------------------------------------------------------
 export const getCreditsForSync = query({
   args: { userId: v.string() },
@@ -172,6 +210,22 @@ export const getCreditsForSync = query({
         .withIndex("by_userId", (q: any) => q.eq("userId", userId as Id<"users">))
         .first();
       return credits ?? null;
+    } catch {
+      return null;
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Query: get the Stripe customer ID for a user (used to open billing portal)
+// ---------------------------------------------------------------------------
+export const getStripeCustomerId = query({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    if (!userId) return null;
+    try {
+      const user = await ctx.db.get(userId as Id<"users">);
+      return user?.stripeCustomerId ?? null;
     } catch {
       return null;
     }
