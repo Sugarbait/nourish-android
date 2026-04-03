@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, Sparkles, Check, Zap, RefreshCcw } from 'lucide-react';
-import { CreditData, activateSubscription, saveCredits } from '@/lib/credits';
+import { CreditData } from '@/lib/credits';
+import { redirectToStripeCheckout } from '@/lib/stripe-checkout';
 import { useToast } from '@/hooks/use-toast';
 
 interface NoCreditsModalProps {
@@ -47,7 +48,7 @@ export function NoCreditsModal({
   onOpenChange,
   type,
   credits,
-  onCreditsUpdate,
+  onCreditsUpdate: _onCreditsUpdate,
   onShowPricing,
   isGuest,
   onRequestSignIn,
@@ -71,7 +72,7 @@ export function NoCreditsModal({
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (isGuest) {
       close();
       setTimeout(() => onRequestSignIn?.(), 400);
@@ -82,14 +83,7 @@ export function NoCreditsModal({
       close();
       return;
     }
-    const updated = activateSubscription(credits);
-    saveCredits(updated);
-    onCreditsUpdate(updated);
-    toast({
-      title: '🎉 Welcome to Nourish Pro!',
-      description: 'You now have 40 credits. They roll over every month — never go to waste.',
-    });
-    close();
+    await redirectToStripeCheckout('subscription');
   };
 
   const handleShowPricing = () => {

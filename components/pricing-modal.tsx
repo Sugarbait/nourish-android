@@ -11,7 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Zap, Star, Crown, Sparkles, RefreshCcw } from 'lucide-react';
-import { CREDIT_PACKAGES, CreditPackage, CreditData, addCreditPackage, activateSubscription, saveCredits } from '@/lib/credits';
+import { CREDIT_PACKAGES, CreditPackage, CreditData } from '@/lib/credits';
+import { redirectToStripeCheckout } from '@/lib/stripe-checkout';
 import { useToast } from '@/hooks/use-toast';
 
 interface PricingModalProps {
@@ -44,28 +45,17 @@ const PACK_ICON_COLORS: Record<CreditPackage, string> = {
 export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isGuest, onRequestSignIn }: PricingModalProps) {
   const { toast } = useToast();
 
-  const handleBuyPack = (pkg: CreditPackage) => {
+  const handleBuyPack = async (pkg: CreditPackage) => {
     if (isGuest) {
       toast({ title: 'Sign in required', description: 'Please sign in to purchase credits.' });
       onOpenChange(false);
       setTimeout(() => onRequestSignIn?.(), 400);
       return;
     }
-    if (!credits.subscription?.active) {
-      toast({ title: 'Subscription required', description: 'Subscribe to Monthly Pro first before topping up with credit packs.' });
-      return;
-    }
-    const updated = addCreditPackage(credits, pkg);
-    saveCredits(updated);
-    onCreditsUpdate(updated);
-    const pack = CREDIT_PACKAGES[pkg];
-    toast({
-      title: `${pack.label} Pack Activated!`,
-      description: `Added ${pack.credits} credits to your account. Use them for meal scans or AI coaching.`,
-    });
+    await redirectToStripeCheckout(pkg);
   };
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (isGuest) {
       toast({ title: 'Sign in required', description: 'Please sign in to subscribe.' });
       onOpenChange(false);
@@ -76,13 +66,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       toast({ title: 'Already subscribed', description: 'Your monthly plan is already active.' });
       return;
     }
-    const updated = activateSubscription(credits);
-    saveCredits(updated);
-    onCreditsUpdate(updated);
-    toast({
-      title: 'Monthly Pro Activated!',
-      description: 'Added 40 credits to your pool. Enjoy Nourish Pro! Renews in 30 days.',
-    });
+    await redirectToStripeCheckout('subscription');
   };
 
   const isSubscribed = credits.subscription?.active === true;
