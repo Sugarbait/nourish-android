@@ -1,5 +1,3 @@
-import { loadStripe } from '@stripe/stripe-js';
-
 // Stripe price IDs
 export const STRIPE_PRICES = {
   subscription: 'price_1TIBSQJodftDQSSFFtgp0U7r', // $3.99/month
@@ -9,15 +7,6 @@ export const STRIPE_PRICES = {
 } as const;
 
 export type StripePriceKey = keyof typeof STRIPE_PRICES;
-
-let stripePromise: ReturnType<typeof loadStripe> | null = null;
-
-function getStripe() {
-  if (!stripePromise) {
-    stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-  }
-  return stripePromise;
-}
 
 export interface CheckoutOptions {
   /** Convex userId — passed as client_reference_id so the webhook can identify the user */
@@ -30,9 +19,9 @@ export async function redirectToStripeCheckout(
   priceKey: StripePriceKey,
   options: CheckoutOptions = {}
 ): Promise<void> {
-  const stripe = await getStripe();
-  if (!stripe) {
-    console.error('Stripe failed to load');
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  if (!convexUrl) {
+    console.error('NEXT_PUBLIC_CONVEX_URL is not set');
     return;
   }
 
@@ -40,16 +29,27 @@ export async function redirectToStripeCheckout(
   const successUrl = `${window.location.origin}/?checkout=success`;
   const cancelUrl  = `${window.location.origin}/`;
 
-  const { error } = await stripe.redirectToCheckout({
-    lineItems: [{ price: STRIPE_PRICES[priceKey], quantity: 1 }],
-    mode,
-    successUrl,
-    cancelUrl,
-    ...(options.customerEmail ? { customerEmail: options.customerEmail } : {}),
-    ...(options.userId        ? { clientReferenceId: options.userId }     : {}),
-  });
+  try {
+    const res = await fetch(`${convexUrl}/stripe-checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceId: STRIPE_PRICES[priceKey],
+        mode,
+        successUrl,
+        cancelUrl,
+        ...(options.customerEmail ? { customerEmail: options.customerEmail } : {}),
+        ...(options.userId        ? { userId: options.userId }               : {}),
+      }),
+    });
 
-  if (error) {
-    console.error('Stripe checkout error:', error.message);
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      console.error('Stripe checkout error:', data.error);
+    }
+  } catch (err) {
+    console.error('Stripe checkout fetch failed:', err);
   }
 }

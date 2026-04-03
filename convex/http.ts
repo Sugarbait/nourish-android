@@ -160,6 +160,74 @@ http.route({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// POST /stripe-checkout
+// Creates a Stripe Checkout Session server-side and returns the hosted URL.
+//
+// Body: { priceId: string, mode: 'payment'|'subscription', userId?: string,
+//         customerEmail?: string, successUrl: string, cancelUrl: string }
+// Returns: { url: string }
+// ---------------------------------------------------------------------------
+http.route({
+  path: "/stripe-checkout",
+  method: "POST",
+  handler: httpAction(async (_ctx, req) => {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      return new Response(JSON.stringify({ error: "Server misconfiguration" }), {
+        status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    }
+
+    let body: { priceId?: string; mode?: string; userId?: string; customerEmail?: string; successUrl?: string; cancelUrl?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    }
+
+    const { priceId, mode, userId, customerEmail, successUrl, cancelUrl } = body;
+    if (!priceId || !mode || !successUrl || !cancelUrl) {
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    }
+
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
+
+    const session = await stripe.checkout.sessions.create({
+      mode: mode as "payment" | "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      ...(customerEmail ? { customer_email: customerEmail } : {}),
+      ...(userId ? { client_reference_id: userId } : {}),
+    });
+
+    return new Response(JSON.stringify({ url: session.url }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    });
+  }),
+});
+
+http.route({
+  path: "/stripe-checkout",
+  method: "OPTIONS",
+  handler: httpAction(async (_ctx, _req) => {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    });
+  }),
+});
+
 // Allow CORS preflight for /stripe-portal so the browser can POST from any origin
 http.route({
   path: "/stripe-portal",
