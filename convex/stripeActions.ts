@@ -17,7 +17,7 @@ const STRIPE_PRICES: Record<string, string> = {
 // clearly rather than a cryptic "tried N times" retry message.
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 } else {
   console.error("[stripeActions] STRIPE_SECRET_KEY is not set in Convex environment variables.");
 }

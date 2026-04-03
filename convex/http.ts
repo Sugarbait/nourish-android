@@ -6,7 +6,7 @@ import { api } from "./_generated/api";
 // Module-level Stripe singleton — created once, reused across all HTTP handlers.
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 } else {
   console.error("[http] STRIPE_SECRET_KEY is not set in Convex environment variables.");
 }
