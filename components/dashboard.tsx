@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.3.6";
+const BUILD_VERSION = "1.3.7";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -482,12 +482,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intake, dailyData.water, dateKey, isMounted]);
 
-  // Auto-scroll to results when loading starts or results arrive
-  useEffect(() => {
-    if (isLoadingAI || aiResults.length > 0) {
-      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
-    }
-  }, [isLoadingAI, aiResults.length]);
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -573,7 +567,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               setImagePreview(dataUri);
               stopCamera();
               runFoodRecognition(dataUri);
-              setTimeout(() => calorieRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
           }
       }
   }
@@ -599,7 +592,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         const dataUri = reader.result as string;
         setImagePreview(dataUri);
         runFoodRecognition(dataUri);
-        setTimeout(() => calorieRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
       };
       reader.readAsDataURL(file);
     }
@@ -1367,34 +1359,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
             <Card className="shadow-xl rounded-2xl border-border/50">
                 <CardHeader>
-                     <CardTitle className="flex items-center gap-2 text-xl font-bold"><GlassWater className="text-blue-400"/> Water Tracker</CardTitle>
-                    <CardDescription>Log your water intake for {format(selectedDate, 'PPP')}.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 pb-5">
-                    <div className="flex justify-center gap-2 flex-wrap">
-                        {Array.from({ length: goals.water }).map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => handleWaterChange(i < dailyData.water ? -(dailyData.water - i) : i + 1 - dailyData.water)}
-                                className={`w-10 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                                    i < dailyData.water
-                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105'
-                                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                                }`}
-                            >
-                                <GlassWater className="h-5 w-5" />
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex justify-between items-center text-sm px-1">
-                        <span className="text-muted-foreground font-medium">{dailyData.water} of {goals.water} glasses</span>
-                        {dailyData.water >= goals.water && <span className="text-blue-400 font-semibold">✨ Great hydration!</span>}
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="shadow-xl rounded-2xl border-border/50">
-                <CardHeader>
                     <CardTitle className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-2 text-xl font-bold"><Utensils className="text-primary"/> Meal History</div>
                         <div className="flex items-center gap-2">
@@ -1462,8 +1426,36 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     )}
                 </CardContent>
             </Card>
+
+            <Card className="shadow-xl rounded-2xl border-border/50">
+                <CardHeader>
+                     <CardTitle className="flex items-center gap-2 text-xl font-bold"><GlassWater className="text-blue-400"/> Water Tracker</CardTitle>
+                    <CardDescription>Log your water intake for {format(selectedDate, 'PPP')}.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 pb-5">
+                    <div className="flex justify-center gap-2 flex-wrap">
+                        {Array.from({ length: goals.water }).map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleWaterChange(i < dailyData.water ? -(dailyData.water - i) : i + 1 - dailyData.water)}
+                                className={`w-10 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                                    i < dailyData.water
+                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-105'
+                                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                                }`}
+                            >
+                                <GlassWater className="h-5 w-5" />
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex justify-between items-center text-sm px-1">
+                        <span className="text-muted-foreground font-medium">{dailyData.water} of {goals.water} glasses</span>
+                        {dailyData.water >= goals.water && <span className="text-blue-400 font-semibold">✨ Great hydration!</span>}
+                    </div>
+                </CardContent>
+            </Card>
           </div>
-          
+
           <div className="md:col-span-2 lg:col-span-1 space-y-6">
 
             {/* ── My Goals Card ── */}
