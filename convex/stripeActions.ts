@@ -4,20 +4,19 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import Stripe from "stripe";
 
-let stripe: Stripe;
-if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
-}
-
 // Price IDs
-const STRIPE_PRICES = {
+const STRIPE_PRICES: Record<string, string> = {
   subscription: "price_1TIBSQJodftDQSSFFtgp0U7r",
   starter:      "price_1TIBVLJodftDQSSFfLLMr6QE",
   value:        "price_1TIBY2JodftDQSSFXF5N9ZLn",
   pro:          "price_1TIBd9JodftDQSSFGsriUBlI",
-} as const;
+};
 
-export type StripePriceKey = keyof typeof STRIPE_PRICES;
+function getStripe(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY is not set in Convex environment variables.");
+  return new Stripe(key, { apiVersion: "2024-06-20" });
+}
 
 /** Create a Stripe Checkout Session and return its URL */
 export const createCheckoutSession = action({
@@ -28,28 +27,29 @@ export const createCheckoutSession = action({
     userId:        v.optional(v.string()),
     customerEmail: v.optional(v.string()),
   },
-  handler: async (_ctx, args): Promise<{ url: string | null }> => {
-    if (!stripe) {
-      throw new Error("Stripe is not configured — STRIPE_SECRET_KEY missing.");
+  handler: async (_ctx, args): Promise<{ url: string | null; error?: string }> => {
+    try {
+      const stripe = getStripe();
+
+      const priceId = STRIPE_PRICES[args.priceKey];
+      if (!priceId) return { url: null, error: `Unknown price key: ${args.priceKey}` };
+
+      const mode = args.priceKey === "subscription" ? "subscription" : "payment";
+
+      const session = await stripe.checkout.sessions.create({
+        mode,
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: args.successUrl,
+        cancel_url:  args.cancelUrl,
+        ...(args.customerEmail ? { customer_email: args.customerEmail } : {}),
+        ...(args.userId        ? { client_reference_id: args.userId }   : {}),
+      });
+
+      return { url: session.url };
+    } catch (err: any) {
+      console.error("[stripeActions] createCheckoutSession error:", err.message);
+      return { url: null, error: err.message };
     }
-
-    const priceId = STRIPE_PRICES[args.priceKey as StripePriceKey];
-    if (!priceId) {
-      throw new Error(`Unknown price key: ${args.priceKey}`);
-    }
-
-    const mode = args.priceKey === "subscription" ? "subscription" : "payment";
-
-    const session = await stripe.checkout.sessions.create({
-      mode,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: args.successUrl,
-      cancel_url:  args.cancelUrl,
-      ...(args.customerEmail ? { customer_email: args.customerEmail } : {}),
-      ...(args.userId        ? { client_reference_id: args.userId }   : {}),
-    });
-
-    return { url: session.url };
   },
 });
 
@@ -60,9 +60,7 @@ export const getBillingPortalUrl = action({
     returnUrl:        v.string(),
   },
   handler: async (_ctx, args): Promise<{ url: string }> => {
-    if (!stripe) {
-      throw new Error("Stripe is not configured — STRIPE_SECRET_KEY missing.");
-    }
+    const stripe = getStripe();
 
     const session = await stripe.billingPortal.sessions.create({
       customer:   args.stripeCustomerId,

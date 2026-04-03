@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.3.8";
+const BUILD_VERSION = "1.3.9";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';

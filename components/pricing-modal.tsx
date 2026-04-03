@@ -61,7 +61,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       if (result.url) {
         window.location.href = result.url;
       } else {
-        toast({ title: 'Checkout failed', description: 'Could not open Stripe. Please try again.', variant: 'destructive' });
+        toast({ title: 'Checkout failed', description: result.error || 'Could not open Stripe. Please try again.', variant: 'destructive' });
       }
     } catch (err: any) {
       toast({ title: 'Checkout failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
