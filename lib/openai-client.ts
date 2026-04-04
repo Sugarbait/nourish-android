@@ -108,6 +108,31 @@ export async function suggestRecipes(goals: any, intake: any, waterIntake: numbe
   }
 }
 
+export async function lookupFoodNutrition(foodName: string) {
+  const contents = [
+    {
+      role: 'user',
+      parts: [
+        {
+          text: `Estimate the nutritional content for a typical single serving of "${foodName}". Respond with valid JSON only, no markdown: {"name": string, "calories": number, "protein": number, "carbs": number, "fat": number}`,
+        },
+      ],
+    },
+  ];
+
+  const systemInstruction =
+    'You are a nutritional expert. Estimate calories and macros for a typical serving of any food. Always respond with valid JSON only, no markdown code blocks.';
+
+  try {
+    const response = await callAI(contents, systemInstruction);
+    const cleanResponse = response.replace(/```json\s*|\s*```/g, '').trim();
+    return JSON.parse(cleanResponse);
+  } catch (error) {
+    console.error('Food nutrition lookup error:', error);
+    throw new Error('Failed to look up nutrition. Please try again.');
+  }
+}
+
 export async function chatWithCoach(
   messages: any[],
   mealHistory: any[],

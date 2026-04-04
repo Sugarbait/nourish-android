@@ -1,6 +1,6 @@
 'use client';
 
-import { recognizeFoodFromImage, suggestRecipes, chatWithCoach } from '@/lib/openai-client';
+import { recognizeFoodFromImage, suggestRecipes, chatWithCoach, lookupFoodNutrition } from '@/lib/openai-client';
 import type { RecognizeFoodOutput } from '@/ai/types/food';
 import type { SuggestRecipesOutput } from '@/ai/types/recipe';
 import type { ChatWithCoachOutput } from '@/ai/types/chat';
@@ -30,6 +30,15 @@ export async function getRecipeSuggestions(input: {
   } catch (error) {
     console.error('Error in getRecipeSuggestions:', error);
     throw new Error('Failed to suggest recipes. Please try again.');
+  }
+}
+
+export async function getNutritionForFood(foodName: string): Promise<{ name: string; calories: number; protein: number; carbs: number; fat: number }> {
+  try {
+    return await lookupFoodNutrition(foodName);
+  } catch (error) {
+    console.error('Error in getNutritionForFood:', error);
+    throw new Error('Failed to look up nutrition. Please try again.');
   }
 }
 

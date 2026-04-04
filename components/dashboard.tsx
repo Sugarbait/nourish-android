@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.4.7";
+const BUILD_VERSION = "1.4.9";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -36,6 +36,9 @@ import {
   CreditCard,
   ChevronDown,
   ExternalLink,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 import {
   CreditData,
@@ -59,7 +62,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format, addDays, subDays, startOfToday } from 'date-fns';
 
-import { getFoodRecognition, getRecipeSuggestions, getCoachResponse } from '@/app/client-actions';
+import { getFoodRecognition, getRecipeSuggestions, getCoachResponse, getNutritionForFood } from '@/app/client-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
@@ -270,6 +273,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const [celebrationGoal, setCelebrationGoal] = useState<{ name: string; emoji: string; message: string } | null>(null);
   const celebratedRef = useRef<Set<string>>(new Set());
   const notifiedRef = useRef<Set<string>>(new Set());
+
+  const [editingFoodItem, setEditingFoodItem] = useState<{ mealId: string; itemIndex: number; value: string } | null>(null);
+  const [isLookingUpNutrition, setIsLookingUpNutrition] = useState(false);
 
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
   const dailyData: DailyData = history[dateKey] || { meals: [], water: 0 };
@@ -621,6 +627,38 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         water: current[dateKey]?.water || 0,
       },
     }));
+  };
+
+  const confirmFoodEdit = async (mealId: string, itemIndex: number) => {
+    if (!editingFoodItem) return;
+    const newName = editingFoodItem.value.trim();
+    if (!newName) { setEditingFoodItem(null); return; }
+    setIsLookingUpNutrition(true);
+    try {
+      const nutrition = await getNutritionForFood(newName);
+      setHistory(current => ({
+        ...current,
+        [dateKey]: {
+          ...current[dateKey],
+          water: current[dateKey]?.water || 0,
+          meals: (current[dateKey]?.meals || []).map(m => {
+            if (m.id !== mealId) return m;
+            const updatedItems = m.items.map((item, idx) =>
+              idx === itemIndex
+                ? { ...item, name: nutrition.name || newName, calories: nutrition.calories, protein: nutrition.protein, carbs: nutrition.carbs, fat: nutrition.fat }
+                : item
+            );
+            return { ...m, items: updatedItems };
+          }),
+        },
+      }));
+      toast({ title: 'Updated!', description: `Nutrition recalculated for "${nutrition.name || newName}".` });
+    } catch {
+      toast({ title: 'Lookup failed', description: 'Could not fetch nutrition. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsLookingUpNutrition(false);
+      setEditingFoodItem(null);
+    }
   };
 
   const getMealTypeByTime = (): MealType => {
@@ -1434,9 +1472,45 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                     <AccordionContent>
                                         <ul className="space-y-2 pl-2">
                                             {meal.items.map((item, index) => (
-                                                <li key={index} className="flex justify-between text-sm">
-                                                    <span>{item.name}</span>
-                                                    <span className="text-muted-foreground">{item.calories} kcal</span>
+                                                <li key={index} className="flex justify-between items-center text-sm gap-2">
+                                                    {editingFoodItem?.mealId === meal.id && editingFoodItem?.itemIndex === index ? (
+                                                        <div className="flex items-center gap-1 flex-1">
+                                                            <input
+                                                                className="flex-1 h-7 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                                                                value={editingFoodItem.value}
+                                                                onChange={e => setEditingFoodItem({ ...editingFoodItem, value: e.target.value })}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === 'Enter') confirmFoodEdit(meal.id, index);
+                                                                    if (e.key === 'Escape') setEditingFoodItem(null);
+                                                                }}
+                                                                autoFocus
+                                                                disabled={isLookingUpNutrition}
+                                                            />
+                                                            <button
+                                                                className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted disabled:opacity-50"
+                                                                onClick={() => confirmFoodEdit(meal.id, index)}
+                                                                disabled={isLookingUpNutrition}
+                                                            >
+                                                                {isLookingUpNutrition ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-green-500" />}
+                                                            </button>
+                                                            <button
+                                                                className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted disabled:opacity-50"
+                                                                onClick={() => setEditingFoodItem(null)}
+                                                                disabled={isLookingUpNutrition}
+                                                            >
+                                                                <X className="h-3.5 w-3.5 text-muted-foreground" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            className="flex items-center gap-1.5 text-left flex-1 group hover:text-primary transition-colors"
+                                                            onClick={() => setEditingFoodItem({ mealId: meal.id, itemIndex: index, value: item.name })}
+                                                        >
+                                                            <span>{item.name}</span>
+                                                            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
+                                                        </button>
+                                                    )}
+                                                    <span className="text-muted-foreground shrink-0">{item.calories} kcal</span>
                                                 </li>
                                             ))}
                                         </ul>
