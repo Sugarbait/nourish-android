@@ -100,7 +100,7 @@ export async function suggestRecipes(goals: any, intake: any, waterIntake: numbe
   ];
 
   const systemInstruction =
-    'You are a nutritional expert. Suggest recipes based on remaining daily macros. Always respond with valid JSON only, no markdown code blocks.';
+    'You are a nutritional expert. Suggest healthy and nutritious recipes based on remaining daily macros. Ensure the recipes use wholesome ingredients and avoid excessive processed sugars or unhealthy fats. Always respond with valid JSON only, no markdown code blocks.';
 
   try {
     const response = await callAI(contents, systemInstruction);

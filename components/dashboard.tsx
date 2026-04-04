@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.5";
+const BUILD_VERSION = "1.5.6";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -836,6 +836,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   };
   
   const handleGetRecipeSuggestions = async () => {
+    if (!isGuest) {
+      if (!credits.subscription?.active) {
+        setNoCreditsType('ai');
+        setNoCreditsOpen(true);
+        return;
+      }
+      const updatedCredits = consumeAICredit(credits);
+      if (!updatedCredits) {
+        setNoCreditsType('ai');
+        setNoCreditsOpen(true);
+        return;
+      }
+      saveCredits(updatedCredits);
+      setCredits(updatedCredits);
+    }
+
     setIsLoadingRecipes(true);
     setRecipeSuggestions([]);
     try {
