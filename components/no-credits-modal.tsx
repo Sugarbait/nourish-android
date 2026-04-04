@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, Sparkles, Check, Zap, RefreshCcw } from 'lucide-react';
 import { CreditData } from '@/lib/credits';
-import { redirectToStripeCheckout } from '@/lib/stripe-checkout';
+import { useAction } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface NoCreditsModalProps {
@@ -39,7 +40,7 @@ const CONTENT = {
 };
 
 const PERKS = [
-  '40 credits/mo — use for scans or AI coaching',
+  '300 credits/mo — use for scans or AI coaching',
   'AI nutritional coach access included',
   'Credits roll over — never lose what you earn',
   'Cancel anytime, no hidden fees',
@@ -58,21 +59,21 @@ export function NoCreditsModal({
   userEmail,
 }: NoCreditsModalProps) {
   const { toast } = useToast();
+  const createCheckoutSession = useAction(api.stripeActions.createCheckoutSession);
   // 'closed' | 'opening' | 'open' | 'closing'
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open' | 'closing'>('closed');
 
   useEffect(() => {
-    if (open && phase === 'closed') {
+    if (open) {
       setPhase('opening');
       const t = setTimeout(() => setPhase('open'), 20); // allow CSS to register initial state
       return () => clearTimeout(t);
-    }
-    if (!open && (phase === 'open' || phase === 'opening')) {
-      setPhase('closing');
+    } else {
+      setPhase(prev => (prev === 'closed' ? 'closed' : 'closing'));
       const t = setTimeout(() => setPhase('closed'), 380);
       return () => clearTimeout(t);
     }
-  }, [open, phase]);
+  }, [open]);
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -87,7 +88,22 @@ export function NoCreditsModal({
       close();
       return;
     }
-    await redirectToStripeCheckout('subscription', { userId, customerEmail: userEmail });
+    try {
+      const result = await createCheckoutSession({
+        priceKey: 'subscription',
+        successUrl: `${window.location.origin}/?checkout=success`,
+        cancelUrl:  `${window.location.origin}/`,
+        ...(userId    ? { userId }                   : {}),
+        ...(userEmail ? { customerEmail: userEmail } : {}),
+      });
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        toast({ title: 'Checkout failed', description: result.error || 'Could not open Stripe.', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Checkout failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
+    }
   };
 
   const handleShowPricing = () => {
