@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.10";
+const BUILD_VERSION = "1.5.11";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -285,6 +285,21 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
   const dailyData: DailyData = history[dateKey] || { meals: [], water: 0 };
+  
+  const convexSetWater = useMutation(api.waterLogs.setWaterGlasses);
+  const convexWaterData = useQuery(api.waterLogs.getWaterForDate, !isGuest && userId ? { userId: userId as any, date: dateKey } : 'skip');
+
+  // Hydrate water from Convex
+  useEffect(() => {
+    if (convexWaterData !== undefined) {
+      setHistory(current => {
+        const currentWater = current[dateKey]?.water || 0;
+        if (currentWater === convexWaterData) return current; // No change needed
+        
+        return { ...current, [dateKey]: { meals: current[dateKey]?.meals || [], water: convexWaterData } };
+      });
+    }
+  }, [convexWaterData, dateKey]);
 
   const manualForm = useForm<z.infer<typeof manualFoodFormSchema>>({
     resolver: zodResolver(manualFoodFormSchema),
@@ -901,6 +916,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     setHistory(current => {
         const currentWater = current[dateKey]?.water || 0;
         const newWater = Math.max(0, currentWater + amount);
+        
+        if (!isGuest && userId) {
+            convexSetWater({ userId: userId as any, date: dateKey, glasses: newWater }).catch(console.error);
+        }
+
         const newDailyData = {
             meals: current[dateKey]?.meals || [],
             water: newWater,
