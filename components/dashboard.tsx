@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.4.9";
+const BUILD_VERSION = "1.5.0";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -106,6 +106,7 @@ type Meal = {
   name: MealType;
   items: FoodItem[];
   timestamp: number; // Use number for easier serialization
+  healthAnalysis?: { score: number; analysis: string };
 };
 
 type DailyGoals = {
@@ -695,7 +696,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         }
         // Auto-add to log based on time of day
         const mealType = getMealTypeByTime();
-        const newMeal: Meal = { id: Date.now().toString(), name: mealType, items: foodWithMacros, timestamp: Date.now() };
+        const healthData = (result.healthScore && result.healthAnalysis)
+          ? { score: result.healthScore, analysis: result.healthAnalysis }
+          : undefined;
+        const newMeal: Meal = { id: Date.now().toString(), name: mealType, items: foodWithMacros, timestamp: Date.now(), healthAnalysis: healthData };
         setHistory(current => ({
           ...current,
           [dateKey]: {
@@ -1514,6 +1518,28 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 </li>
                                             ))}
                                         </ul>
+                                        {meal.healthAnalysis && (
+                                            <details className="mt-3 group">
+                                                <summary className="flex items-center gap-1.5 text-xs font-medium text-primary cursor-pointer select-none list-none">
+                                                    <HeartPulse className="h-3.5 w-3.5" />
+                                                    <span>AI Health Analysis</span>
+                                                    <span className="ml-auto text-muted-foreground font-normal group-open:hidden">▸ Show</span>
+                                                    <span className="ml-auto text-muted-foreground font-normal hidden group-open:inline">▾ Hide</span>
+                                                </summary>
+                                                <div className="mt-2 rounded-lg border border-border/50 bg-muted/40 p-3 flex items-start gap-3">
+                                                    <div className="relative w-12 h-12 flex-shrink-0">
+                                                        <svg className="w-full h-full" viewBox="0 0 36 36">
+                                                            <path className="text-muted" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
+                                                            <path className="text-primary" stroke="currentColor" strokeWidth="3" strokeDasharray={`${meal.healthAnalysis.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"></path>
+                                                        </svg>
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <span className="text-xs font-bold">{meal.healthAnalysis.score}</span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground leading-relaxed">{meal.healthAnalysis.analysis}</p>
+                                                </div>
+                                            </details>
+                                        )}
                                         <div className="mt-3 flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground whitespace-nowrap">Meal type:</span>
                                             <Select value={meal.name} onValueChange={(val) => updateMealType(meal.id, val as MealType)}>
