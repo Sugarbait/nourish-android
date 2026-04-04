@@ -6,9 +6,7 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Dialog = ({ modal, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => (
-  <DialogPrimitive.Root modal={false} {...props} />
-)
+const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
 
