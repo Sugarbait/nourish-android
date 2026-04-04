@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.20";
+const BUILD_VERSION = "1.5.21";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1932,156 +1932,156 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         </div>
       </main>
 
-      {/* Floating Chatbot Icon */}
-      <Button
-        onClick={async () => {
-          if (isGuest) {
-            setGuestUpsellType('coach');
-            setGuestUpsellOpen(true);
-            return;
-          }
-          if (!credits.subscription?.active) {
-            setNoCreditsType('ai');
-            setNoCreditsOpen(true);
-            return;
-          }
-          setIsChatbotOpen(true);
-          if (chatMessages.length === 0) {
-            setIsCoachLoading(true);
-            try {
-              const mealHistoryForCoach = dailyData.meals.map(meal => ({
-                name: meal.name,
-                items: meal.items.map(item => ({
-                  name: item.name, calories: item.calories,
-                  protein: item.protein, carbs: item.carbs, fat: item.fat,
-                })),
-              }));
-              const greeting: ChatMessage = { role: 'user', content: "Hello! Give me a proactive summary of my nutrition today, suggest what I should eat next, any healthy snack ideas, and hydration tips based on my current log." };
-              const response = await getCoachResponse({ messages: [greeting], mealHistory: mealHistoryForCoach, goals, waterIntake: dailyData.water });
-              setChatMessages([{ role: 'model', content: response.response }]);
-            } catch { /* silent fail */ } finally {
-              setIsCoachLoading(false);
+      {/* Floating Chat Widget — no modal, no overlay, no backdrop */}
+      {!isChatbotOpen && (
+        <Button
+          onClick={async () => {
+            if (isGuest) {
+              setGuestUpsellType('coach');
+              setGuestUpsellOpen(true);
+              return;
             }
-          }
-        }}
-        className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 transition-all duration-200 z-50 bg-primary text-primary-foreground border-2 border-black"
-        size="icon"
-      >
-        <MessageCircle className="h-6 w-6" />
-        <span className="sr-only">Open AI Coach</span>
-      </Button>
+            if (!credits.subscription?.active) {
+              setNoCreditsType('ai');
+              setNoCreditsOpen(true);
+              return;
+            }
+            setIsChatbotOpen(true);
+            if (chatMessages.length === 0) {
+              setIsCoachLoading(true);
+              try {
+                const mealHistoryForCoach = dailyData.meals.map(meal => ({
+                  name: meal.name,
+                  items: meal.items.map(item => ({
+                    name: item.name, calories: item.calories,
+                    protein: item.protein, carbs: item.carbs, fat: item.fat,
+                  })),
+                }));
+                const greeting: ChatMessage = { role: 'user', content: "Hello! Give me a proactive summary of my nutrition today, suggest what I should eat next, any healthy snack ideas, and hydration tips based on my current log." };
+                const response = await getCoachResponse({ messages: [greeting], mealHistory: mealHistoryForCoach, goals, waterIntake: dailyData.water });
+                setChatMessages([{ role: 'model', content: response.response }]);
+              } catch { /* silent fail */ } finally {
+                setIsCoachLoading(false);
+              }
+            }
+          }}
+          className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 transition-all duration-200 z-50 bg-primary text-primary-foreground border-2 border-black"
+          size="icon"
+        >
+          <MessageCircle className="h-6 w-6" />
+          <span className="sr-only">Open AI Coach</span>
+        </Button>
+      )}
 
-      {/* Full-Page Chatbot Modal — plain overlay, no Radix Dialog (avoids pointer-events lock bug) */}
+      {/* Chat Widget Panel — fixed bottom-right, no overlay/backdrop */}
       {isChatbotOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
-          <div className="fixed inset-0 bg-black/80" onClick={() => setIsChatbotOpen(false)} />
-          {/* Panel */}
-          <div className="relative z-50 max-w-4xl w-full h-[90vh] sm:h-[80vh] flex flex-col p-0 m-2 sm:m-4 border bg-background shadow-lg sm:rounded-lg">
-            <div className="px-4 py-3 sm:px-6 sm:py-4 border-b">
-              <div className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold leading-none tracking-tight">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+        <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 z-50 w-full sm:w-[420px] h-[100dvh] sm:h-[600px] sm:max-h-[80vh] flex flex-col bg-background border sm:rounded-2xl shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold leading-tight">AI Nutritional Coach</p>
+                <p className="text-[11px] text-muted-foreground">Ask anything about nutrition</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsChatbotOpen(false)}
+              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
+          </div>
+
+          {/* Messages */}
+          <ScrollArea className="flex-1 px-4">
+            <div className="space-y-4 py-4">
+              {chatMessages.length === 0 && (
+                <div className="text-center space-y-4 py-6">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                    <Sparkle className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Welcome! I'm your AI nutritional coach.</h3>
+                    <p className="text-xs text-muted-foreground mb-4">Try one of these:</p>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        className="h-auto p-2.5 text-xs justify-start"
+                        onClick={() => setCoachInput("Can you help me plan my meals for today?")}
+                      >
+                        <span>💡</span>
+                        <span className="font-medium ml-2">Plan my meals</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-auto p-2.5 text-xs justify-start"
+                        onClick={() => setCoachInput("What are some healthy snack ideas?")}
+                      >
+                        <span>🍎</span>
+                        <span className="font-medium ml-2">Healthy snacks</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-auto p-2.5 text-xs justify-start"
+                        onClick={() => setCoachInput("How can I stay hydrated throughout the day?")}
+                      >
+                        <span>💧</span>
+                        <span className="font-medium ml-2">Hydration tips</span>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <span className="truncate">AI Nutritional Coach</span>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1.5">
-                Ask for meal ideas, nutritional advice, or anything else to help you reach your goals!
-              </p>
-              <button
-                onClick={() => setIsChatbotOpen(false)}
-                className="absolute right-4 top-6 sm:top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </button>
+              )}
+              {chatMessages.map((message, index) => (
+                <div key={index} className={`flex items-start gap-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                  {message.role === 'model' && (
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Sparkle className="h-3 w-3 text-primary" />
+                    </div>
+                  )}
+                  <div className={`rounded-2xl px-3 py-2 max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                    <p className="text-xs whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                  {message.role === 'user' && (
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <User className="h-3 w-3 text-primary" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {isCoachLoading && (
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Sparkle className="h-3 w-3 text-primary" />
+                  </div>
+                  <div className="bg-muted rounded-2xl px-3 py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                </div>
+              )}
             </div>
+          </ScrollArea>
 
-            <ScrollArea className="flex-1 px-4 sm:px-6">
-              <div className="space-y-4 py-4">
-                {chatMessages.length === 0 && (
-                  <div className="text-center space-y-4 sm:space-y-6 py-8 sm:py-12">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                      <Sparkle className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-base sm:text-lg font-medium mb-2 sm:mb-3">Welcome! I'm your AI nutritional coach.</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 px-4">Here are some ways I can help you today:</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-2xl mx-auto px-4">
-                        <Button
-                          variant="outline"
-                          className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
-                          onClick={() => setCoachInput("Can you help me plan my meals for today?")}
-                        >
-                          <div className="text-xl sm:text-2xl">💡</div>
-                          <span className="font-medium">Plan my meals</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
-                          onClick={() => setCoachInput("What are some healthy snack ideas?")}
-                        >
-                          <div className="text-xl sm:text-2xl">🍎</div>
-                          <span className="font-medium">Healthy snacks</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
-                          onClick={() => setCoachInput("How can I stay hydrated throughout the day?")}
-                        >
-                          <div className="text-xl sm:text-2xl">💧</div>
-                          <span className="font-medium">Hydration tips</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {chatMessages.map((message, index) => (
-                  <div key={index} className={`flex items-start gap-2 sm:gap-4 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                    {message.role === 'model' && (
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Sparkle className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-                      </div>
-                    )}
-                    <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 max-w-[80%] sm:max-w-[70%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                    {message.role === 'user' && (
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <User className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {isCoachLoading && (
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Sparkle className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-                    </div>
-                    <div className="bg-muted rounded-2xl px-3 py-2 sm:px-4 sm:py-3">
-                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-
-            <div className="border-t px-4 py-3 sm:px-6 sm:py-4">
-              <form onSubmit={handleCoachSubmit} className="flex items-center gap-2 sm:gap-3">
-                <Input
-                  placeholder="Ask your coach a question..."
-                  value={coachInput}
-                  onChange={(e) => setCoachInput(e.target.value)}
-                  disabled={isCoachLoading}
-                  className="flex-1 text-sm"
-                  autoComplete="off"
-                />
-                <Button type="submit" size="icon" disabled={isCoachLoading || !coachInput.trim()} className="w-9 h-9 sm:w-10 sm:h-10">
-                  {isCoachLoading ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" /> : <Send className="h-3 w-3 sm:h-4 sm:w-4" />}
-                  <span className="sr-only">Send Message</span>
-                </Button>
-              </form>
-            </div>
+          {/* Input */}
+          <div className="border-t px-4 py-3 shrink-0">
+            <form onSubmit={handleCoachSubmit} className="flex items-center gap-2">
+              <Input
+                placeholder="Ask your coach a question..."
+                value={coachInput}
+                onChange={(e) => setCoachInput(e.target.value)}
+                disabled={isCoachLoading}
+                className="flex-1 text-sm"
+                autoComplete="off"
+              />
+              <Button type="submit" size="icon" disabled={isCoachLoading || !coachInput.trim()} className="w-9 h-9">
+                {isCoachLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                <span className="sr-only">Send Message</span>
+              </Button>
+            </form>
           </div>
         </div>
       )}

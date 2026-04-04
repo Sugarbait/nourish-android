@@ -191,15 +191,15 @@ export function NoCreditsModal({
         .nai-sparkle-3 { animation: nai-sparkle 2.2s ease-in-out 1.4s infinite; }
       `}</style>
 
-      {/* Backdrop */}
+      {/* Backdrop — pointer-events-none when closing so it can't block touches */}
       <div
-        className={`fixed inset-0 z-50 bg-black/70 backdrop-blur-sm ${isOpen ? 'nai-backdrop' : 'nai-backdrop-out'}`}
-        onClick={close}
+        className={`fixed inset-0 z-50 bg-black/70 backdrop-blur-sm ${isOpen ? 'nai-backdrop' : 'nai-backdrop-out pointer-events-none'}`}
+        onClick={isOpen ? close : undefined}
         aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isOpen ? '' : 'pointer-events-none'}`}>
         <div
           className={`relative w-full max-w-sm pointer-events-auto rounded-3xl border border-border/40 bg-card text-card-foreground shadow-2xl overflow-hidden ${isOpen ? 'nai-modal' : 'nai-modal-out'}`}
           role="dialog"

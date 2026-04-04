@@ -93,15 +93,15 @@ export function GuestUpsellModal({
         }
       `}</style>
 
-      {/* Backdrop */}
+      {/* Backdrop — pointer-events-none when closing so it can't block touches */}
       <div
-        className={`fixed inset-0 z-50 bg-black/70 backdrop-blur-sm ${isOpen ? 'gu-backdrop' : 'gu-backdrop-out'}`}
-        onClick={close}
+        className={`fixed inset-0 z-50 bg-black/70 backdrop-blur-sm ${isOpen ? 'gu-backdrop' : 'gu-backdrop-out pointer-events-none'}`}
+        onClick={isOpen ? close : undefined}
         aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isOpen ? '' : 'pointer-events-none'}`}>
         <div
           className={`relative w-full max-w-sm pointer-events-auto rounded-3xl border border-border/40 bg-card text-card-foreground shadow-2xl overflow-hidden ${isOpen ? 'gu-modal' : 'gu-modal-out'}`}
           role="dialog"
