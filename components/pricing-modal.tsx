@@ -155,11 +155,11 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
                 Monthly Pro
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                40 credits per month — use them for meal scans or AI coaching. Credits <strong>roll over</strong> — never lose unused credits.
+                300 credits per month — use them for meal scans or AI coaching. Credits <strong>roll over</strong> — never lose unused credits.
               </p>
               <ul className="mt-3 space-y-1.5">
                 {[
-                  '40 credits/mo for scans & AI coaching',
+                  '300 credits/mo for scans & AI coaching',
                   'Use credits however you need them',
                   'Credits roll over month to month',
                   'Priority support',

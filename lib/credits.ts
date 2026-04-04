@@ -167,9 +167,9 @@ export const CREDIT_PACKAGES: Record<
   CreditPackage,
   { label: string; price: string; credits: number; badge?: string }
 > = {
-  starter: { label: 'Starter', price: '$1.99', credits: 100, badge: 'Popular' },
-  value:   { label: 'Value',   price: '$4.99', credits: 300 },
-  pro:     { label: 'Pro',     price: '$9.99', credits: 800, badge: 'Best Value' },
+  starter: { label: 'Starter', price: '$1.99', credits: 50 },
+  value:   { label: 'Value',   price: '$4.99', credits: 150, badge: 'Popular' },
+  pro:     { label: 'Pro',     price: '$9.99', credits: 400, badge: 'Best Value' },
 };
 
 export function addCreditPackage(data: CreditData, pkg: CreditPackage): CreditData {
@@ -179,14 +179,14 @@ export function addCreditPackage(data: CreditData, pkg: CreditPackage): CreditDa
 
 /**
  * Activate a monthly subscription ($3.99/mo).
- * Adds 40 credits to the unified pool (rollover) and sets expiry 30 days from now.
+ * Adds 300 credits to the unified pool (rollover) and sets expiry 30 days from now.
  */
 export function activateSubscription(data: CreditData): CreditData {
   const expiry = new Date();
   expiry.setDate(expiry.getDate() + 30);
   return {
     ...data,
-    credits: (Number(data.credits) || 0) + 40,
+    credits: (Number(data.credits) || 0) + 300,
     subscription: {
       active: true,
       plan: 'monthly',
