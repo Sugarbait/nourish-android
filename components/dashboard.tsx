@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.16";
+const BUILD_VERSION = "1.5.17";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -304,9 +304,19 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // Fix Radix UI dialog pointer-events bug when chatbot closes
   useEffect(() => {
     if (!isChatbotOpen && typeof document !== 'undefined') {
-      // Force remove any pointer-events: none that might be stuck on body
-      document.body.style.pointerEvents = '';
-      document.documentElement.style.pointerEvents = '';
+      // Use a small timeout to ensure dialog animation completes before cleanup
+      const timer = setTimeout(() => {
+        // Force remove any pointer-events: none that might be stuck
+        document.body.style.pointerEvents = '';
+        document.documentElement.style.pointerEvents = '';
+
+        // Also clean up any dialog overlays
+        document.querySelectorAll('[data-radix-dialog-overlay], [role="dialog"]').forEach(el => {
+          (el as HTMLElement).style.pointerEvents = '';
+        });
+      }, 50);
+
+      return () => clearTimeout(timer);
     }
   }, [isChatbotOpen]);
 
