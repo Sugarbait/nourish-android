@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.0";
+const BUILD_VERSION = "1.5.1";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -55,7 +55,7 @@ import { NoCreditsModal } from '@/components/no-credits-modal';
 import { GuestUpsellModal } from '@/components/guest-upsell-modal';
 import { GoalCelebration } from '@/components/goal-celebration';
 import { AuthModal } from '@/components/auth-modal';
-import { useAction, useQuery } from 'convex/react';
+import { useAction, useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -208,6 +208,10 @@ function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, child
 export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean }) {
   const { toast } = useToast();
   const getBillingPortalUrl = useAction(api.stripeActions.getBillingPortalUrl);
+  const convexLogMeal = useMutation(api.meals.logMeal);
+  const convexDeleteMeal = useMutation(api.meals.deleteMealByLocalId);
+  const convexUpdateMealItem = useMutation(api.meals.updateMealItem);
+  const convexUpdateMealType = useMutation(api.meals.updateMealType);
   // Auth state from localStorage
   const [userId, setUserId] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -221,6 +225,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const isAuthenticated = !!userId;
   const isGuest = !isAuthenticated;
   const stripeCustomerId = useQuery(api.stripe.getStripeCustomerId, userId ? { userId } : 'skip');
+  // Fetch today's meals from Convex for cross-device hydration (authenticated users only)
+  const todayConvexMeals = useQuery(api.meals.getMealsForDate, userId ? { userId: userId as any, date: format(new Date(), 'yyyy-MM-dd') } : 'skip');
 
   // Read user display info from localStorage
   const userName = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_name') : null;
@@ -328,6 +334,37 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     setIsMounted(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Cross-device hydration: when Convex returns today's meals, merge any that
+  // aren't already in localStorage (identified by localId stored in Convex).
+  useEffect(() => {
+    if (!todayConvexMeals || todayConvexMeals.length === 0) return;
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    setHistory(current => {
+      const existing = current[todayKey]?.meals || [];
+      const existingIds = new Set(existing.map(m => m.id));
+      const toMerge: Meal[] = todayConvexMeals
+        .filter((cm: any) => cm.localId && !existingIds.has(cm.localId))
+        .map((cm: any) => ({
+          id: cm.localId as string,
+          name: cm.name as MealType,
+          items: cm.items,
+          timestamp: cm.createdAt,
+          healthAnalysis: (cm.healthScore && cm.healthAnalysis)
+            ? { score: cm.healthScore, analysis: cm.healthAnalysis }
+            : undefined,
+        }));
+      if (toMerge.length === 0) return current;
+      return {
+        ...current,
+        [todayKey]: {
+          meals: [...existing, ...toMerge],
+          water: current[todayKey]?.water || 0,
+        },
+      };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayConvexMeals]);
 
   // After Stripe redirects back with ?checkout=success, poll Convex until the
   // webhook has updated the credits/subscription, then sync into localStorage.
@@ -615,6 +652,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         water: current[dateKey]?.water || 0,
       },
     }));
+    // Sync deletion to Convex for authenticated users
+    if (userId) {
+      convexDeleteMeal({ userId: userId as any, localId: mealId }).catch(console.error);
+    }
   };
 
   const updateMealType = (mealId: string, newType: MealType) => {
@@ -628,6 +669,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         water: current[dateKey]?.water || 0,
       },
     }));
+    // Sync type change to Convex for authenticated users
+    if (userId) {
+      convexUpdateMealType({ userId: userId as any, localId: mealId, mealType: newType.toLowerCase() as any, name: newType }).catch(console.error);
+    }
   };
 
   const confirmFoodEdit = async (mealId: string, itemIndex: number) => {
@@ -653,6 +698,19 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           }),
         },
       }));
+      // Sync item edit to Convex for authenticated users
+      if (userId) {
+        convexUpdateMealItem({
+          userId: userId as any,
+          localId: mealId,
+          itemIndex,
+          name: nutrition.name || newName,
+          calories: nutrition.calories,
+          protein: nutrition.protein,
+          carbs: nutrition.carbs,
+          fat: nutrition.fat,
+        }).catch(console.error);
+      }
       toast({ title: 'Updated!', description: `Nutrition recalculated for "${nutrition.name || newName}".` });
     } catch {
       toast({ title: 'Lookup failed', description: 'Could not fetch nutrition. Please try again.', variant: 'destructive' });
@@ -708,6 +766,24 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           },
         }));
         setAiResults(foodWithMacros);
+        // Sync new AI-scanned meal to Convex for authenticated users
+        if (userId) {
+          const totals = foodWithMacros.reduce(
+            (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
+            { calories: 0, protein: 0, carbs: 0, fat: 0 }
+          );
+          convexLogMeal({
+            userId: userId as any,
+            date: dateKey,
+            mealType: mealType.toLowerCase() as any,
+            name: mealType,
+            ...totals,
+            healthScore: result.healthScore,
+            healthAnalysis: result.healthAnalysis,
+            items: foodWithMacros,
+            localId: newMeal.id,
+          }).catch(console.error);
+        }
         toast({ title: `Added to ${mealType}!`, description: 'Food recognized and logged. Review the results below.' });
       }
     } catch (error) {
@@ -739,6 +815,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         };
         return { ...current, [dateKey]: newDailyData };
     });
+    // Sync manually-entered meal to Convex for authenticated users
+    if (userId) {
+      const totals = items.reduce(
+        (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+      convexLogMeal({
+        userId: userId as any,
+        date: dateKey,
+        mealType: mealName.toLowerCase() as any,
+        name: mealName,
+        ...totals,
+        items,
+        localId: newMeal.id,
+      }).catch(console.error);
+    }
     resetCapture();
     toast({ title: 'Meal added!', description: `${mealName} has been added to your log for ${format(selectedDate, 'PPP')}.` });
   };

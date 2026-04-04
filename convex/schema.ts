@@ -57,6 +57,8 @@ export default defineSchema({
     carbs: v.number(),
     fat: v.number(),
     healthScore: v.optional(v.number()),
+    healthAnalysis: v.optional(v.string()),
+    localId: v.optional(v.string()),
     items: v.array(
       v.object({
         name: v.string(),
