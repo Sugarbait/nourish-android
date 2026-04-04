@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.4.6";
+const BUILD_VERSION = "1.4.7";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -610,6 +610,19 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }));
   };
 
+  const updateMealType = (mealId: string, newType: MealType) => {
+    setHistory(current => ({
+      ...current,
+      [dateKey]: {
+        ...current[dateKey],
+        meals: (current[dateKey]?.meals || []).map(m =>
+          m.id === mealId ? { ...m, name: newType } : m
+        ),
+        water: current[dateKey]?.water || 0,
+      },
+    }));
+  };
+
   const getMealTypeByTime = (): MealType => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 11) return 'Breakfast';
@@ -934,7 +947,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 p-0">
                   <Avatar className="h-8 w-8">
                     {!isGuest && profile.avatar && <AvatarImage src={profile.avatar} alt="Profile" className="object-cover" />}
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                       {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
                     </AvatarFallback>
                   </Avatar>
@@ -946,7 +959,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     <div className="relative group cursor-pointer" onClick={() => document.getElementById('avatar-upload')?.click()}>
                       <Avatar className="h-20 w-20">
                         {!isGuest && profile.avatar && <AvatarImage src={profile.avatar} alt="Profile" className="object-cover" />}
-                        <AvatarFallback className="bg-primary/10 text-primary text-3xl font-bold">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
                           {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-10 w-10" />}
                         </AvatarFallback>
                       </Avatar>
@@ -1427,10 +1440,24 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 </li>
                                             ))}
                                         </ul>
+                                        <div className="mt-3 flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground whitespace-nowrap">Meal type:</span>
+                                            <Select value={meal.name} onValueChange={(val) => updateMealType(meal.id, val as MealType)}>
+                                                <SelectTrigger className="h-8 w-[130px] text-xs">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Breakfast">Breakfast</SelectItem>
+                                                    <SelectItem value="Lunch">Lunch</SelectItem>
+                                                    <SelectItem value="Dinner">Dinner</SelectItem>
+                                                    <SelectItem value="Snacks">Snacks</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
+                                            className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
                                             onClick={() => removeMeal(meal.id)}
                                         >
                                             <Trash2 className="mr-2 h-4 w-4" /> Remove Entry
