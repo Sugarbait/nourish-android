@@ -66,5 +66,10 @@
   body {
     @apply bg-background text-foreground;
   }
-  
+}
+
+/* Radix UI sometimes sets pointer-events:none on body after a modal/dialog unmounts,
+   which prevents any subsequent interaction. Force it back to auto globally. */
+body, html {
+  pointer-events: auto !important;
 }
