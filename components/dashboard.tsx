@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.3";
+const BUILD_VERSION = "1.5.4";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1821,7 +1821,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             <Card className="shadow-xl rounded-2xl border-border/50">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl font-bold"><Sparkles className="text-primary"/> Recipe Suggestions</CardTitle>
-                    <CardDescription>Need ideas? Let AI help based on your remaining macros for today!</CardDescription>
+                    <CardDescription>Not sure what to eat? Get recipe ideas that perfectly fit the rest of your daily goals.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      {isLoadingRecipes ? (
