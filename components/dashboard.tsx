@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.12";
+const BUILD_VERSION = "1.5.13";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -850,21 +850,26 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   };
   
   const handleGetRecipeSuggestions = async () => {
-    if (!isGuest) {
-      if (!credits.subscription?.active) {
-        setNoCreditsType('ai');
-        setNoCreditsOpen(true);
-        return;
-      }
-      const updatedCredits = consumeAICredit(credits);
-      if (!updatedCredits) {
-        setNoCreditsType('ai');
-        setNoCreditsOpen(true);
-        return;
-      }
-      saveCredits(updatedCredits);
-      setCredits(updatedCredits);
+    if (isGuest) {
+      setGuestUpsellType('coach');
+      setGuestUpsellOpen(true);
+      return;
     }
+
+    if (!credits.subscription?.active) {
+      setNoCreditsType('ai');
+      setNoCreditsOpen(true);
+      return;
+    }
+
+    const updatedCredits = consumeAICredit(credits);
+    if (!updatedCredits) {
+      setNoCreditsType('ai');
+      setNoCreditsOpen(true);
+      return;
+    }
+    saveCredits(updatedCredits);
+    setCredits(updatedCredits);
 
     setIsLoadingRecipes(true);
     setRecipeSuggestions([]);
@@ -939,22 +944,26 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     e.preventDefault();
     if (!coachInput.trim() || isCoachLoading) return;
 
-    if (!isGuest) {
-      if (!credits.subscription?.active) {
-        setNoCreditsType('ai');
-        setNoCreditsOpen(true);
-        return;
-      }
-
-      const updatedCredits = consumeAICredit(credits);
-      if (!updatedCredits) {
-        setNoCreditsType('ai');
-        setNoCreditsOpen(true);
-        return;
-      }
-      saveCredits(updatedCredits);
-      setCredits(updatedCredits);
+    if (isGuest) {
+      setGuestUpsellType('coach');
+      setGuestUpsellOpen(true);
+      return;
     }
+
+    if (!credits.subscription?.active) {
+      setNoCreditsType('ai');
+      setNoCreditsOpen(true);
+      return;
+    }
+
+    const updatedCredits = consumeAICredit(credits);
+    if (!updatedCredits) {
+      setNoCreditsType('ai');
+      setNoCreditsOpen(true);
+      return;
+    }
+    saveCredits(updatedCredits);
+    setCredits(updatedCredits);
 
     const newUserMessage: ChatMessage = { role: 'user', content: coachInput };
     const newMessages = [...chatMessages, newUserMessage];
