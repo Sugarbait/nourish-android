@@ -67,8 +67,4 @@
     @apply bg-background text-foreground;
   }
   
-  /* Failsafe to prevent Radix UI pointer-events freezing bug on remaining dialogs */
-  body[style*="pointer-events: none"] {
-    pointer-events: auto !important;
-  }
 }

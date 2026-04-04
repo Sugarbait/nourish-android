@@ -42,6 +42,22 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
+        {/* Global fix: prevent Radix UI from locking pointer-events on body (mobile Safari bug) */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            var o = new MutationObserver(function(mutations){
+              mutations.forEach(function(m){
+                if(m.type==='attributes' && m.attributeName==='style'){
+                  var pe = document.body.style.pointerEvents;
+                  if(pe === 'none'){
+                    document.body.style.pointerEvents = '';
+                  }
+                }
+              });
+            });
+            o.observe(document.body, { attributes: true, attributeFilter: ['style'] });
+          })();
+        `}} />
         <ConvexClientProvider>
           <GoogleOAuthWrapper>
           <ThemeProvider
