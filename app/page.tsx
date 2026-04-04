@@ -166,7 +166,7 @@ export default function SplashPage() {
   const openSignIn = () => { setAuthTab('signin'); setAuthOpen(true); };
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="dark min-h-screen bg-background text-foreground overflow-x-hidden">
       <style>{`
         @keyframes float-slow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-20px)} }
         @keyframes float-fast { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-10px) rotate(5deg)} }
