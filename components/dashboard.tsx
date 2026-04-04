@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.22";
+const BUILD_VERSION = "1.5.23";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1933,20 +1933,19 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       </main>
 
       {/* Floating Chat Widget — no modal, no overlay, no backdrop */}
-      {!isChatbotOpen && (
-        <Button
-          onClick={async () => {
-            if (isGuest) {
-              setGuestUpsellType('coach');
-              setGuestUpsellOpen(true);
-              return;
-            }
-            if (!credits.subscription?.active) {
-              setNoCreditsType('ai');
-              setNoCreditsOpen(true);
-              return;
-            }
-            setIsChatbotOpen(true);
+      <Button
+        onClick={async () => {
+          if (isGuest) {
+            setGuestUpsellType('coach');
+            setGuestUpsellOpen(true);
+            return;
+          }
+          if (!credits.subscription?.active) {
+            setNoCreditsType('ai');
+            setNoCreditsOpen(true);
+            return;
+          }
+          setIsChatbotOpen(true);
             if (chatMessages.length === 0) {
               setIsCoachLoading(true);
               try {
@@ -1965,13 +1964,12 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               }
             }
           }}
-          className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 transition-all duration-200 z-50 bg-primary text-primary-foreground border-2 border-black"
+          className={`fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 transition-all duration-200 z-50 bg-primary text-primary-foreground border-2 border-black ${isChatbotOpen ? 'hidden' : ''}`}
           size="icon"
         >
           <MessageCircle className="h-6 w-6" />
           <span className="sr-only">Open AI Coach</span>
         </Button>
-      )}
 
       {/* Chat Widget Panel — fixed bottom-right, no overlay/backdrop */}
       {isChatbotOpen && (
