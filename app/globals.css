@@ -68,7 +68,12 @@
   }
   
   /* Failsafe to prevent Radix UI dialog pointer-events freezing bug */
-  body[data-scroll-locked][style], body[style*="pointer-events: none"] {
+  body {
+    pointer-events: auto !important;
+  }
+
+  /* Ensure all links and interactive elements remain clickable */
+  a, button, input, textarea, select, [role="button"], [role="link"] {
     pointer-events: auto !important;
   }
 }

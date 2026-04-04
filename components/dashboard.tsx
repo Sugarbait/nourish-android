@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.15";
+const BUILD_VERSION = "1.5.16";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -295,11 +295,20 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       setHistory(current => {
         const currentWater = current[dateKey]?.water || 0;
         if (currentWater === convexWaterData) return current; // No change needed
-        
+
         return { ...current, [dateKey]: { meals: current[dateKey]?.meals || [], water: convexWaterData } };
       });
     }
   }, [convexWaterData, dateKey]);
+
+  // Fix Radix UI dialog pointer-events bug when chatbot closes
+  useEffect(() => {
+    if (!isChatbotOpen && typeof document !== 'undefined') {
+      // Force remove any pointer-events: none that might be stuck on body
+      document.body.style.pointerEvents = '';
+      document.documentElement.style.pointerEvents = '';
+    }
+  }, [isChatbotOpen]);
 
   const manualForm = useForm<z.infer<typeof manualFoodFormSchema>>({
     resolver: zodResolver(manualFoodFormSchema),
