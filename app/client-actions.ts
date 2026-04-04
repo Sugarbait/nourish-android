@@ -23,9 +23,10 @@ export async function getRecipeSuggestions(input: {
   goals: { calories: number; protein: number; carbs: number; fat: number };
   intake: { calories: number; protein: number; carbs: number; fat: number };
   waterIntake?: number;
+  mealHistory?: any[];
 }): Promise<SuggestRecipesOutput> {
   try {
-    const result = await suggestRecipes(input.goals, input.intake, input.waterIntake || 0);
+    const result = await suggestRecipes(input.goals, input.intake, input.waterIntake || 0, input.mealHistory || []);
     return result;
   } catch (error) {
     console.error('Error in getRecipeSuggestions:', error);

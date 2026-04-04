@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.4";
+const BUILD_VERSION = "1.5.5";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -839,7 +839,17 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     setIsLoadingRecipes(true);
     setRecipeSuggestions([]);
     try {
-        const result = await getRecipeSuggestions({ goals, intake, waterIntake: dailyData.water });
+        const mealHistoryForRecipes = dailyData.meals.map(meal => ({
+          name: meal.name,
+          items: meal.items.map(item => ({
+            name: item.name,
+            calories: item.calories,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat,
+          })),
+        }));
+        const result = await getRecipeSuggestions({ goals, intake, waterIntake: dailyData.water, mealHistory: mealHistoryForRecipes });
         setRecipeSuggestions(result.recipes);
     } catch (error) {
         toast({ title: 'Could not get recipes', description: (error as Error).message, variant: 'destructive' });

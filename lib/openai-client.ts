@@ -73,7 +73,7 @@ export async function recognizeFoodFromImage(imageDataUri: string) {
   }
 }
 
-export async function suggestRecipes(goals: any, intake: any, waterIntake: number = 0) {
+export async function suggestRecipes(goals: any, intake: any, waterIntake: number = 0, mealHistory: any[] = []) {
   const remainingCalories = goals.calories - intake.calories;
   const remainingProtein = goals.protein - intake.protein;
   const remainingCarbs = goals.carbs - intake.carbs;
@@ -84,12 +84,16 @@ export async function suggestRecipes(goals: any, intake: any, waterIntake: numbe
       ? ' Also consider recipes that help with hydration (soups, smoothies, etc.) since water intake is low.'
       : '';
 
+  const mealHistoryText = mealHistory.length > 0
+    ? `Meals eaten today so far: ${JSON.stringify(mealHistory)}. Please ensure your suggestions pair well with these and don't blindly duplicate them.`
+    : '';
+
   const contents = [
     {
       role: 'user',
       parts: [
         {
-          text: `Remaining macros: ${remainingCalories} calories, ${remainingProtein}g protein, ${remainingCarbs}g carbs, ${remainingFat}g fat. Water intake today: ${waterIntake} glasses.${hydrationNote} Suggest 2 recipes. Respond with valid JSON only, no markdown: {"recipes": [{"name": string, "description": string, "calories": number, "protein": number, "carbs": number, "fat": number, "ingredients": [string], "instructions": [string]}]}`,
+          text: `Remaining macros: ${remainingCalories} calories, ${remainingProtein}g protein, ${remainingCarbs}g carbs, ${remainingFat}g fat. Water intake today: ${waterIntake} glasses.${hydrationNote} ${mealHistoryText} Suggest 2 recipes. Respond with valid JSON only, no markdown: {"recipes": [{"name": string, "description": string, "calories": number, "protein": number, "carbs": number, "fat": number, "ingredients": [string], "instructions": [string]}]}`,
         },
       ],
     },
