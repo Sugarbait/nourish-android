@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.1";
+const BUILD_VERSION = "1.5.2";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1566,7 +1566,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                        <ul className="space-y-2 pl-2">
+                                        <ul className="space-y-2 pl-2 pt-1">
                                             {meal.items.map((item, index) => (
                                                 <li key={index} className="flex justify-between items-center text-sm gap-2">
                                                     {editingFoodItem?.mealId === meal.id && editingFoodItem?.itemIndex === index ? (
