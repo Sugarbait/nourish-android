@@ -41,17 +41,17 @@ export function GuestUpsellModal({
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open' | 'closing'>('closed');
 
   useEffect(() => {
-    if (open && phase === 'closed') {
+    if (open) {
       setPhase('opening');
       const t = setTimeout(() => setPhase('open'), 20);
       return () => clearTimeout(t);
-    }
-    if (!open && (phase === 'open' || phase === 'opening')) {
-      setPhase('closing');
+    } else {
+      setPhase(prev => (prev === 'closed' ? 'closed' : 'closing'));
       const t = setTimeout(() => setPhase('closed'), 380);
       return () => clearTimeout(t);
     }
-  }, [open, phase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
