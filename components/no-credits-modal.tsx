@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 interface NoCreditsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: 'meal' | 'ai';
+  type: 'meal' | 'ai' | 'recipe';
   credits: CreditData;
   onCreditsUpdate: (data: CreditData) => void;
   /** Called when user wants to see full pricing / one-time packs */
@@ -36,6 +36,12 @@ const CONTENT = {
     headline: 'AI Coach is for subscribers',
     sub: "The AI nutritional coach is a subscriber-only feature. Subscribe to get personalised coaching, meal recommendations, and hydration tips every day.",
     cta: 'Unlock AI Coaching',
+  },
+  recipe: {
+    emoji: '🥗',
+    headline: 'AI Recipes are for subscribers',
+    sub: "AI-powered recipe generation is a subscriber-only feature. Subscribe to get personalized, healthy recipe ideas based on your daily macros.",
+    cta: 'Unlock AI Recipes',
   },
 };
 

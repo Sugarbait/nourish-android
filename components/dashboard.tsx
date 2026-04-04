@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.13";
+const BUILD_VERSION = "1.5.14";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -270,7 +270,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const [credits, setCredits] = useState<CreditData>(defaultCreditData());
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [noCreditsOpen, setNoCreditsOpen] = useState(false);
-  const [noCreditsType, setNoCreditsType] = useState<'meal' | 'ai'>('meal');
+  const [noCreditsType, setNoCreditsType] = useState<'meal' | 'ai' | 'recipe'>('meal');
   const [guestUpsellOpen, setGuestUpsellOpen] = useState(false);
   const [guestUpsellType, setGuestUpsellType] = useState<'scan' | 'coach'>('scan');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -857,14 +857,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
 
     if (!credits.subscription?.active) {
-      setNoCreditsType('ai');
+      setNoCreditsType('recipe');
       setNoCreditsOpen(true);
       return;
     }
 
     const updatedCredits = consumeAICredit(credits);
     if (!updatedCredits) {
-      setNoCreditsType('ai');
+      setNoCreditsType('recipe');
       setNoCreditsOpen(true);
       return;
     }
@@ -1934,7 +1934,12 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       {/* Floating Chatbot Icon */}
       <Button
         onClick={async () => {
-          if (!isGuest && !credits.subscription?.active) {
+          if (isGuest) {
+            setGuestUpsellType('coach');
+            setGuestUpsellOpen(true);
+            return;
+          }
+          if (!credits.subscription?.active) {
             setNoCreditsType('ai');
             setNoCreditsOpen(true);
             return;
