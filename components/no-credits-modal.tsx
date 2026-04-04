@@ -199,7 +199,7 @@ export function NoCreditsModal({
       />
 
       {/* Modal */}
-      <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isOpen ? '' : 'pointer-events-none'}`}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
           className={`relative w-full max-w-sm pointer-events-auto rounded-3xl border border-border/40 bg-card text-card-foreground shadow-2xl overflow-hidden ${isOpen ? 'nai-modal' : 'nai-modal-out'}`}
           role="dialog"
