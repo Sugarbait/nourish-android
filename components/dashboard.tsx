@@ -1,13 +1,12 @@
 'use client';
 
-const BUILD_VERSION = "1.5.9";
+const BUILD_VERSION = "1.5.10";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Camera,
   Plus,
-  Bot,
   Sparkles,
   Utensils,
   Flame,
@@ -1412,7 +1411,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         ) : imagePreview ? (
                             <>
                                 <Button onClick={handleRecognizeFood} disabled={isLoadingAI} className="flex-1 rounded-full">
-                                    {isLoadingAI ? <Loader2 className="mr-2 animate-spin" /> : <Bot className="mr-2" />}
+                                    {isLoadingAI ? <Loader2 className="mr-2 animate-spin" /> : <Sparkles className="mr-2" />}
                                     Recognize Food
                                 </Button>
                                 <Button onClick={resetCapture} variant="outline" className="flex-1 rounded-full">
@@ -1943,7 +1942,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           <DialogHeader className="px-4 py-3 sm:px-6 sm:py-4 border-b">
             <DialogTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
               <span className="truncate">AI Nutritional Coach</span>
             </DialogTitle>
