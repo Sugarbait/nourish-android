@@ -67,23 +67,8 @@
     @apply bg-background text-foreground;
   }
   
-  /* Failsafe to prevent Radix UI dialog pointer-events freezing bug */
-  html, body {
+  /* Failsafe to prevent Radix UI pointer-events freezing bug on remaining dialogs */
+  body[style*="pointer-events: none"] {
     pointer-events: auto !important;
-  }
-
-  /* Ensure all interactive elements remain clickable */
-  a, button, input, textarea, select, [role="button"], [role="link"] {
-    pointer-events: auto !important;
-  }
-
-  /* Force pointer-events on dialog overlays and portals */
-  [role="dialog"], [role="alertdialog"], [data-radix-dialog-overlay], [style*="pointer-events: none"] {
-    pointer-events: auto !important;
-  }
-
-  /* Catch any element that might have pointer-events locked */
-  * {
-    --tw-pointer-events: auto;
   }
 }

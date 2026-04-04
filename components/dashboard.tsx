@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.17";
+const BUILD_VERSION = "1.5.18";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -301,24 +301,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   }, [convexWaterData, dateKey]);
 
-  // Fix Radix UI dialog pointer-events bug when chatbot closes
-  useEffect(() => {
-    if (!isChatbotOpen && typeof document !== 'undefined') {
-      // Use a small timeout to ensure dialog animation completes before cleanup
-      const timer = setTimeout(() => {
-        // Force remove any pointer-events: none that might be stuck
-        document.body.style.pointerEvents = '';
-        document.documentElement.style.pointerEvents = '';
-
-        // Also clean up any dialog overlays
-        document.querySelectorAll('[data-radix-dialog-overlay], [role="dialog"]').forEach(el => {
-          (el as HTMLElement).style.pointerEvents = '';
-        });
-      }, 50);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isChatbotOpen]);
 
   const manualForm = useForm<z.infer<typeof manualFoodFormSchema>>({
     resolver: zodResolver(manualFoodFormSchema),
@@ -1989,108 +1971,120 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         <span className="sr-only">Open AI Coach</span>
       </Button>
 
-      {/* Full-Page Chatbot Modal */}
-      <Dialog open={isChatbotOpen} onOpenChange={setIsChatbotOpen}>
-        <DialogContent className="max-w-4xl w-full h-[90vh] sm:h-[80vh] flex flex-col p-0 m-2 sm:m-4">
-          <DialogHeader className="px-4 py-3 sm:px-6 sm:py-4 border-b">
-            <DialogTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+      {/* Full-Page Chatbot Modal — plain overlay, no Radix Dialog (avoids pointer-events lock bug) */}
+      {isChatbotOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/80" onClick={() => setIsChatbotOpen(false)} />
+          {/* Panel */}
+          <div className="relative z-50 max-w-4xl w-full h-[90vh] sm:h-[80vh] flex flex-col p-0 m-2 sm:m-4 border bg-background shadow-lg sm:rounded-lg">
+            <div className="px-4 py-3 sm:px-6 sm:py-4 border-b">
+              <div className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold leading-none tracking-tight">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                </div>
+                <span className="truncate">AI Nutritional Coach</span>
               </div>
-              <span className="truncate">AI Nutritional Coach</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Ask for meal ideas, nutritional advice, or anything else to help you reach your goals!
-            </DialogDescription>
-          </DialogHeader>
-          
-          <ScrollArea className="flex-1 px-4 sm:px-6">
-            <div className="space-y-4 py-4">
-              {chatMessages.length === 0 && (
-                <div className="text-center space-y-4 sm:space-y-6 py-8 sm:py-12">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                    <Sparkle className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-medium mb-2 sm:mb-3">Welcome! I'm your AI nutritional coach.</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 px-4">Here are some ways I can help you today:</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-2xl mx-auto px-4">
-                      <Button 
-                        variant="outline" 
-                        className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
-                        onClick={() => setCoachInput("Can you help me plan my meals for today?")}
-                      >
-                        <div className="text-xl sm:text-2xl">💡</div>
-                        <span className="font-medium">Plan my meals</span>
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
-                        onClick={() => setCoachInput("What are some healthy snack ideas?")}
-                      >
-                        <div className="text-xl sm:text-2xl">🍎</div>
-                        <span className="font-medium">Healthy snacks</span>
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
-                        onClick={() => setCoachInput("How can I stay hydrated throughout the day?")}
-                      >
-                        <div className="text-xl sm:text-2xl">💧</div>
-                        <span className="font-medium">Hydration tips</span>
-                      </Button>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1.5">
+                Ask for meal ideas, nutritional advice, or anything else to help you reach your goals!
+              </p>
+              <button
+                onClick={() => setIsChatbotOpen(false)}
+                className="absolute right-4 top-6 sm:top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </button>
+            </div>
+
+            <ScrollArea className="flex-1 px-4 sm:px-6">
+              <div className="space-y-4 py-4">
+                {chatMessages.length === 0 && (
+                  <div className="text-center space-y-4 sm:space-y-6 py-8 sm:py-12">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                      <Sparkle className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-medium mb-2 sm:mb-3">Welcome! I'm your AI nutritional coach.</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 px-4">Here are some ways I can help you today:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-2xl mx-auto px-4">
+                        <Button
+                          variant="outline"
+                          className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
+                          onClick={() => setCoachInput("Can you help me plan my meals for today?")}
+                        >
+                          <div className="text-xl sm:text-2xl">💡</div>
+                          <span className="font-medium">Plan my meals</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
+                          onClick={() => setCoachInput("What are some healthy snack ideas?")}
+                        >
+                          <div className="text-xl sm:text-2xl">🍎</div>
+                          <span className="font-medium">Healthy snacks</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="h-auto p-3 sm:p-4 flex flex-col items-center gap-2 text-xs sm:text-sm"
+                          onClick={() => setCoachInput("How can I stay hydrated throughout the day?")}
+                        >
+                          <div className="text-xl sm:text-2xl">💧</div>
+                          <span className="font-medium">Hydration tips</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-              {chatMessages.map((message, index) => (
-                <div key={index} className={`flex items-start gap-2 sm:gap-4 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                  {message.role === 'model' && (
+                )}
+                {chatMessages.map((message, index) => (
+                  <div key={index} className={`flex items-start gap-2 sm:gap-4 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                    {message.role === 'model' && (
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Sparkle className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                      </div>
+                    )}
+                    <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 max-w-[80%] sm:max-w-[70%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                      <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                    {message.role === 'user' && (
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <User className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {isCoachLoading && (
+                  <div className="flex items-start gap-2 sm:gap-4">
                     <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Sparkle className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                     </div>
-                  )}
-                  <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 max-w-[80%] sm:max-w-[70%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                    <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                  {message.role === 'user' && (
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <User className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                    <div className="bg-muted rounded-2xl px-3 py-2 sm:px-4 sm:py-3">
+                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                     </div>
-                  )}
-                </div>
-              ))}
-              {isCoachLoading && (
-                <div className="flex items-start gap-2 sm:gap-4">
-                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Sparkle className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                   </div>
-                  <div className="bg-muted rounded-2xl px-3 py-2 sm:px-4 sm:py-3">
-                    <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
+            </ScrollArea>
+
+            <div className="border-t px-4 py-3 sm:px-6 sm:py-4">
+              <form onSubmit={handleCoachSubmit} className="flex items-center gap-2 sm:gap-3">
+                <Input
+                  placeholder="Ask your coach a question..."
+                  value={coachInput}
+                  onChange={(e) => setCoachInput(e.target.value)}
+                  disabled={isCoachLoading}
+                  className="flex-1 text-sm"
+                  autoComplete="off"
+                />
+                <Button type="submit" size="icon" disabled={isCoachLoading || !coachInput.trim()} className="w-9 h-9 sm:w-10 sm:h-10">
+                  {isCoachLoading ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" /> : <Send className="h-3 w-3 sm:h-4 sm:w-4" />}
+                  <span className="sr-only">Send Message</span>
+                </Button>
+              </form>
             </div>
-          </ScrollArea>
-          
-          <div className="border-t px-4 py-3 sm:px-6 sm:py-4">
-            <form onSubmit={handleCoachSubmit} className="flex items-center gap-2 sm:gap-3">
-              <Input
-                placeholder="Ask your coach a question..."
-                value={coachInput}
-                onChange={(e) => setCoachInput(e.target.value)}
-                disabled={isCoachLoading}
-                className="flex-1 text-sm"
-                autoComplete="off"
-              />
-              <Button type="submit" size="icon" disabled={isCoachLoading || !coachInput.trim()} className="w-9 h-9 sm:w-10 sm:h-10">
-                {isCoachLoading ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" /> : <Send className="h-3 w-3 sm:h-4 sm:w-4" />}
-                <span className="sr-only">Send Message</span>
-              </Button>
-            </form>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Guest Upsell Modal */}
       <GuestUpsellModal
