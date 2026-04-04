@@ -267,14 +267,6 @@ export function NoCreditsModal({
               {isGuest ? 'Sign In to Subscribe' : `${content.cta} — $3.99/mo`}
             </button>
 
-            {/* Secondary action */}
-            <button
-              onClick={handleShowPricing}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Zap className="h-3 w-3" />
-              Prefer a one-time credit pack instead →
-            </button>
           </div>
         </div>
       </div>
