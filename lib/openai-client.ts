@@ -2,6 +2,42 @@ const AI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 const AI_MODEL = 'gemini-3.1-flash-lite-preview';
 const AI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent`;
 
+const DEEPSEEK_API_KEY = 'sk-d7659d4342b94f1b8379d834cc94a9d2';
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+
+async function callDeepSeek(messages: any[], systemInstruction?: string): Promise<string> {
+  const formattedMessages = [];
+  if (systemInstruction) {
+    formattedMessages.push({ role: 'system', content: systemInstruction });
+  }
+  
+  formattedMessages.push(...messages.map((msg: any) => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.content
+  })));
+
+  const response = await fetch(DEEPSEEK_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: formattedMessages,
+      temperature: 0.7
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`DeepSeek API error: ${response.status} ${response.statusText} - ${err}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
 async function callAI(contents: any[], systemInstruction?: string): Promise<string> {
   const body: any = { contents };
   if (systemInstruction) {
@@ -196,14 +232,8 @@ RESPONSE STYLE:
 - Keep responses focused: 3-5 sentences unless they ask for detail
 - Use bullet points when suggesting multiple items`;
 
-  // API requires alternating user/model turns, and the first message must be from user
-  const contents = messages.map((msg) => ({
-    role: msg.role === 'user' ? 'user' : 'model',
-    parts: [{ text: msg.content }],
-  }));
-
   try {
-    const response = await callAI(contents, systemInstruction);
+    const response = await callDeepSeek(messages, systemInstruction);
     return { response };
   } catch (error) {
     console.error('Coach chat error:', error);
