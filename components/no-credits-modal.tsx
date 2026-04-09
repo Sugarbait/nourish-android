@@ -224,7 +224,7 @@ export function NoCreditsModal({
 
           <div className="relative px-6 pt-8 pb-6 flex flex-col items-center text-center gap-5">
             {/* Floating emoji with pulse rings */}
-            <div className="relative nai-float">
+            <div className={`relative ${type === 'ai' ? '' : 'nai-float'}`}>
               {/* Outer pulse ring */}
               <div className="absolute inset-0 rounded-full bg-primary/20 nai-pulse-ring" style={{ animationDelay: '0s' }} />
               {/* Inner pulse ring */}

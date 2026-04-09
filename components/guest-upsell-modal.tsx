@@ -125,7 +125,7 @@ export function GuestUpsellModal({
 
           <div className="relative px-6 pt-8 pb-6 flex flex-col items-center text-center gap-5">
             {/* Floating emoji */}
-            <div className="relative gu-float">
+            <div className={`relative ${type === 'coach' ? '' : 'gu-float'}`}>
               <div className="absolute inset-0 rounded-full bg-primary/20 gu-pulse-ring" style={{ animationDelay: '0s' }} />
               <div className="absolute inset-0 rounded-full bg-primary/15 gu-pulse-ring" style={{ animationDelay: '0.4s' }} />
               <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-4xl shadow-lg overflow-hidden">
