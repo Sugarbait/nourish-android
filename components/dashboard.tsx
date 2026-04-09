@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.26";
+const BUILD_VERSION = "1.5.27";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -915,13 +915,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   };
 
-  const handleRecognizeFood = async () => {
-    if (!imagePreview) {
-      toast({ title: 'No image selected', description: 'Please select an image of your food first.', variant: 'destructive' });
-      return;
-    }
-    await runFoodRecognition(imagePreview);
-  };
 
   const addItemsToLog = (items: FoodItem[], mealName: MealType) => {
     const newMeal: Meal = {
@@ -1601,15 +1594,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                 </Button>
                             </>
                         ) : imagePreview ? (
-                            <>
-                                <Button onClick={handleRecognizeFood} disabled={isLoadingAI} className="flex-1 rounded-full">
-                                    {isLoadingAI ? <Loader2 className="mr-2 animate-spin" /> : <Sparkles className="mr-2" />}
-                                    Recognize Food <span className="opacity-70 ml-1.5 text-[10px] font-medium border rounded-full px-1.5 py-0.5 border-current">(1 credit)</span>
-                                </Button>
+                            <div className="flex w-full">
                                 <Button onClick={resetCapture} variant="outline" className="flex-1 rounded-full">
                                     <RefreshCcw className="mr-2"/> Retake
                                 </Button>
-                            </>
+                            </div>
                         ): (
                             <>
                                 <Button onClick={startCamera} disabled={hasCameraPermission === false} className="flex-1 rounded-full">
