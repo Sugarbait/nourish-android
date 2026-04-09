@@ -7,8 +7,9 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Leaf, Eye, EyeOff, Loader2, X, Mail } from 'lucide-react';
+import { Eye, EyeOff, Loader2, X, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Logo } from '@/components/logo';
 
 // Brand SVG icons
 const GoogleIcon = () => (
@@ -39,8 +40,7 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
   const raw = (err?.message ?? '').toLowerCase();
 
   if (context === 'signIn') {
-    if (raw.includes('invalid') || raw.includes('wrong') || raw.includes('incorrect') || raw.includes('password') || raw.includes('credentials') || raw.includes('unauthorized') || raw.includes('not found') || raw.includes('no user'))
-      return 'The email or password you entered is incorrect. Please try again.';
+    return 'User name or password is incorrect. Please try again.';
   }
 
   if (context === 'signUp') {
@@ -269,11 +269,8 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
 
           <div className="px-6 pt-6 pb-7">
             {/* Logo */}
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
-                <Leaf className="h-4 w-4 text-primary" />
-              </div>
-              <span className="font-bold text-sm">Nourish</span>
+            <div className="mb-5">
+              <Logo />
             </div>
 
             {/* Tabs */}

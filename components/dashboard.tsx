@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.24";
+const BUILD_VERSION = "1.5.25";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -212,6 +212,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexUpdateMealItem = useMutation(api.meals.updateMealItem);
   const convexUpdateMealType = useMutation(api.meals.updateMealType);
   const convexRedeemCoupon = useMutation(api.users.redeemCoupon);
+  const convexConsumeMealCredit = useMutation(api.users.consumeMealCredit);
 
   const [couponCode, setCouponCode] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -829,14 +830,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const runFoodRecognition = async (dataUri: string) => {
     if (!isGuest) {
-      const updatedCredits = consumeMealCredit(credits);
-      if (!updatedCredits) {
+      if (availableMealCredits(credits) <= 0) {
         setNoCreditsType('meal');
         setNoCreditsOpen(true);
         return;
       }
-      saveCredits(updatedCredits);
-      setCredits(updatedCredits);
     }
 
     setIsLoadingAI(true);
@@ -847,6 +845,18 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       if (result.foodItems.length === 0) {
         toast({ title: 'No food detected', description: 'We couldn\'t identify any food items in the image. Try a clearer picture or add it manually.' });
       } else {
+        // Deduct credit only on successful recognition
+        if (!isGuest) {
+          const updatedCredits = consumeMealCredit(credits);
+          if (updatedCredits) {
+            saveCredits(updatedCredits);
+            setCredits(updatedCredits);
+            if (userId) {
+              convexConsumeMealCredit({ userId: userId as any }).catch(console.error);
+            }
+          }
+        }
+
         const foodWithMacros = augmentWithMacros(result.foodItems);
         if (result.healthScore && result.healthAnalysis) {
             setAiHealthAnalysis({ score: result.healthScore, analysis: result.healthAnalysis });
