@@ -1594,7 +1594,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           <Button type="submit" disabled={isContactSubmitting} className="w-full h-8 text-xs bg-muted hover:bg-muted/70 text-foreground transition-colors">
                             {isContactSubmitting ? <Loader2 className="h-3 w-3 animate-spin"/> : 'Send Message'}
                           </Button>
-                          <p className="text-[10px] text-center text-muted-foreground/60 italic">Sent to contactus@digitalac.app</p>
                         </form>
                       </Form>
                     </div>

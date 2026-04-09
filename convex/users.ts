@@ -232,6 +232,10 @@ export const addCredits = mutation({
 });
 
 const VALID_COUPONS: Record<string, number> = {
+  "NOURISH10": 10,
+  "NOURISH15": 15,
+  "NOURISH20": 20,
+  "NOURISH25": 25,
   "NOURISH100": 100,
   "NOURISH200": 200,
   "NOURISH300": 300,
