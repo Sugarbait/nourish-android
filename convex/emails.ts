@@ -50,8 +50,8 @@ export const sendVerificationEmail = internalAction({
             <td style="padding:32px 36px 24px;">
               <table cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="width:36px;height:36px;background:rgba(16,185,129,0.15);border-radius:10px;text-align:center;vertical-align:middle;">
-                    <span style="font-size:18px;">🌿</span>
+                  <td style="width:36px;height:36px;text-align:center;vertical-align:middle;">
+                    <img src="${SITE_URL}/logo-icon.png" width="36" height="36" alt="Nourish Logo" style="display:block;width:36px;height:36px;object-fit:contain;border-radius:10px;" />
                   </td>
                   <td style="padding-left:10px;">
                     <span style="font-size:15px;font-weight:700;color:#f5f5f5;letter-spacing:-0.3px;">Nourish</span>

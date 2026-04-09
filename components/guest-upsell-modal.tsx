@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { X, Sparkles, UserPlus, Zap } from 'lucide-react';
 
 interface GuestUpsellModalProps {
@@ -127,8 +128,12 @@ export function GuestUpsellModal({
             <div className="relative gu-float">
               <div className="absolute inset-0 rounded-full bg-primary/20 gu-pulse-ring" style={{ animationDelay: '0s' }} />
               <div className="absolute inset-0 rounded-full bg-primary/15 gu-pulse-ring" style={{ animationDelay: '0.4s' }} />
-              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-4xl shadow-lg">
-                {content.emoji}
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-4xl shadow-lg overflow-hidden">
+                {type === 'coach' ? (
+                  <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
+                ) : (
+                  content.emoji
+                )}
               </div>
               <Sparkles className="absolute -top-2 -right-2 h-4 w-4 text-primary opacity-80" />
               <Sparkles className="absolute -bottom-1 -left-3 h-3 w-3 text-emerald-400 opacity-80" />

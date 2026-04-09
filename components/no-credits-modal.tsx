@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { X, Sparkles, Check, Zap, RefreshCcw } from 'lucide-react';
 import { CreditData } from '@/lib/credits';
@@ -228,8 +229,12 @@ export function NoCreditsModal({
               <div className="absolute inset-0 rounded-full bg-primary/20 nai-pulse-ring" style={{ animationDelay: '0s' }} />
               {/* Inner pulse ring */}
               <div className="absolute inset-0 rounded-full bg-primary/15 nai-pulse-ring" style={{ animationDelay: '0.4s' }} />
-              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-4xl shadow-lg">
-                {content.emoji}
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-4xl shadow-lg overflow-hidden">
+                {type === 'ai' ? (
+                  <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
+                ) : (
+                  content.emoji
+                )}
               </div>
               {/* Sparkle dots */}
               <Sparkles className="nai-sparkle-1 absolute -top-2 -right-2 h-4 w-4 text-primary" />

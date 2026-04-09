@@ -42,7 +42,7 @@ export const createAccount: ReturnType<typeof action> = action({
   },
   handler: async (ctx, { name, email, password }): Promise<{ userId: string; pendingVerification: boolean }> => {
     const existing = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
-    if (existing) throw new Error("An account with this email already exists.");
+    if (existing) throw new Error("This email already exists. Please log in or use another email address to sign up.");
 
     if (password.length < 8) throw new Error("Password must be at least 8 characters.");
 

@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "1.5.23";
+const BUILD_VERSION = "1.5.24";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -282,6 +282,82 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const [editingFoodItem, setEditingFoodItem] = useState<{ mealId: string; itemIndex: number; value: string } | null>(null);
   const [isLookingUpNutrition, setIsLookingUpNutrition] = useState(false);
+  const [pendingDuplicate, setPendingDuplicate] = useState<{
+    newMeal: Meal;
+    duplicateOfId: string;
+    foodWithMacros: FoodItem[];
+  } | null>(null);
+
+  const handleDuplicateReplace = () => {
+    if (!pendingDuplicate) return;
+    const { newMeal, duplicateOfId, foodWithMacros } = pendingDuplicate;
+    // Remove the old meal first
+    removeMeal(duplicateOfId);
+    // Log the new meal
+    setHistory(current => ({
+      ...current,
+      [dateKey]: {
+        meals: [...(current[dateKey]?.meals || []), newMeal],
+        water: current[dateKey]?.water || 0,
+      },
+    }));
+    if (userId) {
+      const totals = foodWithMacros.reduce(
+        (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+      convexLogMeal({
+        userId: userId as any,
+        date: dateKey,
+        mealType: newMeal.name.toLowerCase() as any,
+        name: newMeal.name,
+        ...totals,
+        healthScore: newMeal.healthAnalysis?.score,
+        healthAnalysis: newMeal.healthAnalysis?.analysis,
+        items: foodWithMacros,
+        localId: newMeal.id,
+      }).catch(console.error);
+    }
+    toast({ title: `Replaced in ${newMeal.name}!`, description: 'Older entry was replaced. Review the results below.' });
+    setPendingDuplicate(null);
+  };
+
+  const handleDuplicateLogAgain = () => {
+    if (!pendingDuplicate) return;
+    const { newMeal, foodWithMacros } = pendingDuplicate;
+    // Append duplicate entry alongside the existing one
+    setHistory(current => ({
+      ...current,
+      [dateKey]: {
+        meals: [...(current[dateKey]?.meals || []), newMeal],
+        water: current[dateKey]?.water || 0,
+      },
+    }));
+    if (userId) {
+      const totals = foodWithMacros.reduce(
+        (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+      convexLogMeal({
+        userId: userId as any,
+        date: dateKey,
+        mealType: newMeal.name.toLowerCase() as any,
+        name: newMeal.name,
+        ...totals,
+        healthScore: newMeal.healthAnalysis?.score,
+        healthAnalysis: newMeal.healthAnalysis?.analysis,
+        items: foodWithMacros,
+        localId: newMeal.id,
+      }).catch(console.error);
+    }
+    toast({ title: `Added to ${newMeal.name}!`, description: 'Food logged as a duplicate. Review the results below.' });
+    setPendingDuplicate(null);
+  };
+
+  const handleDuplicateCancel = () => {
+    setPendingDuplicate(null);
+    toast({ title: 'Cancelled', description: 'Duplicate scan discarded.' });
+  };
 
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
   const dailyData: DailyData = history[dateKey] || { meals: [], water: 0 };
@@ -767,39 +843,52 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         if (result.healthScore && result.healthAnalysis) {
             setAiHealthAnalysis({ score: result.healthScore, analysis: result.healthAnalysis });
         }
-        // Auto-add to log based on time of day
+        setAiResults(foodWithMacros);
+
         const mealType = getMealTypeByTime();
         const healthData = (result.healthScore && result.healthAnalysis)
           ? { score: result.healthScore, analysis: result.healthAnalysis }
           : undefined;
         const newMeal: Meal = { id: Date.now().toString(), name: mealType, items: foodWithMacros, timestamp: Date.now(), healthAnalysis: healthData };
-        setHistory(current => ({
-          ...current,
-          [dateKey]: {
-            meals: [...(current[dateKey]?.meals || []), newMeal],
-            water: current[dateKey]?.water || 0,
-          },
-        }));
-        setAiResults(foodWithMacros);
-        // Sync new AI-scanned meal to Convex for authenticated users
-        if (userId) {
-          const totals = foodWithMacros.reduce(
-            (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
-            { calories: 0, protein: 0, carbs: 0, fat: 0 }
-          );
-          convexLogMeal({
-            userId: userId as any,
-            date: dateKey,
-            mealType: mealType.toLowerCase() as any,
-            name: mealType,
-            ...totals,
-            healthScore: result.healthScore,
-            healthAnalysis: result.healthAnalysis,
-            items: foodWithMacros,
-            localId: newMeal.id,
-          }).catch(console.error);
+
+        const currentDailyMeals = history[dateKey]?.meals || [];
+        const duplicateMeal = currentDailyMeals.find(m => 
+            m.items.length > 0 &&
+            m.items.length === foodWithMacros.length &&
+            m.items.every((item) => foodWithMacros.some(ni => ni.name.toLowerCase() === item.name.toLowerCase()))
+        );
+
+        if (duplicateMeal) {
+            setPendingDuplicate({ newMeal, duplicateOfId: duplicateMeal.id, foodWithMacros });
+        } else {
+            setHistory(current => ({
+              ...current,
+              [dateKey]: {
+                meals: [...(current[dateKey]?.meals || []), newMeal],
+                water: current[dateKey]?.water || 0,
+              },
+            }));
+            
+            // Sync new AI-scanned meal to Convex for authenticated users
+            if (userId) {
+              const totals = foodWithMacros.reduce(
+                (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
+                { calories: 0, protein: 0, carbs: 0, fat: 0 }
+              );
+              convexLogMeal({
+                userId: userId as any,
+                date: dateKey,
+                mealType: mealType.toLowerCase() as any,
+                name: mealType,
+                ...totals,
+                healthScore: result.healthScore,
+                healthAnalysis: result.healthAnalysis,
+                items: foodWithMacros,
+                localId: newMeal.id,
+              }).catch(console.error);
+            }
+            toast({ title: `Added to ${mealType}!`, description: 'Food recognized and logged. Review the results below.' });
         }
-        toast({ title: `Added to ${mealType}!`, description: 'Food recognized and logged. Review the results below.' });
       }
     } catch (error) {
       toast({ title: 'Recognition failed', description: (error as Error).message, variant: 'destructive' });
@@ -1121,7 +1210,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                   Sign Up
                 </Button>
               </div>
-            ) : (
+            ) : !credits.subscription?.active ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -1130,7 +1219,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               >
                 <CreditCard className="h-3.5 w-3.5" /> Pricing
               </Button>
-            )}
+            ) : null}
             <Sheet open={isProfileOpen} onOpenChange={setIsProfileOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 p-0">
@@ -1366,13 +1455,15 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               </span>
             </button>
           </div>
-          <button
-            onClick={() => { setIsPricingOpen(true); }}
-            className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
-          >
-            <Zap className="h-3 w-3" />
-            <span>{credits.subscription?.active ? 'Top Up' : 'Subscribe'}</span>
-          </button>
+          {!credits.subscription?.active && (
+            <button
+              onClick={() => { setIsPricingOpen(true); }}
+              className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+            >
+              <Zap className="h-3 w-3" />
+              <span>Subscribe</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1432,7 +1523,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         {isCameraOn ? (
                              <>
                                 <Button onClick={handleCapturePhoto} className="flex-1 rounded-full">
-                                    <Camera className="mr-2"/> Capture Photo
+                                    <Camera className="mr-2"/> Capture Photo <span className="opacity-70 ml-1.5 text-[10px] font-medium border rounded-full px-1.5 py-0.5 border-current">(1 credit)</span>
                                 </Button>
                                 <Button onClick={stopCamera} variant="outline" className="flex-1 rounded-full">
                                     <Power className="mr-2"/> Stop Camera
@@ -1442,7 +1533,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                             <>
                                 <Button onClick={handleRecognizeFood} disabled={isLoadingAI} className="flex-1 rounded-full">
                                     {isLoadingAI ? <Loader2 className="mr-2 animate-spin" /> : <Sparkles className="mr-2" />}
-                                    Recognize Food
+                                    Recognize Food <span className="opacity-70 ml-1.5 text-[10px] font-medium border rounded-full px-1.5 py-0.5 border-current">(1 credit)</span>
                                 </Button>
                                 <Button onClick={resetCapture} variant="outline" className="flex-1 rounded-full">
                                     <RefreshCcw className="mr-2"/> Retake
@@ -1455,7 +1546,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                 </Button>
                                 <Button asChild className="flex-1 rounded-full">
                                     <label htmlFor="food-upload" className="cursor-pointer flex items-center justify-center">
-                                        <Upload className="mr-2"/> Upload Photo
+                                        <Upload className="mr-2"/> Upload Photo <span className="opacity-70 ml-1.5 text-[10px] font-medium border rounded-full px-1.5 py-0.5 border-current">(1 credit)</span>
                                     </label>
                                 </Button>
                             </>
@@ -1924,7 +2015,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <CardFooter>
                      <Button onClick={handleGetRecipeSuggestions} disabled={isLoadingRecipes} className="w-full rounded-full">
                         {isLoadingRecipes ? <Loader2 className="mr-2 animate-spin"/> : <Soup className="mr-2"/>}
-                        Suggest Recipes for Today
+                        Suggest Recipes for Today <span className="opacity-70 ml-1.5 text-[10px] font-medium border rounded-full px-1.5 py-0.5 border-current">(1 credit)</span>
                     </Button>
                 </CardFooter>
             </Card>
@@ -1976,9 +2067,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 z-50 w-full sm:w-[420px] h-[100dvh] sm:h-[600px] sm:max-h-[80vh] flex flex-col bg-background border sm:rounded-2xl shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-primary" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center border-2 border-primary/20 shadow-sm shrink-0">
+                <Image src="/ai-coach.png" alt="AI Coach" width={40} height={40} className="object-cover w-full h-full" />
               </div>
               <div>
                 <p className="text-sm font-semibold leading-tight">AI Nutritional Coach</p>
@@ -1999,8 +2090,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             <div className="space-y-4 py-4">
               {chatMessages.length === 0 && (
                 <div className="text-center space-y-4 py-6">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                    <Sparkle className="h-6 w-6 text-primary" />
+                  <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center mx-auto border-4 border-primary/10 shadow-sm shrink-0 relative">
+                    <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
                   </div>
                   <div>
                     <h3 className="text-sm font-medium mb-2">Welcome! I'm your AI nutritional coach.</h3>
@@ -2037,8 +2128,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               {chatMessages.map((message, index) => (
                 <div key={index} className={`flex items-start gap-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
                   {message.role === 'model' && (
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Sparkle className="h-3 w-3 text-primary" />
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 border border-primary/20 relative">
+                      <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
                     </div>
                   )}
                   <div className={`rounded-2xl px-3 py-2 max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
@@ -2053,8 +2144,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               ))}
               {isCoachLoading && (
                 <div className="flex items-start gap-2">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Sparkle className="h-3 w-3 text-primary" />
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 border border-primary/20 relative">
+                    <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
                   </div>
                   <div className="bg-muted rounded-2xl px-3 py-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -2068,7 +2159,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           <div className="border-t px-4 py-3 shrink-0">
             <form onSubmit={handleCoachSubmit} className="flex items-center gap-2">
               <Input
-                placeholder="Ask your coach a question..."
+                placeholder="Ask your coach a question... (1 credit)"
                 value={coachInput}
                 onChange={(e) => setCoachInput(e.target.value)}
                 disabled={isCoachLoading}
@@ -2095,6 +2186,25 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
       {/* Auth Modal (for guest sign-up from within dashboard) */}
       <AuthModal open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen} defaultTab={authModalTab} />
+
+      <Dialog open={!!pendingDuplicate} onOpenChange={(open) => !open && handleDuplicateCancel()}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Duplicate Detected</DialogTitle>
+            <DialogDescription className="pt-2 pb-1">
+              We noticed you already logged '{pendingDuplicate?.foodWithMacros.map(i => i.name).join(", ")}' today. 
+            </DialogDescription>
+            <DialogDescription>
+              Would you like to replace the previous entry, or log this as an additional meal?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 sm:space-x-0">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={handleDuplicateCancel}>Cancel</Button>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={handleDuplicateReplace}>Replace Previous</Button>
+            <Button className="w-full sm:w-auto" onClick={handleDuplicateLogAgain}>Log as Duplicate</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Pricing Modal (full pricing page) */}
       <PricingModal

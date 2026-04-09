@@ -218,9 +218,9 @@ export default function SplashPage() {
       </nav>
 
       {/* HERO */}
-      <section className="relative pt-16 pb-16 md:pt-32 md:pb-24 px-4 flex flex-col lg:flex-row items-center justify-between text-center lg:text-left max-w-7xl mx-auto overflow-hidden min-h-[auto] lg:min-h-[90vh]">
+      <section className="relative pt-16 pb-16 md:pt-32 md:pb-24 overflow-hidden min-h-[auto] lg:min-h-screen w-full flex items-center justify-center">
         {/* Dynamic Background */}
-        <div className="pointer-events-none absolute inset-0">
+        <div className="pointer-events-none absolute inset-0 w-full">
           <div className="absolute inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_at_center,white,transparent_80%)] opacity-30" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-primary/10 blur-[120px] rounded-full" />
           <div className="pulse-glow absolute top-20 left-1/4 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[100px]" style={{animationDelay:'1s'}} />
@@ -231,8 +231,10 @@ export default function SplashPage() {
           </div>
         </div>
 
-        {/* Left Column: Text & CTA */}
-        <div className="relative z-10 flex flex-col items-center lg:items-start max-w-2xl pt-4 lg:pt-10">
+        {/* Content Container */}
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-between text-center lg:text-left h-full">
+          {/* Left Column: Text & CTA */}
+          <div className="relative z-10 flex flex-col items-center lg:items-start max-w-2xl pt-4 lg:pt-10">
           {/* Badge */}
           <div className="relative mb-6 md:mb-8 inline-flex items-center gap-2 rounded-full p-[1px] bg-gradient-to-r from-emerald-500/50 via-teal-500/50 to-primary/50 overflow-hidden group">
             <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -333,6 +335,7 @@ export default function SplashPage() {
             </div>
             <div className="absolute -bottom-6 lg:-bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-6 lg:h-8 bg-black/60 blur-xl rounded-[100%]" />
           </div>
+        </div>
         </div>
       </section>
 
