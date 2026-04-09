@@ -243,43 +243,56 @@ export const redeemCoupon = mutation({
     code: v.string(),
   },
   handler: async (ctx, { userId, code }) => {
-    const uppercaseCode = code.trim().toUpperCase();
-    const reward = VALID_COUPONS[uppercaseCode];
-    if (!reward) {
-      throw new ConvexError("Invalid coupon code.");
-    }
+    try {
+      const uppercaseCode = code.trim().toUpperCase();
+      const reward = VALID_COUPONS[uppercaseCode];
+      
+      if (!reward) {
+        throw new ConvexError("Invalid coupon code.");
+      }
 
-    const today = todayKey();
-    let row = await ctx.db
-      .query("credits")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .first();
+      // Check if user exists
+      const user = await ctx.db.get(userId);
+      if (!user) {
+        throw new ConvexError("User not found. Please sign in again.");
+      }
 
-    if (!row) {
-      await ctx.db.insert("credits", {
-        userId,
-        credits: reward,
-        lastFreeDate: today,
-        dailyFreeMealUsed: false,
-        dailyFreeAIUsed: false,
-        usedCoupons: [uppercaseCode],
+      const today = todayKey();
+      let row = await ctx.db
+        .query("credits")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+
+      if (!row) {
+        await ctx.db.insert("credits", {
+          userId,
+          credits: reward,
+          lastFreeDate: today,
+          dailyFreeMealUsed: false,
+          dailyFreeAIUsed: false,
+          usedCoupons: [uppercaseCode],
+        });
+        return { success: true, reward };
+      }
+
+      const usedCoupons = row.usedCoupons ?? [];
+      if (usedCoupons.includes(uppercaseCode)) {
+        throw new ConvexError("You have already used this coupon code.");
+      }
+
+      let mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
+      await ctx.db.patch(row._id, {
+        credits: mappedCredits + reward,
+        mealCredits: undefined,
+        aiCredits: undefined,
+        usedCoupons: [...usedCoupons, uppercaseCode],
       });
+
       return { success: true, reward };
+    } catch (err: any) {
+      if (err instanceof ConvexError) throw err;
+      console.error("Redeem Coupon Error:", err);
+      throw new ConvexError(`Server error: ${err.message || "Unknown error"}`);
     }
-
-    const usedCoupons = row.usedCoupons ?? [];
-    if (usedCoupons.includes(uppercaseCode)) {
-      throw new ConvexError("You have already used this coupon code.");
-    }
-
-    let mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
-    await ctx.db.patch(row._id, {
-      credits: mappedCredits + reward,
-      mealCredits: undefined,
-      aiCredits: undefined,
-      usedCoupons: [...usedCoupons, uppercaseCode],
-    });
-
-    return { success: true, reward };
   },
 });

@@ -1022,17 +1022,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         toast({ title: 'Coupon Applied!', description: `You received ${result.reward} credits.`, variant: 'default' });
         setCouponCode('');
         
-        const updatedCredits = { 
-          ...credits, 
-          credits: (credits.credits || 0) + (result.reward || 0) 
-        };
-        setCredits(updatedCredits);
-        saveCredits(updatedCredits);
+        // Use functional state update to ensure we have the latest credits object
+        setCredits(current => {
+          const updated = { 
+            ...current, 
+            credits: (current.credits || 0) + (result.reward || 0) 
+          };
+          saveCredits(updated);
+          return updated;
+        });
         
         setIsChatbotOpen(true);
       }
     } catch (err: any) {
-      toast({ title: 'Coupon Failed', description: err.message || 'Invalid or expired code.', variant: 'destructive' });
+      // ConvexError message is usually in err.data or err.message
+      const errorMessage = err.data || err.message || 'Invalid or expired code.';
+      toast({ title: 'Coupon Failed', description: errorMessage, variant: 'destructive' });
     } finally {
       setIsRedeeming(false);
     }
