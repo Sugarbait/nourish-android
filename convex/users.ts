@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 const todayKey = () => {
@@ -246,7 +246,7 @@ export const redeemCoupon = mutation({
     const uppercaseCode = code.trim().toUpperCase();
     const reward = VALID_COUPONS[uppercaseCode];
     if (!reward) {
-      throw new Error("Invalid coupon code.");
+      throw new ConvexError("Invalid coupon code.");
     }
 
     const today = todayKey();
@@ -269,7 +269,7 @@ export const redeemCoupon = mutation({
 
     const usedCoupons = row.usedCoupons ?? [];
     if (usedCoupons.includes(uppercaseCode)) {
-      throw new Error("You have already used this coupon code.");
+      throw new ConvexError("You have already used this coupon code.");
     }
 
     let mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
