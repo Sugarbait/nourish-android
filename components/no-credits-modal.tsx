@@ -34,14 +34,14 @@ const CONTENT = {
   },
   ai: {
     emoji: '🤖',
-    headline: 'AI Coach is for subscribers',
-    sub: "The AI nutritional coach is a subscriber-only feature. Subscribe to get personalised coaching, meal recommendations, and hydration tips every day.",
+    headline: 'More credits required',
+    sub: "Get more credits by adding a coupon code or starting a monthly subscription to get personalised coaching and hydration tips every day.",
     cta: 'Unlock AI Coaching',
   },
   recipe: {
     emoji: '🥗',
-    headline: 'AI Recipes are for subscribers',
-    sub: "AI-powered recipe generation is a subscriber-only feature. Subscribe to get personalized, healthy recipe ideas based on your daily macros.",
+    headline: 'More credits required',
+    sub: "Get more credits by adding a coupon code or starting a monthly subscription to generate personalized, healthy recipe ideas based on your daily macros.",
     cta: 'Unlock AI Recipes',
   },
 };

@@ -964,7 +964,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       return;
     }
 
-    if (!credits.subscription?.active) {
+    if (availableAICredits(credits) <= 0) {
       setNoCreditsType('recipe');
       setNoCreditsOpen(true);
       return;
@@ -1021,6 +1021,15 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       if (result.success) {
         toast({ title: 'Coupon Applied!', description: `You received ${result.reward} credits.`, variant: 'default' });
         setCouponCode('');
+        
+        const updatedCredits = { 
+          ...credits, 
+          credits: (credits.credits || 0) + (result.reward || 0) 
+        };
+        setCredits(updatedCredits);
+        saveCredits(updatedCredits);
+        
+        setIsChatbotOpen(true);
       }
     } catch (err: any) {
       toast({ title: 'Coupon Failed', description: err.message || 'Invalid or expired code.', variant: 'destructive' });
@@ -1077,7 +1086,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       return;
     }
 
-    if (!credits.subscription?.active) {
+    if (availableAICredits(credits) <= 0) {
       setNoCreditsType('ai');
       setNoCreditsOpen(true);
       return;
