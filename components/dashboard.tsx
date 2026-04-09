@@ -211,6 +211,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexDeleteMeal = useMutation(api.meals.deleteMealByLocalId);
   const convexUpdateMealItem = useMutation(api.meals.updateMealItem);
   const convexUpdateMealType = useMutation(api.meals.updateMealType);
+  const convexRedeemCoupon = useMutation(api.users.redeemCoupon);
+
+  const [couponCode, setCouponCode] = useState('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
+
   // Auth state from localStorage
   const [userId, setUserId] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -509,7 +514,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         const credData = await credRes.json();
         const convexCredits = credData?.value;
 
-        const isActivated = sub?.active === true || (convexCredits && convexCredits.mealCredits > 0);
+        // Subscription gets checked here
+        const isActivated = sub?.active === true || (convexCredits && convexCredits.credits > 0);
 
         if (isActivated || attempts >= MAX_ATTEMPTS) {
           clearInterval(poll);
@@ -520,7 +526,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             const existing = loadCredits();
             const merged = {
               ...existing,
-              credits: convexCredits?.mealCredits ?? existing.credits,
+              credits: convexCredits?.credits ?? existing.credits,
+              dailyFreeMealUsed: convexCredits?.dailyFreeMealUsed ?? existing.dailyFreeMealUsed,
+              lastFreeDate: convexCredits?.lastFreeDate ?? existing.lastFreeDate,
               subscription: sub?.active
                 ? { active: true, plan: 'monthly' as const, expiresAt: sub.expiresAt ? new Date(sub.expiresAt).toISOString() : null }
                 : existing.subscription,
@@ -992,6 +1000,25 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     });
   };
 
+  const handleRedeemCoupon = async () => {
+    if (!couponCode.trim() || !userId) return;
+    setIsRedeeming(true);
+    try {
+      const result = await convexRedeemCoupon({
+        userId: userId as any,
+        code: couponCode,
+      });
+      if (result.success) {
+        toast({ title: 'Coupon Applied!', description: `You received ${result.reward} credits.`, variant: 'default' });
+        setCouponCode('');
+      }
+    } catch (err: any) {
+      toast({ title: 'Coupon Failed', description: err.message || 'Invalid or expired code.', variant: 'destructive' });
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
+
   const handleProfileSubmit = (values: z.infer<typeof profileFormSchema>) => {
       const updated = { ...defaultProfile, ...values };
       setProfile(updated);
@@ -1372,7 +1399,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           </Button>
                         </SheetClose>
                       )}
-                      {userId && (
+                      {userId && credits.subscription?.active && (
                         <Button
                           type="button"
                           variant="ghost"
@@ -1397,12 +1424,32 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           }}
                         >
                           <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                          {credits.subscription?.active ? 'Manage / Cancel Subscription' : 'Manage Billing'}
+                          Manage / Cancel Subscription
                         </Button>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 pb-1">
+                    <div className="flex flex-col gap-2 pt-2 border-t">
+                      <span className="text-sm text-muted-foreground">Redeem Coupon</span>
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="Enter code" 
+                          value={couponCode} 
+                          onChange={(e) => setCouponCode(e.target.value)} 
+                          className="h-8 text-sm flex-1"
+                        />
+                        <Button 
+                          type="button" 
+                          size="sm" 
+                          onClick={handleRedeemCoupon} 
+                          disabled={isRedeeming || !couponCode.trim()}
+                        >
+                          {isRedeeming ? '...' : 'Apply'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 pb-1 border-t mt-2">
                       <span className="text-sm text-muted-foreground">Appearance</span>
                       <ModeToggle />
                     </div>

@@ -92,28 +92,29 @@ export const updateProfile = mutation({
 export const getCredits = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    const credits = await ctx.db
+    const row = await ctx.db
       .query("credits")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
     const today = todayKey();
 
-    if (!credits) {
+    if (!row) {
       return {
-        mealCredits: 0,
-        aiCredits: 0,
+        credits: 0,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
       };
     }
 
-    if (credits.lastFreeDate !== today) {
-      return { ...credits, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
+    const mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
+
+    if (row.lastFreeDate !== today) {
+      return { ...row, credits: mappedCredits, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
     }
 
-    return credits;
+    return { ...row, credits: mappedCredits };
   },
 });
 
@@ -121,34 +122,35 @@ export const consumeMealCredit = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const today = todayKey();
-    let credits = await ctx.db
+    let row = await ctx.db
       .query("credits")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
-    if (!credits) {
+    if (!row) {
       const id = await ctx.db.insert("credits", {
         userId,
-        mealCredits: 0,
-        aiCredits: 0,
+        credits: 0,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
       });
-      credits = await ctx.db.get(id) as any;
+      row = await ctx.db.get(id) as any;
     }
 
-    if (credits!.lastFreeDate !== today) {
-      await ctx.db.patch(credits!._id, { lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false });
-      credits = { ...credits!, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
+    if (row!.lastFreeDate !== today) {
+      await ctx.db.patch(row!._id, { lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false });
+      row = { ...row!, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false } as any;
     }
 
-    if (!credits!.dailyFreeMealUsed) {
-      await ctx.db.patch(credits!._id, { dailyFreeMealUsed: true });
+    if (!row!.dailyFreeMealUsed) {
+      await ctx.db.patch(row!._id, { dailyFreeMealUsed: true });
       return { success: true };
     }
-    if (credits!.mealCredits > 0) {
-      await ctx.db.patch(credits!._id, { mealCredits: credits!.mealCredits - 1 });
+
+    let mappedCredits = row!.credits ?? ((row!.mealCredits ?? 0) + (row!.aiCredits ?? 0));
+    if (mappedCredits > 0) {
+      await ctx.db.patch(row!._id, { credits: mappedCredits - 1, mealCredits: undefined, aiCredits: undefined });
       return { success: true };
     }
     return { success: false };
@@ -159,34 +161,35 @@ export const consumeAICredit = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const today = todayKey();
-    let credits = await ctx.db
+    let row = await ctx.db
       .query("credits")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
-    if (!credits) {
+    if (!row) {
       const id = await ctx.db.insert("credits", {
         userId,
-        mealCredits: 0,
-        aiCredits: 0,
+        credits: 0,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
       });
-      credits = await ctx.db.get(id) as any;
+      row = await ctx.db.get(id) as any;
     }
 
-    if (credits!.lastFreeDate !== today) {
-      await ctx.db.patch(credits!._id, { lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false });
-      credits = { ...credits!, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
+    if (row!.lastFreeDate !== today) {
+      await ctx.db.patch(row!._id, { lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false });
+      row = { ...row!, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false } as any;
     }
 
-    if (!credits!.dailyFreeAIUsed) {
-      await ctx.db.patch(credits!._id, { dailyFreeAIUsed: true });
+    if (!row!.dailyFreeAIUsed) {
+      await ctx.db.patch(row!._id, { dailyFreeAIUsed: true });
       return { success: true };
     }
-    if (credits!.aiCredits > 0) {
-      await ctx.db.patch(credits!._id, { aiCredits: credits!.aiCredits - 1 });
+
+    let mappedCredits = row!.credits ?? ((row!.mealCredits ?? 0) + (row!.aiCredits ?? 0));
+    if (mappedCredits > 0) {
+      await ctx.db.patch(row!._id, { credits: mappedCredits - 1, mealCredits: undefined, aiCredits: undefined });
       return { success: true };
     }
     return { success: false };
@@ -196,30 +199,87 @@ export const consumeAICredit = mutation({
 export const addCredits = mutation({
   args: {
     userId: v.id("users"),
+    amount: v.optional(v.number()),
     mealCredits: v.optional(v.number()),
     aiCredits: v.optional(v.number()),
   },
-  handler: async (ctx, { userId, mealCredits, aiCredits }) => {
+  handler: async (ctx, { userId, amount, mealCredits, aiCredits }) => {
     const today = todayKey();
-    let credits = await ctx.db
+    let row = await ctx.db
       .query("credits")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
-    if (!credits) {
+    const addAmount = (amount ?? 0) + (mealCredits ?? 0) + (aiCredits ?? 0);
+
+    if (!row) {
       await ctx.db.insert("credits", {
         userId,
-        mealCredits: mealCredits ?? 0,
-        aiCredits: aiCredits ?? 0,
+        credits: addAmount,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
       });
     } else {
-      await ctx.db.patch(credits._id, {
-        mealCredits: credits.mealCredits + (mealCredits ?? 0),
-        aiCredits: credits.aiCredits + (aiCredits ?? 0),
+      let mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
+      await ctx.db.patch(row._id, {
+        credits: mappedCredits + addAmount,
+        mealCredits: undefined,
+        aiCredits: undefined,
       });
     }
+  },
+});
+
+const VALID_COUPONS: Record<string, number> = {
+  "NOURISH100": 100,
+  "NOURISH200": 200,
+  "NOURISH300": 300,
+};
+
+export const redeemCoupon = mutation({
+  args: {
+    userId: v.id("users"),
+    code: v.string(),
+  },
+  handler: async (ctx, { userId, code }) => {
+    const uppercaseCode = code.trim().toUpperCase();
+    const reward = VALID_COUPONS[uppercaseCode];
+    if (!reward) {
+      throw new Error("Invalid coupon code.");
+    }
+
+    const today = todayKey();
+    let row = await ctx.db
+      .query("credits")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!row) {
+      await ctx.db.insert("credits", {
+        userId,
+        credits: reward,
+        lastFreeDate: today,
+        dailyFreeMealUsed: false,
+        dailyFreeAIUsed: false,
+        usedCoupons: [uppercaseCode],
+      });
+      return { success: true, reward };
+    }
+
+    const usedCoupons = row.usedCoupons ?? [];
+    if (usedCoupons.includes(uppercaseCode)) {
+      throw new Error("You have already used this coupon code.");
+    }
+
+    let mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
+    await ctx.db.patch(row._id, {
+      credits: mappedCredits + reward,
+      mealCredits: undefined,
+      aiCredits: undefined,
+      usedCoupons: [...usedCoupons, uppercaseCode],
+    });
+
+    return { success: true, reward };
   },
 });

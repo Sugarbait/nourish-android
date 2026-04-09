@@ -77,11 +77,13 @@ export default defineSchema({
   // Credits tracking (replaces localStorage)
   credits: defineTable({
     userId: v.id("users"),
-    mealCredits: v.number(),
-    aiCredits: v.number(),
+    credits: v.number(),
+    mealCredits: v.optional(v.number()), // deprecated
+    aiCredits: v.optional(v.number()),   // deprecated
     lastFreeDate: v.string(),
     dailyFreeMealUsed: v.boolean(),
     dailyFreeAIUsed: v.boolean(),
+    usedCoupons: v.optional(v.array(v.string())),
   }).index("by_userId", ["userId"]),
 
   // Subscriptions

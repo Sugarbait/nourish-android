@@ -83,14 +83,16 @@ export const activateSubscription = mutation({
       .first();
 
     if (credits) {
+      let mappedCredits = credits.credits ?? ((credits.mealCredits ?? 0) + (credits.aiCredits ?? 0));
       await ctx.db.patch(credits._id, {
-        mealCredits: credits.mealCredits + SUBSCRIPTION_CREDITS,
+        credits: mappedCredits + SUBSCRIPTION_CREDITS,
+        mealCredits: undefined,
+        aiCredits: undefined,
       });
     } else {
       await ctx.db.insert("credits", {
         userId: uid,
-        mealCredits: SUBSCRIPTION_CREDITS,
-        aiCredits: 0,
+        credits: SUBSCRIPTION_CREDITS,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
@@ -134,14 +136,16 @@ export const addCreditPack = mutation({
       .first();
 
     if (credits) {
+      let mappedCredits = credits.credits ?? ((credits.mealCredits ?? 0) + (credits.aiCredits ?? 0));
       await ctx.db.patch(credits._id, {
-        mealCredits: credits.mealCredits + amount,
+        credits: mappedCredits + amount,
+        mealCredits: undefined,
+        aiCredits: undefined,
       });
     } else {
       await ctx.db.insert("credits", {
         userId: uid,
-        mealCredits: amount,
-        aiCredits: 0,
+        credits: amount,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
@@ -193,14 +197,16 @@ export const renewSubscription = mutation({
       .first();
 
     if (credits) {
+      let mappedCredits = credits.credits ?? ((credits.mealCredits ?? 0) + (credits.aiCredits ?? 0));
       await ctx.db.patch(credits._id, {
-        mealCredits: credits.mealCredits + SUBSCRIPTION_CREDITS,
+        credits: mappedCredits + SUBSCRIPTION_CREDITS,
+        mealCredits: undefined,
+        aiCredits: undefined,
       });
     } else {
       await ctx.db.insert("credits", {
         userId: user._id,
-        mealCredits: SUBSCRIPTION_CREDITS,
-        aiCredits: 0,
+        credits: SUBSCRIPTION_CREDITS,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
