@@ -108,4 +108,13 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
   }).index("by_userId", ["userId"]),
+
+  // Contact form submissions
+  contactMessages: defineTable({
+    name: v.string(),
+    email: v.string(),
+    message: v.string(),
+    app: v.string(),
+    createdAt: v.number(),
+  }),
 });

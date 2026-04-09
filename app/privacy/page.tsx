@@ -95,7 +95,7 @@ export default function PrivacyPage() {
             </ul>
             <p className="mt-2">
               To exercise any of these rights, please contact us at{' '}
-              <a href="mailto:privacy@digitalac.app" className="text-primary hover:underline">privacy@digitalac.app</a>.
+              <a href="mailto:contactus@digitalac.app" className="text-primary hover:underline">contactus@digitalac.app</a>.
             </p>
           </section>
 
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
             </p>
             <div className="mt-2 rounded-xl border border-white/5 bg-white/[0.03] p-4 text-sm">
               <p><strong className="text-foreground">Nourish</strong></p>
-              <p>Email: <a href="mailto:privacy@digitalac.app" className="text-primary hover:underline">privacy@digitalac.app</a></p>
+              <p>Email: <a href="mailto:contactus@digitalac.app" className="text-primary hover:underline">contactus@digitalac.app</a></p>
             </div>
           </section>
         </div>

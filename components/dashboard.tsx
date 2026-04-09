@@ -38,6 +38,7 @@ import {
   Pencil,
   Check,
   X,
+  MessageSquare,
 } from 'lucide-react';
 import {
   CreditData,
@@ -82,6 +83,17 @@ import { Calendar } from './ui/calendar';
 import { Textarea } from './ui/textarea';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 import type { RecognizeFoodOutput } from '@/ai/types/food';
@@ -180,6 +192,12 @@ const profileFormSchema = z.object({
   avatar: z.string().optional(),
 });
 
+const contactFormSchema = z.object({
+  name: z.string().min(1, "Name is required."),
+  email: z.string().email("Invalid email address."),
+  message: z.string().min(10, "Message must be at least 10 characters."),
+});
+
 type UserProfile = z.infer<typeof profileFormSchema>;
 
 const defaultProfile: UserProfile = { name: '', age: '', weight: '', height: '', activityLevel: 'moderate', avatar: '' };
@@ -213,6 +231,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexUpdateMealType = useMutation(api.meals.updateMealType);
   const convexRedeemCoupon = useMutation(api.users.redeemCoupon);
   const convexConsumeMealCredit = useMutation(api.users.consumeMealCredit);
+  const submitContactForm = useAction(api.contact.submitContactForm);
 
   const [couponCode, setCouponCode] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -287,6 +306,23 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const notifiedRef = useRef<Set<string>>(new Set());
 
   const [editingFoodItem, setEditingFoodItem] = useState<{ mealId: string; itemIndex: number; value: string } | null>(null);
+
+  const [isContactSubmitting, setIsContactSubmitting] = useState(false);
+
+  const contactForm = useForm<z.infer<typeof contactFormSchema>>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      name: userName || "",
+      email: userEmail || "",
+      message: "",
+    },
+  });
+
+  // Sync contact form values when user details are available/change
+  useEffect(() => {
+    if (userName) contactForm.setValue('name', userName);
+    if (userEmail) contactForm.setValue('email', userEmail);
+  }, [userName, userEmail, contactForm]);
   const [isLookingUpNutrition, setIsLookingUpNutrition] = useState(false);
   const [pendingDuplicate, setPendingDuplicate] = useState<{
     newMeal: Meal;
@@ -994,6 +1030,50 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   };
   
+  const handleOpenCoach = useCallback(async () => {
+    if (isGuest) {
+      setGuestUpsellType('coach');
+      setGuestUpsellOpen(true);
+      return;
+    }
+    if (!credits.subscription?.active) {
+      setNoCreditsType('ai');
+      setNoCreditsOpen(true);
+      return;
+    }
+    
+    setIsChatbotOpen(true);
+    
+    // Proactive greeting if conversation is empty
+    if (chatMessages.length === 0 && !isCoachLoading) {
+      setIsCoachLoading(true);
+      try {
+        const mealHistoryForCoach = dailyData.meals.map(meal => ({
+          name: meal.name,
+          items: meal.items.map(item => ({
+            name: item.name, calories: item.calories,
+            protein: item.protein, carbs: item.carbs, fat: item.fat,
+          })),
+        }));
+        const greeting: ChatMessage = { 
+          role: 'user', 
+          content: "Hello! Give me a proactive summary of my nutrition today, suggest what I should eat next, any healthy snack ideas, and hydration tips based on my current log." 
+        };
+        const response = await getCoachResponse({ 
+          messages: [greeting], 
+          mealHistory: mealHistoryForCoach, 
+          goals, 
+          waterIntake: dailyData.water 
+        });
+        setChatMessages([{ role: 'model', content: response.response }]);
+      } catch (err) {
+        console.error("Coach greeting failed:", err);
+      } finally {
+        setIsCoachLoading(false);
+      }
+    }
+  }, [isGuest, credits.subscription?.active, chatMessages.length, isCoachLoading, dailyData.meals, dailyData.water, goals]);
+
   const handleManualSubmit = (values: z.infer<typeof manualFoodFormSchema>) => {
     addItemsToLog(values.items, values.mealType);
     setManualEntryOpen(false);
@@ -1026,6 +1106,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         });
         
         setIsChatbotOpen(true);
+        // Automatically close profile sheet and open coach session
+        setIsProfileOpen(false);
+        handleOpenCoach();
       }
     } catch (err: any) {
       // ConvexError message is usually in err.data or err.message
@@ -1033,6 +1116,26 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       toast({ title: 'Coupon Failed', description: errorMessage, variant: 'destructive' });
     } finally {
       setIsRedeeming(false);
+    }
+  };
+
+  const handleContactSubmit = async (values: z.infer<typeof contactFormSchema>) => {
+    setIsContactSubmitting(true);
+    try {
+      await submitContactForm({
+        ...values,
+        app: "Nourish",
+      });
+      toast({ title: 'Message Sent!', description: 'Thank you for your feedback. We will get back to you soon.' });
+      contactForm.reset({
+        name: userName || "",
+        email: userEmail || "",
+        message: "",
+      });
+    } catch (err: any) {
+      toast({ title: 'Failed to send', description: err.message || 'Please try again later.', variant: 'destructive' });
+    } finally {
+      setIsContactSubmitting(false);
     }
   };
 
@@ -1471,6 +1574,31 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                       <ModeToggle />
                     </div>
 
+                    <div className="pt-4 border-t mt-2">
+                       <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                        <MessageSquare className="h-4 w-4 text-primary" /> Contact Us
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mb-4">Have feedback or suggestions? We&apos;d love to hear from you.</p>
+                      
+                      <Form {...contactForm}>
+                        <form onSubmit={contactForm.handleSubmit(handleContactSubmit)} className="space-y-3">
+                          <FormField control={contactForm.control} name="name" render={({ field }) => (
+                            <FormItem><FormControl><Input placeholder="Your Name" {...field} className="h-8 text-xs" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
+                          )} />
+                          <FormField control={contactForm.control} name="email" render={({ field }) => (
+                            <FormItem><FormControl><Input placeholder="Your Email" {...field} className="h-8 text-xs" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
+                          )} />
+                          <FormField control={contactForm.control} name="message" render={({ field }) => (
+                            <FormItem><FormControl><Textarea placeholder="How can we improve Nourish?" {...field} className="min-h-[80px] text-xs resize-none" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
+                          )} />
+                          <Button type="submit" disabled={isContactSubmitting} className="w-full h-8 text-xs bg-muted hover:bg-muted/70 text-foreground transition-colors">
+                            {isContactSubmitting ? <Loader2 className="h-3 w-3 animate-spin"/> : 'Send Message'}
+                          </Button>
+                          <p className="text-[10px] text-center text-muted-foreground/60 italic">Sent to contactus@digitalac.app</p>
+                        </form>
+                      </Form>
+                    </div>
+
                     <SheetFooter className="pt-2">
                       <SheetClose asChild>
                         <Button type="button" variant="outline" className="w-full">Cancel</Button>
@@ -1852,14 +1980,34 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
-                                            onClick={() => removeMeal(meal.id)}
-                                        >
-                                            <Trash2 className="mr-2 h-4 w-4" /> Remove Entry
-                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
+                                                >
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Remove Entry
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will permanently delete this meal entry from your history for {format(selectedDate, 'PPP')}. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction 
+                                                        onClick={() => removeMeal(meal.id)}
+                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                    >
+                                                        Delete Entry
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </AccordionContent>
                                 </AccordionItem>
                             ))}
@@ -2085,36 +2233,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
       {/* Floating Chat Widget — no modal, no overlay, no backdrop */}
       <Button
-        onClick={async () => {
-          if (isGuest) {
-            setGuestUpsellType('coach');
-            setGuestUpsellOpen(true);
-            return;
-          }
-          if (!credits.subscription?.active) {
-            setNoCreditsType('ai');
-            setNoCreditsOpen(true);
-            return;
-          }
-          setIsChatbotOpen(true);
-            if (chatMessages.length === 0) {
-              setIsCoachLoading(true);
-              try {
-                const mealHistoryForCoach = dailyData.meals.map(meal => ({
-                  name: meal.name,
-                  items: meal.items.map(item => ({
-                    name: item.name, calories: item.calories,
-                    protein: item.protein, carbs: item.carbs, fat: item.fat,
-                  })),
-                }));
-                const greeting: ChatMessage = { role: 'user', content: "Hello! Give me a proactive summary of my nutrition today, suggest what I should eat next, any healthy snack ideas, and hydration tips based on my current log." };
-                const response = await getCoachResponse({ messages: [greeting], mealHistory: mealHistoryForCoach, goals, waterIntake: dailyData.water });
-                setChatMessages([{ role: 'model', content: response.response }]);
-              } catch { /* silent fail */ } finally {
-                setIsCoachLoading(false);
-              }
-            }
-          }}
+        onClick={handleOpenCoach}
           className={`fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 transition-all duration-200 z-50 bg-primary text-primary-foreground border-2 border-black ${isChatbotOpen ? 'hidden' : ''}`}
           size="icon"
         >

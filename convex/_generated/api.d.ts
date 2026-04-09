@@ -12,6 +12,7 @@ import type * as aiMessages from "../aiMessages.js";
 import type * as auth from "../auth.js";
 import type * as authInternal from "../authInternal.js";
 import type * as check from "../check.js";
+import type * as contact from "../contact.js";
 import type * as emails from "../emails.js";
 import type * as http from "../http.js";
 import type * as meals from "../meals.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authInternal: typeof authInternal;
   check: typeof check;
+  contact: typeof contact;
   emails: typeof emails;
   http: typeof http;
   meals: typeof meals;

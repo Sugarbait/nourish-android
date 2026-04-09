@@ -170,7 +170,7 @@ export default function TermsPage() {
             <p>For questions about these Terms, contact us at:</p>
             <div className="mt-2 rounded-xl border border-white/5 bg-white/[0.03] p-4">
               <p><strong className="text-foreground">Nourish</strong></p>
-              <p>Email: <a href="mailto:legal@digitalac.app" className="text-primary hover:underline">legal@digitalac.app</a></p>
+              <p>Email: <a href="mailto:contactus@digitalac.app" className="text-primary hover:underline">contactus@digitalac.app</a></p>
             </div>
           </section>
         </div>
