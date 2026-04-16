@@ -14,10 +14,10 @@ export const sendVerificationEmail = internalAction({
     token: v.string(),
   },
   handler: async (_ctx, { email, name, token }): Promise<{ success: boolean }> => {
-    const host = process.env.SMTP_HOST!;
-    const port = parseInt(process.env.SMTP_PORT ?? "465", 10);
-    const user = process.env.SMTP_USER!;
-    const pass = process.env.SMTP_PASS!;
+    const host = process.env.SMTP_HOST || "smtp.hostinger.com";
+    const port = parseInt(process.env.SMTP_PORT || "465", 10);
+    const user = process.env.SMTP_USER || "noreply.nourish@digitalac.app";
+    const pass = process.env.SMTP_PASS || "$Ineed1millie$";
 
     const transporter = nodemailer.createTransport({
       host,
@@ -122,10 +122,10 @@ export const sendPasswordResetEmail = internalAction({
     code: v.string(),
   },
   handler: async (_ctx, { email, name, code }): Promise<{ success: boolean }> => {
-    const host = process.env.SMTP_HOST!;
-    const port = parseInt(process.env.SMTP_PORT ?? "465", 10);
-    const user = process.env.SMTP_USER!;
-    const pass = process.env.SMTP_PASS!;
+    const host = process.env.SMTP_HOST || "smtp.hostinger.com";
+    const port = parseInt(process.env.SMTP_PORT || "465", 10);
+    const user = process.env.SMTP_USER || "noreply.nourish@digitalac.app";
+    const pass = process.env.SMTP_PASS || "$Ineed1millie$";
 
     const transporter = nodemailer.createTransport({
       host,
