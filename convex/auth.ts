@@ -123,15 +123,16 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
   },
 });
 
-/** Request a password reset — returns the 6-digit code directly. */
+/** Request a password reset — sends a 6-digit code to the user's email. */
 export const requestPasswordReset: ReturnType<typeof action> = action({
   args: { email: v.string() },
-  handler: async (ctx, { email }): Promise<{ code: string }> => {
+  handler: async (ctx, { email }): Promise<{ sent: boolean }> => {
     const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
     if (!user) throw new Error("No account found with that email address.");
+    if (!user.passwordHash) throw new Error("This account uses social login (Google or Microsoft) and does not have a password.");
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = Date.now() + 1000 * 60 * 30;
+    const expiry = Date.now() + 1000 * 60 * 30; // 30 minutes
 
     await ctx.runMutation(internal.authInternal.updateUserResetCode, {
       userId: user._id,
@@ -139,7 +140,13 @@ export const requestPasswordReset: ReturnType<typeof action> = action({
       resetCodeExpiry: expiry,
     });
 
-    return { code };
+    await ctx.runAction(internal.emails.sendPasswordResetEmail, {
+      email,
+      name: user.name ?? email,
+      code,
+    });
+
+    return { sent: true };
   },
 });
 

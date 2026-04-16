@@ -51,8 +51,10 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
   }
 
   if (context === 'reset') {
-    if (raw.includes('not found') || raw.includes('no user') || raw.includes('invalid'))
+    if (raw.includes('not found') || raw.includes('no user') || raw.includes('invalid') || raw.includes('no account'))
       return "We couldn't find an account with that email address.";
+    if (raw.includes('social login') || raw.includes('google') || raw.includes('microsoft'))
+      return 'That account uses Google or Microsoft sign-in and has no password to reset. Please sign in with the social provider instead.';
   }
 
   if (context === 'resetVerify') {
@@ -207,7 +209,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     try {
       await requestPasswordReset({ email });
       setResetView('verify');
-      toast({ title: 'Reset code ready', description: 'Enter the 6-digit code to set a new password.' });
+      toast({ title: 'Reset code sent!', description: 'Check your email for the 6-digit code.' });
     } catch (err: any) {
       toast({ title: 'Could not send reset code', description: getFriendlyError(err, 'reset'), variant: 'destructive' });
     } finally {
