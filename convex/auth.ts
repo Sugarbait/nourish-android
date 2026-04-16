@@ -1,7 +1,7 @@
 "use node";
 
 import { action } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import bcrypt from "bcryptjs";
 
@@ -14,15 +14,19 @@ export const loginUser: ReturnType<typeof action> = action({
     password: v.string(),
   },
   handler: async (ctx, { email, password }): Promise<AuthResult> => {
-    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
-    if (!user) throw new Error("Invalid email or password.");
-    if (!user.passwordHash) throw new Error("This account uses social login. Please sign in with Google or Microsoft.");
+    const trimmedEmail = email.trim();
+    let user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail });
+    if (!user) {
+      user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
+    }
+    if (!user) throw new ConvexError("Invalid email or password.");
+    if (!user.passwordHash) throw new ConvexError("This account uses social login. Please sign in with Google or Microsoft.");
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) throw new Error("Invalid email or password.");
+    if (!valid) throw new ConvexError("Invalid email or password.");
 
     if (user.emailVerified === false) {
-      throw new Error("Please verify your email before signing in. Check your inbox for the verification link.");
+      throw new ConvexError("Please verify your email before signing in. Check your inbox for the verification link.");
     }
 
     return {
@@ -41,10 +45,11 @@ export const createAccount: ReturnType<typeof action> = action({
     password: v.string(),
   },
   handler: async (ctx, { name, email, password }): Promise<{ userId: string; pendingVerification: boolean }> => {
-    const existing = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
-    if (existing) throw new Error("This email already exists. Please log in or use another email address to sign up.");
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
+    if (existing) throw new ConvexError("This email already exists. Please log in or use another email address to sign up.");
 
-    if (password.length < 8) throw new Error("Password must be at least 8 characters.");
+    if (password.length < 8) throw new ConvexError("Password must be at least 8 characters.");
 
     const passwordHash = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomUUID();
@@ -60,7 +65,7 @@ export const createAccount: ReturnType<typeof action> = action({
     });
 
     await ctx.runAction(internal.emails.sendVerificationEmail, {
-      email,
+      email: normalizedEmail,
       name,
       token: verificationToken,
     });
@@ -79,6 +84,8 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
     avatarUrl: v.optional(v.string()),
   },
   handler: async (ctx, { provider, providerId, email, name, avatarUrl }): Promise<AuthResult> => {
+    const normalizedEmail = email.trim().toLowerCase();
+
     const byOAuth = await ctx.runQuery(internal.authInternal.getUserByOAuth, {
       authProvider: provider,
       oauthProviderId: providerId,
@@ -89,6 +96,8 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
         userId: byOAuth._id,
         name,
         avatarUrl,
+        // Let's ensure the email is normalized on update too if we had an oauthEmail field, 
+        // but since we don't, we skip it.
       });
       return {
         userId: byOAuth._id as unknown as string,
@@ -97,7 +106,9 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
       };
     }
 
-    const byEmail = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
+    let byEmail = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: email.trim() });
+    if (!byEmail) byEmail = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
+    
     if (byEmail) {
       await ctx.runMutation(internal.authInternal.updateOAuthUser, {
         userId: byEmail._id,
@@ -112,7 +123,7 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
     }
 
     const userId = await ctx.runMutation(internal.authInternal.createUser, {
-      email,
+      email: normalizedEmail,
       name,
       authProvider: provider,
       oauthProviderId: providerId,
@@ -127,9 +138,13 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
 export const requestPasswordReset: ReturnType<typeof action> = action({
   args: { email: v.string() },
   handler: async (ctx, { email }): Promise<{ sent: boolean }> => {
-    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
-    if (!user) throw new Error("No account found with that email address.");
-    if (!user.passwordHash) throw new Error("This account uses social login (Google or Microsoft) and does not have a password.");
+    const trimmedEmail = email.trim();
+    let user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail });
+    if (!user) {
+      user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
+    }
+    if (!user) throw new ConvexError("No account found with that email address.");
+    if (!user.passwordHash) throw new ConvexError("This account uses social login (Google or Microsoft) and does not have a password.");
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + 1000 * 60 * 30; // 30 minutes
@@ -158,12 +173,16 @@ export const resetPassword: ReturnType<typeof action> = action({
     newPassword: v.string(),
   },
   handler: async (ctx, { email, code, newPassword }): Promise<{ success: boolean }> => {
-    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
-    if (!user) throw new Error("No account found with that email address.");
-    if (!user.resetCode || user.resetCode !== code) throw new Error("Invalid or expired reset code.");
-    if (user.resetCodeExpiry && user.resetCodeExpiry < Date.now()) throw new Error("Reset code has expired. Please request a new one.");
+    const trimmedEmail = email.trim();
+    let user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail });
+    if (!user) {
+      user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
+    }
+    if (!user) throw new ConvexError("No account found with that email address.");
+    if (!user.resetCode || user.resetCode !== code) throw new ConvexError("Invalid or expired reset code.");
+    if (user.resetCodeExpiry && user.resetCodeExpiry < Date.now()) throw new ConvexError("Reset code has expired. Please request a new one.");
 
-    if (newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
+    if (newPassword.length < 8) throw new ConvexError("Password must be at least 8 characters.");
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await ctx.runMutation(internal.authInternal.updateUserPassword, {
