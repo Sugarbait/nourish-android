@@ -278,8 +278,8 @@ export const redeemCoupon = mutation({
       }
 
       const usedCoupons = row.usedCoupons ?? [];
-      if (usedCoupons.includes(uppercaseCode)) {
-        throw new ConvexError("You have already used this coupon code.");
+      if (usedCoupons.length > 0) {
+        throw new ConvexError("You have already redeemed a coupon code. Only one coupon is allowed per account.");
       }
 
       let mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
