@@ -6,7 +6,7 @@ import { v } from "convex/values";
 // Price IDs
 const STRIPE_PRICES: Record<string, string> = {
   subscription:        "price_1TIBSQJodftDQSSFFtgp0U7r",
-  subscription_yearly: "REPLACE_WITH_YEARLY_STRIPE_PRICE_ID",
+  subscription_yearly: "price_1TO8ZGJodftDQSSFzZKjT5px",
   starter:             "price_1TIBVLJodftDQSSFfLLMr6QE",
   value:               "price_1TIBY2JodftDQSSFXF5N9ZLn",
   pro:                 "price_1TIBd9JodftDQSSFGsriUBlI",
