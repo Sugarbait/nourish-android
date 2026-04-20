@@ -222,6 +222,80 @@ function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, child
   );
 }
 
+// Parse formatted text and return JSX elements
+function parseFormattedText(text: string): React.ReactNode[] {
+  const elements: React.ReactNode[] = [];
+  let lastIndex = 0;
+  const regex = /\*\*(.+?)\*\*|__(.+?)__|(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)|_(.+?)_|\[(.+?)\]\((.+?)\)/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      elements.push(text.slice(lastIndex, match.index));
+    }
+
+    if (match[1]) {
+      elements.push(<strong key={`b-${match.index}`}>{match[1]}</strong>);
+    } else if (match[2]) {
+      elements.push(<u key={`u-${match.index}`}>{match[2]}</u>);
+    } else if (match[3]) {
+      elements.push(<em key={`i1-${match.index}`}>{match[3]}</em>);
+    } else if (match[4]) {
+      elements.push(<em key={`i2-${match.index}`}>{match[4]}</em>);
+    } else if (match[5] && match[6]) {
+      elements.push(
+        <a key={`a-${match.index}`} href={match[6]} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          {match[5]}
+        </a>
+      );
+    }
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    elements.push(text.slice(lastIndex));
+  }
+
+  return elements.length > 0 ? elements : [text];
+}
+
+type TypewriterMessageProps = {
+  content: string;
+  isLoading?: boolean;
+};
+
+function TypewriterMessage({ content, isLoading = false }: TypewriterMessageProps) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
+
+  useEffect(() => {
+    if (isLoading) {
+      setDisplayedText('');
+      setIsComplete(false);
+      return;
+    }
+
+    if (displayedText.length < content.length) {
+      const timer = setTimeout(() => {
+        setDisplayedText(content.slice(0, displayedText.length + 1));
+      }, 15);
+      return () => clearTimeout(timer);
+    } else {
+      setIsComplete(true);
+    }
+  }, [displayedText, content, isLoading]);
+
+  const textToDisplay = isLoading ? content : displayedText;
+  const parsedContent = parseFormattedText(textToDisplay);
+
+  return (
+    <div className="text-xs whitespace-pre-wrap leading-relaxed">
+      {parsedContent}
+      {!isComplete && !isLoading && <span className="animate-pulse">|</span>}
+    </div>
+  );
+}
+
 export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean }) {
   const { toast } = useToast();
   const getBillingPortalUrl = useAction(api.stripeActions.getBillingPortalUrl);
@@ -2311,7 +2385,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     </div>
                   )}
                   <div className={`rounded-2xl px-3 py-2 max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                    <p className="text-xs whitespace-pre-wrap">{message.content}</p>
+                    {message.role === 'model' ? (
+                      <TypewriterMessage content={message.content} isLoading={false} />
+                    ) : (
+                      <p className="text-xs whitespace-pre-wrap">{message.content}</p>
+                    )}
                   </div>
                   {message.role === 'user' && (
                     <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
