@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.10";
+const BUILD_VERSION = "0.2.11";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -309,6 +309,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexRedeemCoupon = useMutation(api.users.redeemCoupon);
   const convexConsumeMealCredit = useMutation(api.users.consumeMealCredit);
   const submitContactForm = useAction(api.contact.submitContactForm);
+  const convexDeleteSavedRecipe = useMutation(api.recipes.deleteSavedRecipe);
 
   const [couponCode, setCouponCode] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -328,6 +329,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const stripeCustomerId = useQuery(api.stripe.getStripeCustomerId, userId ? { userId } : 'skip');
   // Fetch today's meals from Convex for cross-device hydration (authenticated users only)
   const todayConvexMeals = useQuery(api.meals.getMealsForDate, userId ? { userId: userId as any, date: format(new Date(), 'yyyy-MM-dd') } : 'skip');
+  const savedRecipes = useQuery(api.recipes.getSavedRecipes, userId ? { userId: userId as any } : 'skip') ?? [];
 
   // Read user display info from localStorage
   const userName = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_name') : null;
@@ -2289,6 +2291,72 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     </Button>
                 </CardFooter>
             </Card>
+
+            {/* Saved Recipes */}
+            {isAuthenticated && savedRecipes.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                    <Bookmark className="text-primary" /> Saved Recipes
+                  </CardTitle>
+                  <CardDescription>Your personally saved recipes, available anytime.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Accordion type="single" collapsible className="w-full space-y-2">
+                    {savedRecipes.map((recipe) => (
+                      <AccordionItem value={recipe._id} key={recipe._id}>
+                        <AccordionTrigger>
+                          <div className="flex flex-col items-start text-left">
+                            <p className="font-semibold">{recipe.name}</p>
+                            <p className="text-sm text-muted-foreground">{recipe.description}</p>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                            <div className="bg-muted p-2 rounded-md"><p className="text-xs">Calories</p><p className="font-semibold">{recipe.calories}</p></div>
+                            <div className="bg-muted p-2 rounded-md"><p className="text-xs">Protein</p><p className="font-semibold">{recipe.protein}g</p></div>
+                            <div className="bg-muted p-2 rounded-md"><p className="text-xs">Carbs</p><p className="font-semibold">{recipe.carbs}g</p></div>
+                            <div className="bg-muted p-2 rounded-md"><p className="text-xs">Fat</p><p className="font-semibold">{recipe.fat}g</p></div>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold mb-2">Ingredients</h4>
+                            <ul className="list-disc list-inside space-y-1 text-sm">
+                              {recipe.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
+                            </ul>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold mb-2">Instructions</h4>
+                            <ol className="list-decimal list-inside space-y-1 text-sm">
+                              {recipe.instructions.map((step, i) => <li key={i}>{step}</li>)}
+                            </ol>
+                          </div>
+                          <div className="flex gap-2 pt-2 border-t">
+                            <RecipeShareButton recipe={recipe} isAuth={isAuthenticated} userId={userId} />
+                            <RecipePrintButton recipe={recipe} />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-destructive hover:text-destructive ml-auto"
+                              onClick={async () => {
+                                try {
+                                  await convexDeleteSavedRecipe({ userId: userId as any, recipeId: recipe._id });
+                                  toast({ title: 'Recipe removed', description: `${recipe.name} removed from saved recipes.` });
+                                } catch {
+                                  toast({ title: 'Error', description: 'Failed to remove recipe.', variant: 'destructive' });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Remove
+                            </Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
