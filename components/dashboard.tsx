@@ -2373,7 +2373,16 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         <span>💧</span>
                         <span className="font-medium ml-2">Hydration tips</span>
                       </Button>
+                      <Button
+                        variant="outline"
+                        className="h-auto p-2.5 text-xs justify-start"
+                        onClick={() => setCoachInput("Can you help me adjust my nutrition goals?")}
+                      >
+                        <span>🎯</span>
+                        <span className="font-medium ml-2">Adjust my goals</span>
+                      </Button>
                     </div>
+                    <p className="text-[11px] text-muted-foreground mt-3 px-2">💡 Tip: I can help adjust your nutrition targets anytime—just ask!</p>
                   </div>
                 </div>
               )}
