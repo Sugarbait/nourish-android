@@ -117,4 +117,38 @@ export default defineSchema({
     app: v.string(),
     createdAt: v.number(),
   }),
+
+  // Saved recipes
+  savedRecipes: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    description: v.string(),
+    calories: v.number(),
+    protein: v.number(),
+    carbs: v.number(),
+    fat: v.number(),
+    ingredients: v.array(v.string()),
+    instructions: v.array(v.string()),
+    source: v.union(v.literal("generated"), v.literal("shared")),
+    savedAt: v.number(),
+  })
+    .index("by_userId", ["userId"]),
+
+  // Recipe shares (for public sharing)
+  recipeShares: defineTable({
+    userId: v.id("users"),
+    shareId: v.string(),
+    name: v.string(),
+    description: v.string(),
+    calories: v.number(),
+    protein: v.number(),
+    carbs: v.number(),
+    fat: v.number(),
+    ingredients: v.array(v.string()),
+    instructions: v.array(v.string()),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_shareId", ["shareId"]),
 });

@@ -16,6 +16,7 @@ import type * as contact from "../contact.js";
 import type * as emails from "../emails.js";
 import type * as http from "../http.js";
 import type * as meals from "../meals.js";
+import type * as recipes from "../recipes.js";
 import type * as stripe from "../stripe.js";
 import type * as stripeActions from "../stripeActions.js";
 import type * as users from "../users.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   http: typeof http;
   meals: typeof meals;
+  recipes: typeof recipes;
   stripe: typeof stripe;
   stripeActions: typeof stripeActions;
   users: typeof users;

@@ -39,6 +39,9 @@ import {
   Check,
   X,
   MessageSquare,
+  Bookmark,
+  Share2,
+  Printer,
 } from 'lucide-react';
 import {
   CreditData,
@@ -2266,6 +2269,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 {recipe.instructions.map((step, i) => <li key={i}>{step}</li>)}
                                             </ol>
                                         </div>
+                                        <div className="flex gap-2 pt-2 border-t">
+                                            <RecipeSaveButton recipe={recipe} isAuth={isAuthenticated} userId={userId} />
+                                            <RecipeShareButton recipe={recipe} isAuth={isAuthenticated} userId={userId} />
+                                            <RecipePrintButton recipe={recipe} />
+                                        </div>
                                     </AccordionContent>
                                 </AccordionItem>
                             ))}
@@ -2499,5 +2507,221 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         </div>
       </footer>
     </div>
+  );
+}
+
+// Recipe action button components
+function RecipeSaveButton({ recipe, isAuth, userId }: { recipe: Recipe; isAuth: boolean; userId: string | null }) {
+  const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const saveRecipeMutation = useMutation(api.recipes.saveRecipe);
+  const { toast } = useToast();
+
+  const handleSave = async () => {
+    if (!isAuth || !userId) {
+      toast({ title: 'Sign in required', description: 'Please sign in to save recipes.' });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await saveRecipeMutation({
+        userId: userId as any,
+        recipe: {
+          name: recipe.name,
+          description: recipe.description,
+          calories: recipe.calories,
+          protein: recipe.protein,
+          carbs: recipe.carbs,
+          fat: recipe.fat,
+          ingredients: recipe.ingredients,
+          instructions: recipe.instructions,
+        },
+      });
+
+      if (result.saved) {
+        setIsSaved(true);
+        toast({ title: 'Recipe saved!', description: `${recipe.name} saved to your recipes.` });
+      } else {
+        toast({ title: 'Already saved', description: result.message });
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to save recipe.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant={isSaved ? 'default' : 'outline'}
+      onClick={handleSave}
+      disabled={isLoading || isSaved}
+      className="gap-1"
+    >
+      {isSaved ? <Check className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+      {isSaved ? 'Saved' : 'Save'}
+    </Button>
+  );
+}
+
+function RecipeShareButton({ recipe, isAuth, userId }: { recipe: Recipe; isAuth: boolean; userId: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const createShareMutation = useMutation(api.recipes.createRecipeShare);
+  const { toast } = useToast();
+
+  const handleCreateShare = async () => {
+    if (!isAuth || !userId) {
+      toast({ title: 'Sign in required', description: 'Please sign in to share recipes.' });
+      setOpen(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await createShareMutation({
+        userId: userId as any,
+        recipe: {
+          name: recipe.name,
+          description: recipe.description,
+          calories: recipe.calories,
+          protein: recipe.protein,
+          carbs: recipe.carbs,
+          fat: recipe.fat,
+          ingredients: recipe.ingredients,
+          instructions: recipe.instructions,
+        },
+      });
+
+      setShareId(result.shareId);
+      toast({ title: 'Share link created!', description: 'Copy the link to share with others.' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to create share link.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareId) return;
+    const link = `${window.location.origin}/shared-recipe?id=${shareId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: 'Link copied!', description: 'Shareable link copied to clipboard.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to copy link.', variant: 'destructive' });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button size="sm" variant="outline" className="gap-1" asChild>
+        <DialogTrigger>
+          <Share2 className="h-4 w-4" />
+          Share
+        </DialogTrigger>
+      </Button>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Share "{recipe.name}"</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {shareId ? (
+            <>
+              <p className="text-sm text-muted-foreground">Anyone with this link can view the recipe:</p>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={`${window.location.origin}/shared-recipe?id=${shareId}`}
+                  className="text-sm"
+                />
+                <Button size="sm" onClick={handleCopyLink}>
+                  Copy
+                </Button>
+              </div>
+            </>
+          ) : (
+            <Button onClick={handleCreateShare} disabled={isLoading} className="w-full">
+              {isLoading ? 'Creating...' : 'Create Share Link'}
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RecipePrintButton({ recipe }: { recipe: Recipe }) {
+  const handlePrint = () => {
+    const printWindow = window.open('', '', 'height=600,width=800');
+    if (!printWindow) return;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${recipe.name}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+          .nutrition { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+          .nutrition-item { background: #f5f5f5; padding: 10px; border-radius: 4px; text-align: center; }
+          .nutrition-item .label { font-size: 12px; color: #666; }
+          .nutrition-item .value { font-size: 18px; font-weight: bold; }
+          h2 { margin-top: 20px; font-size: 16px; color: #333; }
+          ul, ol { margin-left: 20px; }
+          li { margin: 5px 0; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <h1>${recipe.name}</h1>
+        <p>${recipe.description}</p>
+
+        <div class="nutrition">
+          <div class="nutrition-item">
+            <div class="label">Calories</div>
+            <div class="value">${recipe.calories}</div>
+          </div>
+          <div class="nutrition-item">
+            <div class="label">Protein</div>
+            <div class="value">${recipe.protein}g</div>
+          </div>
+          <div class="nutrition-item">
+            <div class="label">Carbs</div>
+            <div class="value">${recipe.carbs}g</div>
+          </div>
+          <div class="nutrition-item">
+            <div class="label">Fat</div>
+            <div class="value">${recipe.fat}g</div>
+          </div>
+        </div>
+
+        <h2>Ingredients</h2>
+        <ul>
+          ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
+        </ul>
+
+        <h2>Instructions</h2>
+        <ol>
+          ${recipe.instructions.map(step => `<li>${step}</li>`).join('')}
+        </ol>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  return (
+    <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1">
+      <Printer className="h-4 w-4" />
+      Print
+    </Button>
   );
 }
