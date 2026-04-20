@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.9";
+const BUILD_VERSION = "0.2.10";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -2317,13 +2317,23 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <p className="text-[11px] text-muted-foreground">Ask anything about nutrition</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsChatbotOpen(false)}
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setChatMessages([])}
+                title="Clear conversation"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="sr-only">Clear messages</span>
+              </button>
+              <button
+                onClick={() => { setIsChatbotOpen(false); setChatMessages([]); }}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
