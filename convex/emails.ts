@@ -200,12 +200,16 @@ export const sendPasswordResetEmail = internalAction({
 </body>
 </html>`;
 
-    await transporter.sendMail({
-      from: `"Nourish" <${user}>`,
-      to: email,
-      subject: "Your Nourish password reset code",
-      html,
-    });
+    try {
+      await transporter.sendMail({
+        from: `"Nourish" <${user}>`,
+        to: email,
+        subject: "Your Nourish password reset code",
+        html,
+      });
+    } catch (error) {
+      throw new Error(`Email delivery failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     return { success: true };
   },
