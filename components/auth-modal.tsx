@@ -58,6 +58,8 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
   }
 
   if (context === 'resetVerify') {
+    if (raw.includes('password') || raw.includes('8 character'))
+      return 'Password must be at least 8 characters.';
     if (raw.includes('invalid') || raw.includes('expired') || raw.includes('code') || raw.includes('token'))
       return 'That code is incorrect or has expired. Please request a new one.';
   }

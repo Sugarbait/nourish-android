@@ -56,7 +56,7 @@ export const createAccount: ReturnType<typeof action> = action({
     const verificationTokenExpiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
 
     const userId = await ctx.runMutation(internal.authInternal.createUser, {
-      email,
+      email: normalizedEmail,
       name,
       passwordHash,
       emailVerified: false,
@@ -179,7 +179,7 @@ export const resetPassword: ReturnType<typeof action> = action({
       user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
     }
     if (!user) throw new ConvexError("No account found with that email address.");
-    if (!user.resetCode || user.resetCode !== code) throw new ConvexError("Invalid or expired reset code.");
+    if (!user.resetCode || user.resetCode !== code.trim()) throw new ConvexError("Invalid or expired reset code.");
     if (user.resetCodeExpiry && user.resetCodeExpiry < Date.now()) throw new ConvexError("Reset code has expired. Please request a new one.");
 
     if (newPassword.length < 8) throw new ConvexError("Password must be at least 8 characters.");
