@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,7 @@ const PACK_ICON_COLORS: Record<CreditPackage, string> = {
 export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isGuest, onRequestSignIn, userId, userEmail }: PricingModalProps) {
   const { toast } = useToast();
   const createCheckoutSession = useAction(api.stripeActions.createCheckoutSession);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const checkout = async (priceKey: string) => {
     try {
@@ -90,10 +91,10 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       return;
     }
     if (credits.subscription?.active) {
-      toast({ title: 'Already subscribed', description: 'Your monthly plan is already active.' });
+      toast({ title: 'Already subscribed', description: 'Your plan is already active.' });
       return;
     }
-    await checkout('subscription');
+    await checkout(billingCycle === 'yearly' ? 'subscription_yearly' : 'subscription');
   };
 
   const isSubscribed = credits.subscription?.active === true;
@@ -136,11 +137,28 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
           </div>
         </div>
 
-        {/* Monthly Subscription */}
+        {/* Billing toggle */}
+        <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-muted/50 border border-border/50 w-fit mx-auto">
+          <button
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${billingCycle === 'monthly' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setBillingCycle('yearly')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${billingCycle === 'yearly' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Yearly
+            <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">Save 25%</span>
+          </button>
+        </div>
+
+        {/* Subscription card */}
         <div className={`relative rounded-xl border-2 p-5 bg-gradient-to-br ${isSubscribed ? 'from-green-500/10 to-green-600/5 border-green-500/50' : 'from-primary/10 to-primary/5 border-primary/40'}`}>
           {!isSubscribed && (
             <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-0.5">
-              Recommended
+              {billingCycle === 'yearly' ? 'Best Value' : 'Recommended'}
             </Badge>
           )}
           {isSubscribed && (
@@ -152,7 +170,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
             <div>
               <h3 className="font-bold text-base flex items-center gap-2">
                 <RefreshCcw className="h-4 w-4 text-primary" />
-                Monthly Pro
+                {billingCycle === 'yearly' ? 'Yearly Pro' : 'Monthly Pro'}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 300 credits per month — use them for meal scans or AI coaching. Credits <strong>roll over</strong> — never lose unused credits.
@@ -163,6 +181,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
                   'Use credits however you need them',
                   'Credits roll over month to month',
                   'Priority support',
+                  ...(billingCycle === 'yearly' ? ['2 months free vs monthly'] : []),
                 ].map(f => (
                   <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Check className="h-3.5 w-3.5 text-primary shrink-0" /> {f}
@@ -171,8 +190,18 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
               </ul>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-2xl font-bold">$3.99</div>
-              <div className="text-xs text-muted-foreground">/month</div>
+              {billingCycle === 'yearly' ? (
+                <>
+                  <div className="text-2xl font-bold">$35.99</div>
+                  <div className="text-xs text-muted-foreground">/year</div>
+                  <div className="text-xs text-emerald-400 mt-0.5">~$3.00/mo</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">$3.99</div>
+                  <div className="text-xs text-muted-foreground">/month</div>
+                </>
+              )}
               <Button
                 size="sm"
                 className="mt-3 w-full"

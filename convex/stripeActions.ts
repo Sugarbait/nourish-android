@@ -5,10 +5,11 @@ import { v } from "convex/values";
 
 // Price IDs
 const STRIPE_PRICES: Record<string, string> = {
-  subscription: "price_1TIBSQJodftDQSSFFtgp0U7r",
-  starter:      "price_1TIBVLJodftDQSSFfLLMr6QE",
-  value:        "price_1TIBY2JodftDQSSFXF5N9ZLn",
-  pro:          "price_1TIBd9JodftDQSSFGsriUBlI",
+  subscription:        "price_1TIBSQJodftDQSSFFtgp0U7r",
+  subscription_yearly: "REPLACE_WITH_YEARLY_STRIPE_PRICE_ID",
+  starter:             "price_1TIBVLJodftDQSSFfLLMr6QE",
+  value:               "price_1TIBY2JodftDQSSFXF5N9ZLn",
+  pro:                 "price_1TIBd9JodftDQSSFGsriUBlI",
 };
 
 /** Create a Stripe Checkout Session using plain fetch (no SDK) */
@@ -28,7 +29,7 @@ export const createCheckoutSession = action({
       const priceId = STRIPE_PRICES[args.priceKey];
       if (!priceId) return { url: null, error: `Unknown price key: ${args.priceKey}` };
 
-      const mode = args.priceKey === "subscription" ? "subscription" : "payment";
+      const mode = args.priceKey.startsWith("subscription") ? "subscription" : "payment";
 
       const params = new URLSearchParams({
         mode,
