@@ -9,7 +9,7 @@ const AMOUNT_TO_CREDITS: Record<number, number> = {
   999: 800,  // $9.99 Pro
 };
 
-const SUBSCRIPTION_CREDITS = 40;
+const SUBSCRIPTION_CREDITS = 300;
 
 // ---------------------------------------------------------------------------
 // Helper: resolve a Convex userId (string from client_reference_id) or fall
