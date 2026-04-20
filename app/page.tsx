@@ -65,6 +65,7 @@ export default function SplashPage() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signup');
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const createOrUpdateOAuthUser = useAction(api.auth.createOrUpdateOAuthUser);
 
   // Redirect already-logged-in users
@@ -364,9 +365,29 @@ export default function SplashPage() {
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black">Simple, honest <GradientText>pricing</GradientText></h2>
             <p className="text-sm md:text-base text-muted-foreground mt-3">Start free. Upgrade when you're ready.</p>
           </div>
+          {/* Billing toggle */}
+          <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 w-fit mx-auto mb-8">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${billingCycle === 'monthly' ? 'bg-white/10 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('yearly')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${billingCycle === 'yearly' ? 'bg-white/10 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Yearly
+              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">Save 25%</span>
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 max-w-xl mx-auto">
             <PricingCard name="Free" price="$0" period="/ forever" features={['1 meal scan/day','1 AI message/day','Basic tracking']} cta="Get Started" onCta={openSignUp} />
-            <PricingCard name="Pro Monthly" price="$3.99" period="/ month" features={['40 credits/month','Credits roll over','1 free daily scan + AI msg','Cancel anytime']} cta="Subscribe" highlight onCta={openSignUp} />
+            {billingCycle === 'monthly' ? (
+              <PricingCard name="Pro Monthly" price="$3.99" period="/ month" features={['300 credits/month','Credits roll over','1 free daily scan included','Cancel anytime']} cta="Subscribe" highlight onCta={openSignUp} />
+            ) : (
+              <PricingCard name="Pro Yearly" price="$35.99" period="/ year" features={['300 credits/month','Credits roll over','1 free daily scan included','~$3.00/mo — 2 months free']} cta="Subscribe" highlight onCta={openSignUp} />
+            )}
           </div>
           <p className="text-center text-[11px] md:text-xs text-muted-foreground mt-6">
             Already a subscriber? Additional credit packs available inside the app.
