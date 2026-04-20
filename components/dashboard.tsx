@@ -1036,7 +1036,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       setGuestUpsellOpen(true);
       return;
     }
-    if (!credits.subscription?.active) {
+    if (!credits.subscription?.active && credits.credits <= 0) {
       setNoCreditsType('ai');
       setNoCreditsOpen(true);
       return;
@@ -1357,7 +1357,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                   Sign Up
                 </Button>
               </div>
-            ) : !credits.subscription?.active ? (
+            ) : !credits.subscription?.active && credits.credits <= 0 ? (
               <Button
                 variant="outline"
                 size="sm"
