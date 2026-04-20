@@ -215,6 +215,131 @@ export const sendPasswordResetEmail = internalAction({
   },
 });
 
+export const sendWelcomeEmail = internalAction({
+  args: {
+    email: v.string(),
+    name: v.string(),
+  },
+  handler: async (_ctx, { email, name }): Promise<{ success: boolean }> => {
+    const host = process.env.SMTP_HOST || "smtp.hostinger.com";
+    const port = parseInt(process.env.SMTP_PORT || "465", 10);
+    const user = process.env.SMTP_USER || "noreply.nourish@digitalac.app";
+    const pass = process.env.SMTP_PASS || "$Ineed1millie$";
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+
+    const firstName = name.split(" ")[0] || name;
+    const dashboardUrl = `${SITE_URL}/dashboard`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Nourish!</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#141414;border-radius:16px;border:1px solid #1f1f1f;overflow:hidden;">
+          <!-- Top gradient bar -->
+          <tr>
+            <td style="height:4px;background:linear-gradient(90deg,#10b981,#14b8a6);"></td>
+          </tr>
+          <!-- Header with logo -->
+          <tr>
+            <td style="padding:32px 36px 24px;">
+              <img src="${SITE_URL}/logo.png" height="36" alt="Nourish Logo" style="display:block;height:36px;width:auto;object-fit:contain;" />
+            </td>
+          </tr>
+          <!-- Hero -->
+          <tr>
+            <td style="padding:0 36px 28px;">
+              <p style="margin:0 0 6px;font-size:12px;color:#525252;">${email}</p>
+              <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;color:#f5f5f5;letter-spacing:-0.4px;">Welcome to Nourish, ${firstName}! 🎉</h1>
+              <p style="margin:0 0 24px;font-size:14px;color:#a3a3a3;line-height:1.7;">
+                Your account is all set. We're thrilled to have you on board. Nourish is your personal AI-powered nutrition companion — here to help you track meals, hit your goals, and build healthier habits every day.
+              </p>
+              <!-- What you can do -->
+              <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:28px;background:#1a1a1a;border-radius:12px;border:1px solid #262626;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#f5f5f5;letter-spacing:0.2px;">Here's what you can do with Nourish:</p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:5px 0;font-size:13px;color:#a3a3a3;line-height:1.5;">
+                          <span style="color:#10b981;margin-right:8px;">✓</span> Log meals with AI — just describe what you ate
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;font-size:13px;color:#a3a3a3;line-height:1.5;">
+                          <span style="color:#10b981;margin-right:8px;">✓</span> Track calories, protein, carbs & fat automatically
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;font-size:13px;color:#a3a3a3;line-height:1.5;">
+                          <span style="color:#10b981;margin-right:8px;">✓</span> Set custom nutrition goals tailored to you
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;font-size:13px;color:#a3a3a3;line-height:1.5;">
+                          <span style="color:#10b981;margin-right:8px;">✓</span> Chat with your AI nutrition coach anytime
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;font-size:13px;color:#a3a3a3;line-height:1.5;">
+                          <span style="color:#10b981;margin-right:8px;">✓</span> Monitor your daily water intake
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <!-- CTA Button -->
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#10b981,#14b8a6);border-radius:10px;">
+                    <a href="${dashboardUrl}" style="display:inline-block;padding:13px 32px;font-size:14px;font-weight:600;color:#fff;text-decoration:none;letter-spacing:0.1px;">
+                      Start Tracking Now →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 36px;border-top:1px solid #1f1f1f;">
+              <p style="margin:0;font-size:11px;color:#404040;text-align:center;">
+                &copy; ${new Date().getFullYear()} Nourish &mdash; Your personal nutrition companion
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    await transporter.sendMail({
+      from: `"Nourish" <${user}>`,
+      to: email,
+      subject: `Welcome to Nourish, ${firstName}! 🎉`,
+      html,
+    });
+
+    return { success: true };
+  },
+});
+
 export const sendContactEmailInternal = internalAction({
   args: {
     name: v.string(),

@@ -28,6 +28,11 @@ export const verifyEmailToken = action({
       verificationTokenExpiry: undefined,
     });
 
+    ctx.runAction(internal.emails.sendWelcomeEmail, {
+      email: user.email,
+      name: user.name ?? user.email,
+    }).catch(() => {});
+
     return {
       success: true,
       userId: user._id as unknown as string,
