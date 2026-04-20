@@ -289,7 +289,7 @@ function TypewriterMessage({ content, isLoading = false }: TypewriterMessageProp
   const parsedContent = parseFormattedText(textToDisplay);
 
   return (
-    <div className="text-xs whitespace-pre-wrap leading-relaxed">
+    <div className="text-sm whitespace-pre-wrap leading-relaxed">
       {parsedContent}
       {!isComplete && !isLoading && <span className="animate-pulse">|</span>}
     </div>
