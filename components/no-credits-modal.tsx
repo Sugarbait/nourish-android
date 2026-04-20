@@ -41,7 +41,7 @@ const CONTENT = {
   recipe: {
     emoji: '🥗',
     headline: 'More credits required',
-    sub: "Get more credits by adding a coupon code or starting a monthly subscription to generate personalized, healthy recipe ideas based on your daily macros.",
+    sub: "Get more credits by adding a coupon code or starting a monthly subscription to generate personalized, healthy recipe ideas based on your nutrition targets.",
     cta: 'Unlock AI Recipes',
   },
 };

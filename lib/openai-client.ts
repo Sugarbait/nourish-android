@@ -129,14 +129,14 @@ export async function suggestRecipes(goals: any, intake: any, waterIntake: numbe
       role: 'user',
       parts: [
         {
-          text: `Remaining macros: ${remainingCalories} calories, ${remainingProtein}g protein, ${remainingCarbs}g carbs, ${remainingFat}g fat. Water intake today: ${waterIntake} glasses.${hydrationNote} ${mealHistoryText} Suggest 2 recipes. Respond with valid JSON only, no markdown: {"recipes": [{"name": string, "description": string, "calories": number, "protein": number, "carbs": number, "fat": number, "ingredients": [string], "instructions": [string]}]}`,
+          text: `Remaining nutrition targets: ${remainingCalories} calories, ${remainingProtein}g protein, ${remainingCarbs}g carbs, ${remainingFat}g fat. Water intake today: ${waterIntake} glasses.${hydrationNote} ${mealHistoryText} Suggest 2 recipes. Respond with valid JSON only, no markdown: {"recipes": [{"name": string, "description": string, "calories": number, "protein": number, "carbs": number, "fat": number, "ingredients": [string], "instructions": [string]}]}`,
         },
       ],
     },
   ];
 
   const systemInstruction =
-    'You are a nutritional expert. Suggest healthy and nutritious recipes based on remaining daily macros. Ensure the recipes use wholesome ingredients and avoid excessive processed sugars or unhealthy fats. Always respond with valid JSON only, no markdown code blocks.';
+    'You are a nutritional expert. Suggest healthy and nutritious recipes based on your nutrition targets. Ensure the recipes use wholesome ingredients and avoid excessive processed sugars or unhealthy fats. Always respond with valid JSON only, no markdown code blocks.';
 
   try {
     const response = await callAI(contents, systemInstruction);
@@ -161,7 +161,7 @@ export async function lookupFoodNutrition(foodName: string) {
   ];
 
   const systemInstruction =
-    'You are a nutritional expert. Estimate calories and macros for a typical serving of any food. Always respond with valid JSON only, no markdown code blocks.';
+    'You are a nutritional expert. Estimate nutrition info for a typical serving of any food. Always respond with valid JSON only, no markdown code blocks.';
 
   try {
     const response = await callAI(contents, systemInstruction);

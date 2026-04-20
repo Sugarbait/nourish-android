@@ -41,7 +41,7 @@ export default function TermsPage() {
             </p>
             <ul className="list-disc list-inside space-y-1 mt-2">
               <li>Scan and identify food items using AI image recognition.</li>
-              <li>Track daily calorie and macronutrient intake.</li>
+              <li>Track daily calories, protein, carbs, and fat.</li>
               <li>Receive personalised nutrition coaching via AI.</li>
               <li>Monitor water intake and daily health goals.</li>
               <li>Purchase credits and subscription plans for enhanced access.</li>

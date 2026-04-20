@@ -40,7 +40,7 @@ export default function PrivacyPage() {
             <ul className="list-disc list-inside space-y-1 mt-2">
               <li><strong className="text-foreground">Account information:</strong> email address, name, and password (stored as a secure hash).</li>
               <li><strong className="text-foreground">Meal data:</strong> photos you upload for food recognition, meal names, nutritional values, and meal types.</li>
-              <li><strong className="text-foreground">Health goals:</strong> calorie targets, macro goals, dietary restrictions you enter.</li>
+              <li><strong className="text-foreground">Health goals:</strong> calorie targets, nutrition targets, dietary restrictions you enter.</li>
               <li><strong className="text-foreground">Water intake logs:</strong> daily water consumption data.</li>
               <li><strong className="text-foreground">AI coach conversations:</strong> messages you send to and receive from the AI nutrition coach.</li>
               <li><strong className="text-foreground">Usage data:</strong> credit usage, subscription status, and feature interactions.</li>

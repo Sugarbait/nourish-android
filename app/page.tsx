@@ -304,7 +304,7 @@ export default function SplashPage() {
 
                   <div className="relative rounded-xl lg:rounded-2xl bg-white/[0.05] border border-white/10 p-3 lg:p-4 overflow-hidden group">
                     <div className="absolute right-0 top-0 w-24 h-24 lg:w-32 lg:h-32 bg-primary/20 rounded-full blur-2xl -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-700" />
-                    <p className="text-[9px] lg:text-[11px] font-medium text-muted-foreground mb-3 lg:mb-4 uppercase tracking-wider">Today&apos;s Macros</p>
+                    <p className="text-[9px] lg:text-[11px] font-medium text-muted-foreground mb-3 lg:mb-4 uppercase tracking-wider">Today&apos;s Nutrition</p>
                     <div className="flex justify-between relative z-10 px-1">
                       {[
                         { l: 'Calories', v: '1,840', c: 'text-primary' },
@@ -350,7 +350,7 @@ export default function SplashPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             <FeatureCard icon={<Camera className="h-5 w-5" />} title="Instant Meal Scanning" desc="Point your camera at any meal and get full nutrition data in seconds — powered by Gemini AI." />
             <FeatureCard icon={<Brain className="h-5 w-5" />} title="AI Nutrition Coach" desc="Ask anything about your diet. Your coach knows your history and helps you hit your goals." />
-            <FeatureCard icon={<BarChart2 className="h-5 w-5" />} title="Macro Tracking" desc="Track calories, protein, carbs and fat effortlessly across breakfast, lunch, dinner and snacks." />
+            <FeatureCard icon={<BarChart2 className="h-5 w-5" />} title="Nutrition Tracking" desc="Track your nutrition—calories, protein, carbs and fat—effortlessly across all meals." />
             <FeatureCard icon={<Droplets className="h-5 w-5" />} title="Water Tracking" desc="Stay hydrated with a simple tap-to-log tracker that keeps you on target all day." />
             <FeatureCard icon={<RefreshCcw className="h-5 w-5" />} title="Rolling Credits" desc="Monthly credits that roll over — never lose what you've paid for." />
             <FeatureCard icon={<Shield className="h-5 w-5" />} title="Secure & Private" desc="Your data stays yours — protected with end-to-end security and stored safely in the cloud." />
@@ -403,7 +403,7 @@ export default function SplashPage() {
             {[
               {name:'Sarah K.',text:"I've tried every calorie app out there. Nourish is the only one where I actually enjoyed the experience."},
               {name:'Marcus L.',text:"The AI coach is like having a nutritionist in my pocket. It actually remembers what I ate and gives real advice."},
-              {name:'Priya M.',text:"Scanning meals is mind-blowing. It recognised my homemade curry and got the macros almost perfect."},
+              {name:'Priya M.',text:"Scanning meals is mind-blowing. It recognised my homemade curry and got the nutrition breakdown almost perfect."},
             ].map(({name,text}) => (
               <div key={name} className="flex flex-col rounded-2xl border border-white/5 bg-white/[0.03] p-6 hover:bg-white/[0.05] transition-colors">
                 <div className="flex gap-1 mb-4">{Array(5).fill(0).map((_,i)=><Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400"/>)}</div>
