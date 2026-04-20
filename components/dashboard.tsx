@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.7";
+const BUILD_VERSION = "0.2.8";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1118,33 +1118,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     
     setIsChatbotOpen(true);
     
-    // Proactive greeting if conversation is empty
-    if (chatMessages.length === 0 && !isCoachLoading) {
-      setIsCoachLoading(true);
-      try {
-        const mealHistoryForCoach = dailyData.meals.map(meal => ({
-          name: meal.name,
-          items: meal.items.map(item => ({
-            name: item.name, calories: item.calories,
-            protein: item.protein, carbs: item.carbs, fat: item.fat,
-          })),
-        }));
-        const greeting: ChatMessage = { 
-          role: 'user', 
-          content: "Hello! Give me a proactive summary of my nutrition today, suggest what I should eat next, any healthy snack ideas, and hydration tips based on my current log." 
-        };
-        const response = await getCoachResponse({ 
-          messages: [greeting], 
-          mealHistory: mealHistoryForCoach, 
-          goals, 
-          waterIntake: dailyData.water 
-        });
-        setChatMessages([{ role: 'model', content: response.response }]);
-      } catch (err) {
-        console.error("Coach greeting failed:", err);
-      } finally {
-        setIsCoachLoading(false);
+    // Simple greeting if conversation is empty
+    if (chatMessages.length === 0) {
+      let greeting = `Hello! 👋 How can I help you today?`;
+      if (profile.name) {
+        const firstName = profile.name.split(' ')[0];
+        greeting = `Hello ${firstName}! 👋 How can I help you today?`;
       }
+      setChatMessages([{ role: 'model', content: greeting }]);
     }
   }, [isGuest, credits.subscription?.active, chatMessages.length, isCoachLoading, dailyData.meals, dailyData.water, goals]);
 
