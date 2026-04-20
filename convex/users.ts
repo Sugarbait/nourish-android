@@ -231,15 +231,13 @@ export const addCredits = mutation({
   },
 });
 
-const VALID_COUPONS: Record<string, number> = {
-  "NOURISH10": 10,
-  "NOURISH15": 15,
-  "NOURISH20": 20,
-  "NOURISH25": 25,
-  "NOURISH100": 100,
-  "NOURISH200": 200,
-  "NOURISH300": 300,
-};
+function getValidCoupons(): Record<string, number> {
+  try {
+    return JSON.parse(process.env.COUPON_CODES ?? "{}");
+  } catch {
+    return {};
+  }
+}
 
 export const redeemCoupon = mutation({
   args: {
@@ -249,7 +247,7 @@ export const redeemCoupon = mutation({
   handler: async (ctx, { userId, code }) => {
     try {
       const uppercaseCode = code.trim().toUpperCase();
-      const reward = VALID_COUPONS[uppercaseCode];
+      const reward = getValidCoupons()[uppercaseCode];
       
       if (!reward) {
         throw new ConvexError("Invalid coupon code.");
