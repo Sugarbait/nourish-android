@@ -15,8 +15,11 @@ async function getAccessToken(): Promise<string> {
     throw new Error("Missing Google OAuth credentials in Convex environment variables.");
   }
 
-  const client = new UserRefreshClient(clientId, clientSecret, refreshToken);
-  client.scopes = ["https://www.googleapis.com/auth/cloud-platform"];
+  const client = new UserRefreshClient({
+    clientId,
+    clientSecret,
+    refreshToken,
+  });
   const { token } = await client.getAccessToken();
   if (!token) throw new Error("Failed to obtain Google access token.");
   return token;
