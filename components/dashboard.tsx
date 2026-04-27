@@ -960,15 +960,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       if (result.foodItems.length === 0) {
         toast({ title: 'No food detected', description: 'We couldn\'t identify any food items in the image. Try a clearer picture or add it manually.' });
       } else {
-        // Deduct credit only on successful recognition
-        if (!isGuest) {
-          const updatedCredits = consumeMealCredit(credits);
-          if (updatedCredits) {
-            saveCredits(updatedCredits);
-            setCredits(updatedCredits);
-            if (userId) {
-              convexConsumeMealCredit({ userId: userId as any }).catch(console.error);
-            }
+        // Deduct credit on successful recognition
+        const updatedCredits = consumeMealCredit(credits);
+        if (updatedCredits) {
+          saveCredits(updatedCredits);
+          setCredits(updatedCredits);
+          if (userId) {
+            convexConsumeMealCredit({ userId: userId as any }).catch(console.error);
           }
         }
 
