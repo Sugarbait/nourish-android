@@ -258,24 +258,24 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className={`pointer-events-auto w-full max-w-sm rounded-2xl border border-border/40 bg-card shadow-2xl overflow-hidden ${isOpen ? 'auth-m-in' : 'auth-m-out'}`}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 pointer-events-none">
+        <div className={`pointer-events-auto w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-border/40 bg-card shadow-2xl ${isOpen ? 'auth-m-in' : 'auth-m-out'}`}>
           {/* Top gradient bar */}
           <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-primary to-teal-400" />
 
-          {/* Close */}
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {/* Header with logo and close button */}
+          <div className="absolute top-4 inset-x-5 flex items-center justify-between z-10">
+            <div className="w-8" />
+            <img src="/logo.png" alt="Nourish" className="h-9 w-auto" />
+            <button
+              onClick={() => onOpenChange(false)}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-          <div className="px-6 pt-6 pb-7">
-            {/* Logo */}
-            <div className="mb-5">
-              <Logo />
-            </div>
+          <div className="px-6 pt-16 pb-7">
 
             {/* Tabs */}
             <div className="flex rounded-xl bg-muted/50 p-1 mb-5">

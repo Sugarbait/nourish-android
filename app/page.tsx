@@ -78,13 +78,25 @@ export default function SplashPage() {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const code = searchParams.get('code');
+    const error = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
+
+    if (error) {
+      console.error('[Microsoft OAuth] Auth error:', error, errorDescription);
+      window.history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+
     if (!code) return;
 
     // Clean the URL immediately
     window.history.replaceState(null, '', window.location.pathname);
 
     const codeVerifier = sessionStorage.getItem('ms_pkce_verifier');
-    if (!codeVerifier) return;
+    if (!codeVerifier) {
+      console.error('[Microsoft OAuth] Code verifier not found in session storage');
+      return;
+    }
     sessionStorage.removeItem('ms_pkce_verifier');
 
     const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '857339e2-a51c-454a-bf30-3f095aec1654';
@@ -102,21 +114,30 @@ export default function SplashPage() {
             code,
             redirect_uri: redirectUri,
             code_verifier: codeVerifier,
-            scope: 'openid profile email User.Read',
           }),
         });
 
         if (!tokenRes.ok) {
-          console.error('[Microsoft OAuth] Token exchange failed:', await tokenRes.text());
+          const errorText = await tokenRes.text();
+          console.error('[Microsoft OAuth] Token exchange failed:', tokenRes.status, errorText);
           return;
         }
 
         const tokens = await tokenRes.json();
+        if (!tokens.id_token) {
+          console.error('[Microsoft OAuth] No id_token in response');
+          return;
+        }
+
         const idToken = tokens.id_token;
         const accessToken = tokens.access_token;
-        if (!idToken) return;
 
         const base64Url = idToken.split('.')[1];
+        if (!base64Url) {
+          console.error('[Microsoft OAuth] Invalid id_token format');
+          return;
+        }
+
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         const jsonPayload = decodeURIComponent(
           atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
@@ -125,6 +146,11 @@ export default function SplashPage() {
         const msEmail = decoded.preferred_username || decoded.email || decoded.upn || '';
         const msName = decoded.name || '';
         const msId = decoded.oid || decoded.sub || '';
+
+        if (!msEmail || !msId) {
+          console.error('[Microsoft OAuth] Missing email or ID in token');
+          return;
+        }
 
         // Try to fetch profile photo from Microsoft Graph API
         let avatarUrl: string | undefined;
