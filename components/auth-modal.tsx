@@ -148,7 +148,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   });
 
   const handleMicrosoftSignIn = async () => {
-    const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '26865529-0a14-449e-8540-caddf613fa35';
+    const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '857339e2-a51c-454a-bf30-3f095aec1654';
     const redirectUri = window.location.origin + '/';
 
     // Generate PKCE code verifier + challenge
