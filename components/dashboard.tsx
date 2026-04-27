@@ -1110,17 +1110,18 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   };
   
   const handleOpenCoach = useCallback(async () => {
-    if (isGuest) {
+    const isDev = process.env.NODE_ENV === 'development';
+    if (!isDev && isGuest) {
       setGuestUpsellType('coach');
       setGuestUpsellOpen(true);
       return;
     }
-    if (!credits.subscription?.active && credits.credits <= 0) {
+    if (!isDev && !credits.subscription?.active && credits.credits <= 0) {
       setNoCreditsType('ai');
       setNoCreditsOpen(true);
       return;
     }
-    
+
     setIsChatbotOpen(true);
     
     // Simple greeting if conversation is empty
@@ -1241,26 +1242,29 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     e.preventDefault();
     if (!coachInput.trim() || isCoachLoading) return;
 
-    if (isGuest) {
+    const isDev = process.env.NODE_ENV === 'development';
+    if (!isDev && isGuest) {
       setGuestUpsellType('coach');
       setGuestUpsellOpen(true);
       return;
     }
 
-    if (availableAICredits(credits) <= 0) {
+    if (!isDev && availableAICredits(credits) <= 0) {
       setNoCreditsType('ai');
       setNoCreditsOpen(true);
       return;
     }
 
-    const updatedCredits = consumeAICredit(credits);
-    if (!updatedCredits) {
-      setNoCreditsType('ai');
-      setNoCreditsOpen(true);
-      return;
+    if (!isDev) {
+      const updatedCredits = consumeAICredit(credits);
+      if (!updatedCredits) {
+        setNoCreditsType('ai');
+        setNoCreditsOpen(true);
+        return;
+      }
+      saveCredits(updatedCredits);
+      setCredits(updatedCredits);
     }
-    saveCredits(updatedCredits);
-    setCredits(updatedCredits);
 
     const newUserMessage: ChatMessage = { role: 'user', content: coachInput };
     const newMessages = [...chatMessages, newUserMessage];

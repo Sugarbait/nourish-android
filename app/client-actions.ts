@@ -1,18 +1,23 @@
 'use client';
 
-import { recognizeFoodFromImage, suggestRecipes, chatWithCoach, lookupFoodNutrition } from '@/lib/openai-client';
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 import type { RecognizeFoodOutput } from '@/ai/types/food';
 import type { SuggestRecipesOutput } from '@/ai/types/recipe';
 import type { ChatWithCoachOutput } from '@/ai/types/chat';
+
+function getConvex() {
+  const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+  if (!url) throw new Error("NEXT_PUBLIC_CONVEX_URL is not set.");
+  return new ConvexHttpClient(url);
+}
 
 export async function getFoodRecognition(data: { photoDataUri: string }): Promise<RecognizeFoodOutput> {
   if (!data.photoDataUri.startsWith('data:image/')) {
     throw new Error('Must be a data URI for an image');
   }
-  
   try {
-    const result = await recognizeFoodFromImage(data.photoDataUri);
-    return result;
+    return await getConvex().action(api.gemini.recognizeFoodFromImage, { imageDataUri: data.photoDataUri });
   } catch (error) {
     console.error('Error in getFoodRecognition:', error);
     throw new Error('Failed to recognize food. Please try again.');
@@ -20,14 +25,20 @@ export async function getFoodRecognition(data: { photoDataUri: string }): Promis
 }
 
 export async function getRecipeSuggestions(input: {
-  goals: { calories: number; protein: number; carbs: number; fat: number };
-  intake: { calories: number; protein: number; carbs: number; fat: number };
+  goals:       { calories: number; protein: number; carbs: number; fat: number };
+  intake:      { calories: number; protein: number; carbs: number; fat: number };
   waterIntake?: number;
   mealHistory?: any[];
 }): Promise<SuggestRecipesOutput> {
   try {
-    const result = await suggestRecipes(input.goals, input.intake, input.waterIntake || 0, input.mealHistory || []);
-    return result;
+    return await getConvex().action(api.gemini.suggestRecipes, {
+      remainingCalories: input.goals.calories - input.intake.calories,
+      remainingProtein:  input.goals.protein  - input.intake.protein,
+      remainingCarbs:    input.goals.carbs    - input.intake.carbs,
+      remainingFat:      input.goals.fat      - input.intake.fat,
+      waterIntake:       input.waterIntake    || 0,
+      mealHistory:       input.mealHistory    || [],
+    });
   } catch (error) {
     console.error('Error in getRecipeSuggestions:', error);
     throw new Error('Failed to suggest recipes. Please try again.');
@@ -36,7 +47,7 @@ export async function getRecipeSuggestions(input: {
 
 export async function getNutritionForFood(foodName: string): Promise<{ name: string; calories: number; protein: number; carbs: number; fat: number }> {
   try {
-    return await lookupFoodNutrition(foodName);
+    return await getConvex().action(api.gemini.lookupFoodNutrition, { foodName });
   } catch (error) {
     console.error('Error in getNutritionForFood:', error);
     throw new Error('Failed to look up nutrition. Please try again.');
@@ -44,14 +55,18 @@ export async function getNutritionForFood(foodName: string): Promise<{ name: str
 }
 
 export async function getCoachResponse(input: {
-  messages: { role: string; content: string }[];
+  messages:    { role: string; content: string }[];
   mealHistory: { name: string; items: { name: string; calories: number }[] }[];
-  goals: { calories: number; protein: number; carbs: number; fat: number };
+  goals:       { calories: number; protein: number; carbs: number; fat: number };
   waterIntake?: number;
 }): Promise<ChatWithCoachOutput> {
   try {
-    const result = await chatWithCoach(input.messages, input.mealHistory, input.goals, input.waterIntake || 0);
-    return result;
+    return await getConvex().action(api.gemini.chatWithCoach, {
+      messages:    input.messages,
+      mealHistory: input.mealHistory,
+      goals:       input.goals,
+      waterIntake: input.waterIntake || 0,
+    });
   } catch (error) {
     console.error('Error in getCoachResponse:', error);
     throw new Error('Failed to get response from coach. Please try again.');

@@ -14,6 +14,7 @@ import type * as authInternal from "../authInternal.js";
 import type * as check from "../check.js";
 import type * as contact from "../contact.js";
 import type * as emails from "../emails.js";
+import type * as gemini from "../gemini.js";
 import type * as http from "../http.js";
 import type * as meals from "../meals.js";
 import type * as recipes from "../recipes.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   check: typeof check;
   contact: typeof contact;
   emails: typeof emails;
+  gemini: typeof gemini;
   http: typeof http;
   meals: typeof meals;
   recipes: typeof recipes;
