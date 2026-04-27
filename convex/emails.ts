@@ -5,7 +5,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import nodemailer from "nodemailer";
 
-const SITE_URL = "https://nourishai.digitalac.app";
+const SITE_URL = "https://nourishai.com";
 
 export const sendVerificationEmail = internalAction({
   args: {
@@ -16,7 +16,7 @@ export const sendVerificationEmail = internalAction({
   handler: async (_ctx, { email, name, token }): Promise<{ success: boolean }> => {
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
-    const user = process.env.SMTP_USER || "noreply.nourish@digitalac.app";
+    const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
     const pass = process.env.SMTP_PASS || "$Ineed1millie$";
 
     const transporter = nodemailer.createTransport({
@@ -121,7 +121,7 @@ export const sendPasswordResetEmail = internalAction({
   handler: async (_ctx, { email, name, code }): Promise<{ success: boolean }> => {
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
-    const user = process.env.SMTP_USER || "noreply.nourish@digitalac.app";
+    const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
     const pass = process.env.SMTP_PASS || "$Ineed1millie$";
 
     const transporter = nodemailer.createTransport({
@@ -223,7 +223,7 @@ export const sendWelcomeEmail = internalAction({
   handler: async (_ctx, { email, name }): Promise<{ success: boolean }> => {
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
-    const user = process.env.SMTP_USER || "noreply.nourish@digitalac.app";
+    const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
     const pass = process.env.SMTP_PASS || "$Ineed1millie$";
 
     const transporter = nodemailer.createTransport({
@@ -350,7 +350,7 @@ export const sendContactEmailInternal = internalAction({
   handler: async (_ctx, { name, email, message, app }) => {
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
-    const user = process.env.SMTP_USER || "noreply.nourish@digitalac.app";
+    const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
     const pass = process.env.SMTP_PASS || "$Ineed1millie$";
 
     if (!host || !user || !pass) {
