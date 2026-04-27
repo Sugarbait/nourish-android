@@ -263,10 +263,8 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
           {/* Top gradient bar */}
           <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-primary to-teal-400" />
 
-          {/* Header with logo and close button */}
-          <div className="absolute top-4 inset-x-5 flex items-center justify-between z-10">
-            <div className="w-8" />
-            <img src="/logo.png" alt="Nourish" className="h-9 w-auto" />
+          {/* Close button - fixed at top right */}
+          <div className="absolute top-4 right-5 z-10">
             <button
               onClick={() => onOpenChange(false)}
               className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
@@ -275,7 +273,12 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
             </button>
           </div>
 
-          <div className="px-6 pt-16 pb-7 flex-1 overflow-y-auto">
+          <div className="px-6 pt-5 pb-7 flex-1 overflow-y-auto">
+
+            {/* Logo - scrolls with content */}
+            <div className="flex justify-center mb-5">
+              <img src="/logo.png" alt="Nourish" className="h-9 w-auto" />
+            </div>
 
             {/* Tabs */}
             <div className="flex rounded-xl bg-muted/50 p-1 mb-5">
