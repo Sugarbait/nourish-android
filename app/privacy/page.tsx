@@ -142,7 +142,6 @@ export default function PrivacyPage() {
       <footer className="border-t border-white/5 py-8 px-4 mt-10">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} Nourish. All rights reserved.</span>
-          <a href="https://www.neoncell.ca" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">www.neoncell.ca</a>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
             <Link href="/terms" className="hover:text-foreground">Terms</Link>
