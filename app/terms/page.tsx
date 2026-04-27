@@ -170,7 +170,7 @@ export default function TermsPage() {
             <p>For questions about these Terms, contact us at:</p>
             <div className="mt-2 rounded-xl border border-white/5 bg-white/[0.03] p-4">
               <p><strong className="text-foreground">Nourish</strong></p>
-              <p>Email: <a href="mailto:contactus@digitalac.app" className="text-primary hover:underline">contactus@digitalac.app</a></p>
+              <p>Email: <a href="mailto:contactus@neoncell.ca" className="text-primary hover:underline">contactus@neoncell.ca</a></p>
             </div>
           </section>
         </div>
@@ -179,7 +179,6 @@ export default function TermsPage() {
       <footer className="border-t border-white/5 py-8 px-4 mt-10">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} Nourish. All rights reserved.</span>
-          <span>Get more apps on <a href="https://www.digitalac.app" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">www.Digitalac.app</a></span>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
             <Link href="/terms" className="hover:text-foreground">Terms</Link>

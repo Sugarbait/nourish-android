@@ -401,7 +401,7 @@ export const sendContactEmailInternal = internalAction({
 
     await transporter.sendMail({
       from: `"Nourish Contact Form" <${user}>`,
-      to: "contactus@digitalac.app",
+      to: "contactus@neoncell.ca",
       replyTo: email,
       subject: `New Message from ${name} via ${app}`,
       html,
