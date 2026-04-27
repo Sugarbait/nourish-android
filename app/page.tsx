@@ -436,8 +436,9 @@ export default function SplashPage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-4 text-xs md:text-sm text-muted-foreground text-center sm:text-left">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="Nourish" className="h-7 w-auto" />
-            <span className="opacity-50">· © {new Date().getFullYear()}</span>
+            <span className="opacity-50">· © {new Date().getFullYear()} Nourish. All rights reserved.</span>
           </div>
+          <a href="https://www.neoncell.ca" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">www.neoncell.ca</a>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
             <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
