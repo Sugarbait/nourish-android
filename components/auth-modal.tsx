@@ -259,7 +259,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 pointer-events-none">
-        <div className={`pointer-events-auto w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-border/40 bg-card shadow-2xl ${isOpen ? 'auth-m-in' : 'auth-m-out'}`}>
+        <div className={`pointer-events-auto w-full max-w-sm h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-2xl border border-border/40 bg-card shadow-2xl flex flex-col ${isOpen ? 'auth-m-in' : 'auth-m-out'}`}>
           {/* Top gradient bar */}
           <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-primary to-teal-400" />
 
@@ -275,7 +275,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
             </button>
           </div>
 
-          <div className="px-6 pt-16 pb-7">
+          <div className="px-6 pt-16 pb-7 overflow-y-auto flex-1">
 
             {/* Tabs */}
             <div className="flex rounded-xl bg-muted/50 p-1 mb-5">
