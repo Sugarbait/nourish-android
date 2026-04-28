@@ -190,6 +190,18 @@ export const resetPassword: ReturnType<typeof action> = action({
       passwordHash,
     });
 
+    // The user proved email ownership by entering the correct reset code,
+    // so mark their email as verified (unblocks login for users who never
+    // clicked the original verification link).
+    if (user.emailVerified === false) {
+      await ctx.runMutation(internal.authInternal.updateUserVerification, {
+        userId: user._id,
+        emailVerified: true,
+        verificationToken: undefined,
+        verificationTokenExpiry: undefined,
+      });
+    }
+
     return { success: true };
   },
 });

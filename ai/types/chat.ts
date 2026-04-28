@@ -25,6 +25,12 @@ export const ChatWithCoachInputSchema = z.object({
     fat: z.number(),
   }).describe("The user's daily nutritional goals."),
   waterIntake: z.number().optional().describe("The user's water intake in glasses for the day."),
+  profile: z.object({
+    age: z.string().optional(),
+    weight: z.string().optional(),
+    height: z.string().optional(),
+    activityLevel: z.string().optional(),
+  }).optional().describe("The user's physical profile data."),
 });
 export type ChatWithCoachInput = z.infer<typeof ChatWithCoachInputSchema>;
 

@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.16";
+const BUILD_VERSION = "0.2.17";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -326,9 +326,16 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const isAuthenticated = !!userId;
   const isGuest = !isAuthenticated;
+
+  // dateKey must be derived before useQuery hooks so it can be passed as a query arg
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
+  const dateKey = format(selectedDate, 'yyyy-MM-dd');
+
   const stripeCustomerId = useQuery(api.stripe.getStripeCustomerId, userId ? { userId } : 'skip');
-  // Fetch today's meals from Convex for cross-device hydration (authenticated users only)
-  const todayConvexMeals = useQuery(api.meals.getMealsForDate, userId ? { userId: userId as any, date: format(new Date(), 'yyyy-MM-dd') } : 'skip');
+  // Fetch meals for the currently selected date from Convex (cross-device hydration)
+  const selectedDateConvexMeals = useQuery(api.meals.getMealsForDate, userId ? { userId: userId as any, date: dateKey } : 'skip');
+  // Fetch credits from Convex — source of truth for all authenticated users
+  const convexCredits = useQuery(api.users.getCredits, userId ? { userId: userId as any } : 'skip');
   const savedRecipes = useQuery(api.recipes.getSavedRecipes, userId ? { userId: userId as any } : 'skip') ?? [];
 
   // Read user display info from localStorage
@@ -346,7 +353,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const calorieRef = useRef<HTMLParagraphElement>(null);
   
   const [isMounted, setIsMounted] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
+  // selectedDate and dateKey moved above useQuery hooks
   const [goals, setGoals] = useState<DailyGoals>({ calories: 2200, protein: 150, carbs: 250, fat: 70, water: 8 });
   const [history, setHistory] = useState<Record<string, DailyData>>({});
 
@@ -480,7 +487,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     toast({ title: 'Cancelled', description: 'Duplicate scan discarded.' });
   };
 
-  const dateKey = format(selectedDate, 'yyyy-MM-dd');
   const dailyData: DailyData = history[dateKey] || { meals: [], water: 0 };
   
   const convexSetWater = useMutation(api.waterLogs.setWaterGlasses);
@@ -547,15 +553,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Cross-device hydration: when Convex returns today's meals, merge any that
-  // aren't already in localStorage (identified by localId stored in Convex).
+  // Cross-device hydration: when Convex returns meals for the selected date, merge any
+  // that aren't already in local state (identified by localId stored in Convex).
   useEffect(() => {
-    if (!todayConvexMeals || todayConvexMeals.length === 0) return;
-    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    if (!selectedDateConvexMeals || selectedDateConvexMeals.length === 0) return;
     setHistory(current => {
-      const existing = current[todayKey]?.meals || [];
+      const existing = current[dateKey]?.meals || [];
       const existingIds = new Set(existing.map(m => m.id));
-      const toMerge: Meal[] = todayConvexMeals
+      const toMerge: Meal[] = selectedDateConvexMeals
         .filter((cm: any) => cm.localId && !existingIds.has(cm.localId))
         .map((cm: any) => ({
           id: cm.localId as string,
@@ -569,14 +574,32 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       if (toMerge.length === 0) return current;
       return {
         ...current,
-        [todayKey]: {
+        [dateKey]: {
           meals: [...existing, ...toMerge],
-          water: current[todayKey]?.water || 0,
+          water: current[dateKey]?.water || 0,
         },
       };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todayConvexMeals]);
+  }, [selectedDateConvexMeals, dateKey]);
+
+  // Sync credits from Convex — authoritative source of truth.
+  // Runs whenever convexCredits changes (e.g. after a purchase webhook fires).
+  useEffect(() => {
+    if (!convexCredits) return;
+    setCredits(prev => {
+      const merged = {
+        ...prev,
+        credits: convexCredits.credits ?? prev.credits,
+        lastFreeDate: convexCredits.lastFreeDate ?? prev.lastFreeDate,
+        dailyFreeMealUsed: convexCredits.dailyFreeMealUsed ?? prev.dailyFreeMealUsed,
+        dailyFreeAIUsed: convexCredits.dailyFreeAIUsed ?? prev.dailyFreeAIUsed,
+      };
+      saveCredits(merged);
+      return merged;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convexCredits]);
 
   // After Stripe redirects back with ?checkout=success, poll Convex until the
   // webhook has updated the credits/subscription, then sync into localStorage.
@@ -1287,6 +1310,12 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         mealHistory: mealHistoryForCoach,
         goals: goals,
         waterIntake: dailyData.water,
+        profile: {
+          age: profile.age,
+          weight: profile.weight,
+          height: profile.height,
+          activityLevel: profile.activityLevel,
+        },
       };
 
       const response = await getCoachResponse(coachInputData);
@@ -1577,7 +1606,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                             onClick={() => { setIsPricingOpen(true); }}
                           >
                             <Zap className="h-3.5 w-3.5 mr-2" />
-                            Subscribe — $3.99/mo
+                            Subscribe — $5.99/mo
                           </Button>
                         </SheetClose>
                       )}

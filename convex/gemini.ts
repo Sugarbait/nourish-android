@@ -173,8 +173,9 @@ export const chatWithCoach = action({
     mealHistory: v.array(v.any()),
     goals:       v.object({ calories: v.number(), protein: v.number(), carbs: v.number(), fat: v.number(), water: v.optional(v.number()) }),
     waterIntake: v.number(),
+    profile:     v.optional(v.object({ age: v.optional(v.string()), weight: v.optional(v.string()), height: v.optional(v.string()), activityLevel: v.optional(v.string()) })),
   },
-  handler: async (_ctx, { messages, mealHistory, goals, waterIntake }) => {
+  handler: async (_ctx, { messages, mealHistory, goals, waterIntake, profile }) => {
     const mealHistoryText =
       mealHistory.length > 0
         ? mealHistory
@@ -192,8 +193,12 @@ export const chatWithCoach = action({
     const remainingFat      = goals.fat      - mealHistory.reduce((t: number, m: any) => t + m.items.reduce((s: number, i: any) => s + (i.fat     || 0), 0), 0);
     const waterNeeded       = Math.max(0, 8 - waterIntake);
 
-    const systemInstruction = `You are Nourish, your friendly nutritional coach. You're here to support their nutrition journey with genuine warmth and practical guidance.
+    const profileText = profile && (profile.age || profile.weight || profile.height || profile.activityLevel)
+      ? `\nUSER'S PHYSICAL PROFILE:\n${profile.age ? `- Age: ${profile.age}\n` : ""}${profile.weight ? `- Weight: ${profile.weight}\n` : ""}${profile.height ? `- Height: ${profile.height}\n` : ""}${profile.activityLevel ? `- Activity Level: ${profile.activityLevel}\n` : ""}`
+      : "";
 
+    const systemInstruction = `You are Nourish, your friendly nutritional coach. You're here to support their nutrition journey with genuine warmth and practical guidance.
+${profileText}
 USER'S DAILY GOALS:
 - Calories: ${goals.calories} kcal | Protein: ${goals.protein}g | Carbs: ${goals.carbs}g | Fat: ${goals.fat}g
 

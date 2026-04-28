@@ -17,7 +17,11 @@ export const sendVerificationEmail = internalAction({
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
     const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
-    const pass = process.env.SMTP_PASS || "$Ineed1millie$";
+    const pass = process.env.SMTP_PASS;
+
+    if (!pass) {
+      throw new Error("[emails] SMTP_PASS env var is not set in Convex. Cannot send verification email.");
+    }
 
     const transporter = nodemailer.createTransport({
       host,
@@ -122,7 +126,11 @@ export const sendPasswordResetEmail = internalAction({
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
     const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
-    const pass = process.env.SMTP_PASS || "$Ineed1millie$";
+    const pass = process.env.SMTP_PASS;
+
+    if (!pass) {
+      throw new Error("[emails] SMTP_PASS env var is not set in Convex. Cannot send password reset email.");
+    }
 
     const transporter = nodemailer.createTransport({
       host,
@@ -224,7 +232,11 @@ export const sendWelcomeEmail = internalAction({
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
     const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
-    const pass = process.env.SMTP_PASS || "$Ineed1millie$";
+    const pass = process.env.SMTP_PASS;
+
+    if (!pass) {
+      throw new Error("[emails] SMTP_PASS env var is not set in Convex. Cannot send welcome email.");
+    }
 
     const transporter = nodemailer.createTransport({
       host,
@@ -351,10 +363,10 @@ export const sendContactEmailInternal = internalAction({
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
     const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
-    const pass = process.env.SMTP_PASS || "$Ineed1millie$";
+    const pass = process.env.SMTP_PASS;
 
     if (!host || !user || !pass) {
-      console.warn("SMTP credentials not set. Skipping email delivery.");
+      console.warn("[emails] SMTP credentials not fully set. Skipping contact email delivery.");
       return;
     }
 

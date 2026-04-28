@@ -59,6 +59,7 @@ export async function getCoachResponse(input: {
   mealHistory: { name: string; items: { name: string; calories: number }[] }[];
   goals:       { calories: number; protein: number; carbs: number; fat: number };
   waterIntake?: number;
+  profile?: { age?: string; weight?: string; height?: string; activityLevel?: string };
 }): Promise<ChatWithCoachOutput> {
   try {
     return await getConvex().action(api.gemini.chatWithCoach, {
@@ -66,6 +67,7 @@ export async function getCoachResponse(input: {
       mealHistory: input.mealHistory,
       goals:       input.goals,
       waterIntake: input.waterIntake || 0,
+      profile:     input.profile,
     });
   } catch (error) {
     console.error('Error in getCoachResponse:', error);

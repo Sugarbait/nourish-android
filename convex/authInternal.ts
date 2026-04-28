@@ -90,6 +90,10 @@ export const updateUserPassword = internalMutation({
     passwordHash: v.string(),
   },
   handler: async (ctx, { userId, passwordHash }) => {
-    await ctx.db.patch(userId, { passwordHash, resetCode: undefined, resetCodeExpiry: undefined });
+    // Patch password first — do NOT mix undefined values in the same patch object,
+    // as Convex's V8 runtime can silently drop the entire write when undefined is present.
+    await ctx.db.patch(userId, { passwordHash });
+    // Clear the one-time reset fields separately.
+    await ctx.db.patch(userId, { resetCode: undefined, resetCodeExpiry: undefined });
   },
 });

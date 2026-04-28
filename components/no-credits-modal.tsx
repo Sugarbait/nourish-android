@@ -250,7 +250,7 @@ export function NoCreditsModal({
 
             {/* Price badge */}
             <div className="flex items-baseline gap-1.5">
-              <span className="text-4xl font-black text-foreground">$3.99</span>
+              <span className="text-4xl font-black text-foreground">$5.99</span>
               <div className="text-left">
                 <div className="text-xs text-muted-foreground leading-none">per</div>
                 <div className="text-xs text-muted-foreground leading-none">month</div>
@@ -275,7 +275,7 @@ export function NoCreditsModal({
               className="nai-shimmer-btn w-full rounded-xl py-3.5 px-6 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95 flex items-center justify-center gap-2"
             >
               <RefreshCcw className="h-4 w-4" />
-              {isGuest ? 'Sign In to Subscribe' : `${content.cta} — $3.99/mo`}
+              {isGuest ? 'Sign In to Subscribe' : `${content.cta} — $5.99/mo`}
             </button>
 
           </div>

@@ -40,6 +40,10 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
   const raw = (err?.message ?? '').toLowerCase();
 
   if (context === 'signIn') {
+    if (raw.includes('verify') || raw.includes('verification'))
+      return 'Please verify your email before signing in. Check your inbox for the verification link.';
+    if (raw.includes('social login') || raw.includes('google') || raw.includes('microsoft'))
+      return 'This account uses Google or Microsoft sign-in. Please use the social login button instead.';
     return 'User name or password is incorrect. Please try again.';
   }
 
