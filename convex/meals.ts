@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { ConvexError } from "convex/values";
 
 const mealItemSchema = v.object({
   name: v.string(),
@@ -55,14 +56,12 @@ export const getMealsForDate = query({
 export const getMealsForDateRange = query({
   args: { userId: v.id("users"), startDate: v.string(), endDate: v.string() },
   handler: async (ctx, { userId, startDate, endDate }) => {
-    const all = await ctx.db
+    return await ctx.db
       .query("meals")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .withIndex("by_userId_date", (q) =>
+        q.eq("userId", userId).gte("date", startDate).lte("date", endDate)
+      )
       .collect();
-
-    return all.filter(
-      (m) => m.date >= startDate && m.date <= endDate
-    );
   },
 });
 
@@ -150,11 +149,10 @@ export const syncBatchMeals = mutation({
     meals: v.array(v.object({
       date: v.string(),
       mealType: v.union(
-        v.literal("breakfast"),
-        v.literal("lunch"),
-        v.literal("dinner"),
-        v.literal("snack"),
-        v.literal("Snacks") // Add uppercase Snaks just in case
+        v.literal("breakfast"), v.literal("Breakfast"),
+        v.literal("lunch"), v.literal("Lunch"),
+        v.literal("dinner"), v.literal("Dinner"),
+        v.literal("snack"), v.literal("Snacks"), v.literal("Snack")
       ),
       name: v.string(),
       calories: v.number(),
@@ -168,34 +166,38 @@ export const syncBatchMeals = mutation({
     })),
   },
   handler: async (ctx, { userId, meals }) => {
-    // Get existing localIds for this user to avoid duplicates
-    const existingMeals = await ctx.db
-      .query("meals")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    
-    const existingLocalIds = new Set(existingMeals.map(m => m.localId).filter(Boolean));
-    
-    let addedCount = 0;
-    for (const meal of meals) {
-      if (!existingLocalIds.has(meal.localId)) {
-        // Normalize mealType to lowercase and handle "Snacks" plural
-        const rawType = meal.mealType.toLowerCase();
-        const normalizedType = (rawType === 'snacks' ? 'snack' : rawType) as any;
-        
-        // Exclude original mealType from spread to ensure normalizedType is used correctly
-        const { mealType: _, ...mealData } = meal;
-        
-        await ctx.db.insert("meals", {
-          userId,
-          ...mealData,
-          mealType: normalizedType,
-          createdAt: Date.now(),
-        });
-        addedCount++;
+    try {
+      // Get existing localIds for this user to avoid duplicates
+      const existingMeals = await ctx.db
+        .query("meals")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .collect();
+      
+      const existingLocalIds = new Set(existingMeals.map(m => m.localId).filter(Boolean));
+      
+      let addedCount = 0;
+      for (const meal of meals) {
+        if (!existingLocalIds.has(meal.localId)) {
+          // Normalize mealType to lowercase and handle "Snacks" plural
+          const rawType = meal.mealType.toLowerCase();
+          const normalizedType = (rawType === 'snacks' ? 'snack' : rawType) as any;
+          
+          // Exclude original mealType from spread to ensure normalizedType is used correctly
+          const { mealType: _, ...mealData } = meal;
+          
+          await ctx.db.insert("meals", {
+            userId,
+            ...mealData,
+            mealType: normalizedType,
+            createdAt: Date.now(),
+          });
+          addedCount++;
+        }
       }
+      return { addedCount };
+    } catch (error: any) {
+      throw new ConvexError(`Failed to sync meals: ${error.message}`);
     }
-    return { addedCount };
   },
 });
 
@@ -203,12 +205,16 @@ export const syncBatchMeals = mutation({
 export const getTrackedDates = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    const meals = await ctx.db
-      .query("meals")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    
-    const dates = new Set(meals.map(m => m.date));
-    return Array.from(dates).sort();
+    try {
+      const meals = await ctx.db
+        .query("meals")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .collect();
+      
+      const dates = new Set(meals.map(m => m.date));
+      return Array.from(dates).sort();
+    } catch (error: any) {
+      throw new ConvexError(`Failed to get tracked dates: ${error.message}`);
+    }
   },
 });
