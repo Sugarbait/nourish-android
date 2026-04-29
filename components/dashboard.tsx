@@ -566,6 +566,16 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         toast({ title: "Could not load saved data", variant: 'destructive' });
     }
     setIsMounted(true);
+    // Load notification state from localStorage to persist across page refreshes
+    try {
+      const savedNotified = localStorage.getItem('nourish-notifications-sent');
+      if (savedNotified) {
+        const notified = JSON.parse(savedNotified);
+        notifiedRef.current = new Set(notified);
+      }
+    } catch (error) {
+      console.error("Failed to load notification state", error);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -801,6 +811,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       // 75% milestone → encouraging toast
       if (pct >= 0.75 && pct < 1 && !notifiedRef.current.has(notifyKey)) {
         notifiedRef.current.add(notifyKey);
+        try {
+          localStorage.setItem('nourish-notifications-sent', JSON.stringify(Array.from(notifiedRef.current)));
+        } catch (error) {
+          console.error("Failed to save notification state", error);
+        }
         toast({
           title: `Almost there! ${check.emoji}`,
           description: `You're ${Math.round(pct * 100)}% to your ${check.name.toLowerCase()}. Keep it up!`,
