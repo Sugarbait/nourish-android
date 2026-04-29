@@ -1558,9 +1558,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           if (!file) return;
                           const reader = new FileReader();
                           reader.onload = (ev) => {
-                            const dataUrl = ev.target?.result as string;
-                            profileForm.setValue('avatar', dataUrl);
-                            setProfile(prev => ({ ...prev, avatar: dataUrl }));
+                            const img = new window.Image();
+                            img.onload = () => {
+                              const SIZE = 256;
+                              const canvas = document.createElement('canvas');
+                              canvas.width = SIZE;
+                              canvas.height = SIZE;
+                              const ctx2d = canvas.getContext('2d')!;
+                              const scale = Math.max(SIZE / img.width, SIZE / img.height);
+                              const w = img.width * scale;
+                              const h = img.height * scale;
+                              ctx2d.drawImage(img, (SIZE - w) / 2, (SIZE - h) / 2, w, h);
+                              const compressed = canvas.toDataURL('image/jpeg', 0.75);
+                              profileForm.setValue('avatar', compressed);
+                              setProfile(prev => ({ ...prev, avatar: compressed }));
+                            };
+                            img.src = ev.target?.result as string;
                           };
                           reader.readAsDataURL(file);
                         }}
