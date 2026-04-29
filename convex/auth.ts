@@ -143,7 +143,7 @@ export const requestPasswordReset: ReturnType<typeof action> = action({
     if (!user) {
       user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
     }
-    if (!user) throw new ConvexError("We don't have an account with that email. Please check the spelling or try a different email address.");
+    if (!user) throw new ConvexError("No email exists in the system. Please check the spelling or try a different email address.");
     if (!user.passwordHash) throw new ConvexError("This account uses social login (Google or Microsoft) and does not have a password.");
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -178,7 +178,7 @@ export const resetPassword: ReturnType<typeof action> = action({
     if (!user) {
       user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
     }
-    if (!user) throw new ConvexError("We don't have an account with that email. Please check the spelling or try a different email address.");
+    if (!user) throw new ConvexError("No email exists in the system. Please check the spelling or try a different email address.");
     if (!user.resetCode || user.resetCode !== code.trim()) throw new ConvexError("Invalid or expired reset code.");
     if (user.resetCodeExpiry && user.resetCodeExpiry < Date.now()) throw new ConvexError("Reset code has expired. Please request a new one.");
 

@@ -55,8 +55,8 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
   }
 
   if (context === 'reset') {
-    if (raw.includes('not found') || raw.includes('no user') || raw.includes('invalid') || raw.includes('no account') || raw.includes('spelling'))
-      return "We don't have an account with that email. Please check the spelling or try a different email address.";
+    if (raw.includes('not found') || raw.includes('no user') || raw.includes('invalid') || raw.includes('no account') || raw.includes('spelling') || raw.includes('no email exists'))
+      return "No email exists in the system. Please check the spelling or try a different email address.";
     if (raw.includes('social login') || raw.includes('google') || raw.includes('microsoft'))
       return 'That account uses Google or Microsoft sign-in and has no password to reset. Please sign in with the social provider instead.';
   }
