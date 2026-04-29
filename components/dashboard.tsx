@@ -351,7 +351,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const trackedDateObjects = useMemo(() => {
     if (!trackedDates) return [];
-    return trackedDates.map(d => new Date(d + 'T12:00:00'));
+    return trackedDates
+      .map(d => new Date(d + 'T12:00:00'))
+      .filter(d => !isNaN(d.getTime()));
   }, [trackedDates]);
 
   // Read user display info from localStorage
@@ -947,11 +949,18 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
     return last7DaysDates.map(date => {
       const dayMeals = recentMeals.filter(m => m.date === date);
-      const totalCalories = dayMeals.reduce((acc, m) => acc + m.calories, 0);
+      const totalCalories = dayMeals.reduce((acc, m) => acc + (m.calories || 0), 0);
+      const goal = displayGoals.calories || 2000;
+      
+      let dayName = 'Day';
+      try {
+        dayName = format(new Date(date + 'T12:00:00'), 'EEE');
+      } catch (e) {}
+
       return {
-        name: format(new Date(date + 'T12:00:00'), 'EEE'),
+        name: dayName,
         calories: totalCalories,
-        goal: displayGoals.calories,
+        goal: goal,
         isToday: date === format(new Date(), 'yyyy-MM-dd')
       };
     });
@@ -2190,7 +2199,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             </Card>
             )}
 
-            {isAuthenticated && progressData.length > 0 && (
+            {isMounted && isAuthenticated && progressData.length > 0 && (
                 <Card className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
                     <CardHeader className="pb-2">
                         <CardTitle className="flex items-center gap-2 text-xl font-bold">
@@ -2217,7 +2226,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 <div className="bg-background border rounded-lg shadow-lg p-2 text-xs">
                                                     <p className="font-bold mb-1">{data.name}</p>
                                                     <p className="text-primary">{data.calories} / {data.goal} kcal</p>
-                                                    <p className="text-muted-foreground">{Math.round((data.calories / data.goal) * 100)}% of goal</p>
+                                                    <p className="text-muted-foreground">{data.goal > 0 ? Math.round((data.calories / data.goal) * 100) : 0}% of goal</p>
                                                 </div>
                                             );
                                         }
