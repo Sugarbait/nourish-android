@@ -325,7 +325,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   useEffect(() => {
     const id = localStorage.getItem('nourish_user_id');
-    setUserId(id);
+    // Basic validation to ensure it's not a junk string from previous versions
+    if (id && (id === 'guest' || id.length < 10)) {
+      localStorage.removeItem('nourish_user_id');
+      setUserId(null);
+    } else {
+      setUserId(id);
+    }
     setIsAuthLoading(false);
   }, []);
 

@@ -182,23 +182,30 @@ export const syncBatchMeals = mutation({
           const rawType = meal.mealType.toLowerCase();
           const normalizedType = (rawType === 'snacks' ? 'snack' : rawType) as any;
           
-          // Exclude original mealType from spread to ensure normalizedType is used correctly
-          const { mealType: _, ...mealData } = meal;
-          
           await ctx.db.insert("meals", {
-            userId,
-            ...mealData,
-            mealType: normalizedType,
-            createdAt: Date.now(),
-          });
-          addedCount++;
-        }
+          userId,
+          date: meal.date,
+          mealType: normalizedType,
+          name: meal.name,
+          calories: meal.calories,
+          protein: meal.protein,
+          carbs: meal.carbs,
+          fat: meal.fat,
+          items: meal.items,
+          localId: meal.localId,
+          healthScore: meal.healthScore,
+          healthAnalysis: meal.healthAnalysis,
+          createdAt: Date.now(),
+        });
+        addedCount++;
       }
-      return { addedCount };
-    } catch (error: any) {
-      throw new ConvexError(`Failed to sync meals: ${error.message}`);
     }
-  },
+    return { addedCount };
+  } catch (error: any) {
+    console.error("syncBatchMeals error:", error);
+    throw new ConvexError(`Failed to sync meals: ${error.toString()}`);
+  }
+},
 });
 
 /** Get all unique dates where the user has logged meals */
