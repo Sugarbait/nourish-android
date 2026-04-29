@@ -142,3 +142,55 @@ export const updateMealType = mutation({
     await ctx.db.patch(meal._id, { mealType, name });
   },
 });
+
+/** Batch sync meals from local storage (guest history) to Convex */
+export const syncBatchMeals = mutation({
+  args: {
+    userId: v.id("users"),
+    meals: v.array(v.object({
+      date: v.string(),
+      mealType: v.union(
+        v.literal("breakfast"),
+        v.literal("lunch"),
+        v.literal("dinner"),
+        v.literal("snack"),
+        v.literal("Snacks") // Add uppercase Snaks just in case
+      ),
+      name: v.string(),
+      calories: v.number(),
+      protein: v.number(),
+      carbs: v.number(),
+      fat: v.number(),
+      items: v.array(mealItemSchema),
+      localId: v.string(),
+      healthScore: v.optional(v.number()),
+      healthAnalysis: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, { userId, meals }) => {
+    // Get existing localIds for this user to avoid duplicates
+    const existingMeals = await ctx.db
+      .query("meals")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    
+    const existingLocalIds = new Set(existingMeals.map(m => m.localId).filter(Boolean));
+    
+    let addedCount = 0;
+    for (const meal of meals) {
+      if (!existingLocalIds.has(meal.localId)) {
+        // Normalize mealType to lowercase
+        const normalizedType = (meal.mealType.toLowerCase() === 'snacks' ? 'snack' : meal.mealType.toLowerCase()) as any;
+        
+        await ctx.db.insert("meals", {
+          userId,
+          ...meal,
+          mealType: normalizedType,
+          createdAt: Date.now(),
+        });
+        addedCount++;
+      }
+    }
+    return { addedCount };
+  },
+});

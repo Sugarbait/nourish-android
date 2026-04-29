@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.28";
+const BUILD_VERSION = "0.2.29";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -42,7 +42,9 @@ import {
   Bookmark,
   Share2,
   Printer,
+  TrendingUp,
 } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ReferenceLine } from 'recharts';
 import {
   CreditData,
   loadCredits,
@@ -311,6 +313,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexConsumeMealCredit = useMutation(api.users.consumeMealCredit);
   const submitContactForm = useAction(api.contact.submitContactForm);
   const convexDeleteSavedRecipe = useMutation(api.recipes.deleteSavedRecipe);
+  const convexSyncBatchMeals = useMutation(api.meals.syncBatchMeals);
+  const convexSyncBatchWater = useMutation(api.waterLogs.syncBatchWater);
 
   const [couponCode, setCouponCode] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -339,6 +343,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexCredits = useQuery(api.users.getCredits, userId ? { userId: userId as any } : 'skip');
   const convexProfile = useQuery(api.users.getProfile, userId ? { userId: userId as any } : 'skip');
   const savedRecipes = useQuery(api.recipes.getSavedRecipes, userId ? { userId: userId as any } : 'skip') ?? [];
+
+  const sevenDaysAgo = format(subDays(new Date(), 6), 'yyyy-MM-dd');
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const recentMeals = useQuery(api.meals.getMealsForDateRange, userId ? { userId: userId as any, startDate: sevenDaysAgo, endDate: today } : 'skip');
 
   // Read user display info from localStorage
   const userName = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_name') : null;
@@ -850,6 +858,83 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     };
     getCameraPermission();
   }, []);
+
+  // SYNC: When a guest logs in, sync their local history to Convex
+  const hasSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!isMounted || isGuest || !userId || hasSyncedRef.current) return;
+    
+    const syncHistory = async () => {
+      try {
+        const historyDates = Object.keys(history);
+        if (historyDates.length === 0) {
+          hasSyncedRef.current = true;
+          return;
+        }
+
+        const allMeals: any[] = [];
+        const allWater: any[] = [];
+
+        historyDates.forEach(date => {
+          const dayData = history[date];
+          if (dayData.meals) {
+            dayData.meals.forEach(meal => {
+              allMeals.push({
+                date,
+                mealType: meal.name as any,
+                name: meal.name,
+                calories: meal.items.reduce((acc, i) => acc + i.calories, 0),
+                protein: meal.items.reduce((acc, i) => acc + i.protein, 0),
+                carbs: meal.items.reduce((acc, i) => acc + i.carbs, 0),
+                fat: meal.items.reduce((acc, i) => acc + i.fat, 0),
+                items: meal.items,
+                localId: meal.id,
+                healthScore: meal.healthAnalysis?.score,
+                healthAnalysis: meal.healthAnalysis?.analysis,
+              });
+            });
+          }
+          if (dayData.water > 0) {
+            allWater.push({ date, glasses: dayData.water });
+          }
+        });
+
+        if (allMeals.length > 0) {
+          await convexSyncBatchMeals({ userId: userId as any, meals: allMeals });
+        }
+        if (allWater.length > 0) {
+          await convexSyncBatchWater({ userId: userId as any, logs: allWater });
+        }
+        
+        hasSyncedRef.current = true;
+        console.log(`Synced ${allMeals.length} meals and ${allWater.length} water logs to Convex.`);
+      } catch (error) {
+        console.error("Failed to sync history to Convex:", error);
+      }
+    };
+
+    syncHistory();
+  }, [isMounted, isGuest, userId, history, convexSyncBatchMeals, convexSyncBatchWater]);
+
+  const progressData = useMemo(() => {
+    if (!recentMeals) return [];
+    
+    const last7DaysDates = Array.from({ length: 7 }, (_, i) => {
+      const d = subDays(new Date(), 6 - i);
+      return format(d, 'yyyy-MM-dd');
+    });
+
+    return last7DaysDates.map(date => {
+      const dayMeals = recentMeals.filter(m => m.date === date);
+      const totalCalories = dayMeals.reduce((acc, m) => acc + m.calories, 0);
+      return {
+        name: format(new Date(date + 'T12:00:00'), 'EEE'),
+        calories: totalCalories,
+        goal: displayGoals.calories,
+        isToday: date === format(new Date(), 'yyyy-MM-dd')
+      };
+    });
+  }, [recentMeals, displayGoals.calories]);
 
   const startCamera = async () => {
     if (hasCameraPermission && !isCameraOn) {
@@ -2083,6 +2168,56 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 </CardContent>
             </Card>
             )}
+
+            {isAuthenticated && progressData.length > 0 && (
+                <Card className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                            <TrendingUp className="text-primary h-5 w-5" /> Weekly Progress
+                        </CardTitle>
+                        <CardDescription>Your calorie intake over the last 7 days.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[220px] pt-4 pr-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={progressData}>
+                                <XAxis 
+                                    dataKey="name" 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                                />
+                                <YAxis hide domain={[0, (dataMax: number) => Math.max(dataMax, displayGoals.calories) * 1.1]} />
+                                <Tooltip 
+                                    cursor={{ fill: 'hsl(var(--primary) / 0.05)' }}
+                                    content={({ active, payload }) => {
+                                        if (active && payload && payload.length) {
+                                            const data = payload[0].payload;
+                                            return (
+                                                <div className="bg-background border rounded-lg shadow-lg p-2 text-xs">
+                                                    <p className="font-bold mb-1">{data.name}</p>
+                                                    <p className="text-primary">{data.calories} / {data.goal} kcal</p>
+                                                    <p className="text-muted-foreground">{Math.round((data.calories / data.goal) * 100)}% of goal</p>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
+                                <ReferenceLine y={displayGoals.calories} stroke="hsl(var(--primary) / 0.3)" strokeDasharray="3 3" />
+                                <Bar dataKey="calories" radius={[4, 4, 0, 0]} barSize={32}>
+                                    {progressData.map((entry, index) => (
+                                        <Cell 
+                                            key={`cell-${index}`} 
+                                            fill={entry.calories > entry.goal ? 'hsl(var(--destructive))' : (entry.isToday ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)')} 
+                                        />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            )}
+
 
             <Card className="shadow-xl rounded-2xl border-border/50">
                 <CardHeader>

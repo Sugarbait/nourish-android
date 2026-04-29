@@ -30,8 +30,8 @@ export const getProfile = query({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
+    const user = await ctx.db.get(userId);
     if (!profile) {
-      const user = await ctx.db.get(userId);
       return {
         userId,
         email: user?.email ?? "",
@@ -46,10 +46,13 @@ export const getProfile = query({
         weight: "",
         height: "",
         activityLevel: "moderate",
-        avatar: "",
+        avatar: user?.avatarUrl ?? "",
       };
     }
-    return profile;
+    return {
+      ...profile,
+      avatar: profile.avatar || user?.avatarUrl || "",
+    };
   },
 });
 
@@ -99,6 +102,11 @@ export const updateProfile = mutation({
         activityLevel: rest.activityLevel,
         avatar: rest.avatar,
       });
+    }
+
+    // Also update users table avatar if provided to keep them in sync
+    if (rest.avatar !== undefined) {
+      await ctx.db.patch(userId, { avatarUrl: rest.avatar });
     }
   },
 });
