@@ -874,8 +874,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         stream.getTracks().forEach(track => track.stop());
         setHasCameraPermission(true);
-      } catch (error) {
-        console.error('Error accessing camera:', error);
+      } catch (error: any) {
+        // NotFoundError is expected on devices without a camera (e.g. some desktops)
+        if (error.name !== 'NotFoundError' && error.name !== 'DevicesNotFoundError') {
+          console.error('Error accessing camera:', error);
+        }
         setHasCameraPermission(false);
       }
     };

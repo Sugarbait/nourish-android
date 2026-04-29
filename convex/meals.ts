@@ -179,12 +179,16 @@ export const syncBatchMeals = mutation({
     let addedCount = 0;
     for (const meal of meals) {
       if (!existingLocalIds.has(meal.localId)) {
-        // Normalize mealType to lowercase
-        const normalizedType = (meal.mealType.toLowerCase() === 'snacks' ? 'snack' : meal.mealType.toLowerCase()) as any;
+        // Normalize mealType to lowercase and handle "Snacks" plural
+        const rawType = meal.mealType.toLowerCase();
+        const normalizedType = (rawType === 'snacks' ? 'snack' : rawType) as any;
+        
+        // Exclude original mealType from spread to ensure normalizedType is used correctly
+        const { mealType: _, ...mealData } = meal;
         
         await ctx.db.insert("meals", {
           userId,
-          ...meal,
+          ...mealData,
           mealType: normalizedType,
           createdAt: Date.now(),
         });
