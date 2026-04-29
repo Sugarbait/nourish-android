@@ -799,7 +799,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       if (check.goal <= 0) continue;
       const pct = check.value / check.goal;
       const celebKey = `${dateKey}-${check.key}-100`;
-      const notifyKey = `${dateKey}-${check.key}-75`;
+      const notifyKey = `${dateKey}-${check.key}-${Math.floor(pct * 100)}`;
 
       // 100% reached → celebrate (queue one at a time)
       if (pct >= 1 && !celebratedRef.current.has(celebKey) && !celebrationGoal) {
