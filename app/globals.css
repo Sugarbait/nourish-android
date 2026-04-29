@@ -73,3 +73,24 @@
 body, html {
   pointer-events: auto !important;
 }
+
+/* Calendar Tracked Day Dot */
+.day-tracked {
+  position: relative;
+}
+
+.day-tracked::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background-color: #22c55e;
+  border-radius: 50%;
+}
+
+.dark .day-tracked::after {
+  background-color: #4ade80;
+}

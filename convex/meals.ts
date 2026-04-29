@@ -194,3 +194,17 @@ export const syncBatchMeals = mutation({
     return { addedCount };
   },
 });
+
+/** Get all unique dates where the user has logged meals */
+export const getTrackedDates = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const meals = await ctx.db
+      .query("meals")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    
+    const dates = new Set(meals.map(m => m.date));
+    return Array.from(dates).sort();
+  },
+});

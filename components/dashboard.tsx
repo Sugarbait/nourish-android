@@ -347,6 +347,12 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const sevenDaysAgo = format(subDays(new Date(), 6), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
   const recentMeals = useQuery(api.meals.getMealsForDateRange, userId ? { userId: userId as any, startDate: sevenDaysAgo, endDate: today } : 'skip');
+  const trackedDates = useQuery(api.meals.getTrackedDates, userId ? { userId: userId as any } : 'skip');
+
+  const trackedDateObjects = useMemo(() => {
+    if (!trackedDates) return [];
+    return trackedDates.map(d => new Date(d + 'T12:00:00'));
+  }, [trackedDates]);
 
   // Read user display info from localStorage
   const userName = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_name') : null;
@@ -2256,6 +2262,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                         onSelect={handleDateChange}
                                         disabled={(date) => date > new Date() || date < new Date("2000-01-01")}
                                         initialFocus
+                                        modifiers={{ tracked: trackedDateObjects }}
+                                        modifiersClassNames={{ tracked: "day-tracked" }}
                                     />
                                 </PopoverContent>
                             </Popover>
