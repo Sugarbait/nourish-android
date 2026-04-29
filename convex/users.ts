@@ -104,8 +104,8 @@ export const updateProfile = mutation({
       });
     }
 
-    // Also update users table avatar if provided to keep them in sync
-    if (rest.avatar !== undefined) {
+    // Also update users table avatar if provided and not empty to keep them in sync
+    if (rest.avatar) {
       await ctx.db.patch(userId, { avatarUrl: rest.avatar });
     }
   },

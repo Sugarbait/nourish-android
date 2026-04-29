@@ -382,7 +382,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const [isManualEntryOpen, setManualEntryOpen] = useState(false);
   const [isGoalsOpen, setGoalsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [profile, setProfile] = useState<UserProfile>(defaultProfile);
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+      const name = localStorage.getItem('nourish_user_name');
+      const avatar = localStorage.getItem('nourish_user_avatar');
+      if (name || avatar) {
+        return { ...defaultProfile, name: name || '', avatar: avatar || '' };
+      }
+    }
+    return defaultProfile;
+  });
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
@@ -1666,7 +1681,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 p-0">
                   <Avatar className="h-8 w-8">
-                    {!isGuest && profile.avatar && <AvatarImage src={profile.avatar} alt="Profile" className="object-cover" />}
+                    {!isGuest && (profile.avatar || userAvatar) && <AvatarImage src={profile.avatar || userAvatar || ''} alt="Profile" className="object-cover" />}
                     <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                       {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
                     </AvatarFallback>
@@ -1677,11 +1692,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <SheetHeader>
                   <div className="flex flex-col items-center gap-3 pb-4">
                     <div className="relative group cursor-pointer" onClick={() => document.getElementById('avatar-upload')?.click()}>
-                      <Avatar className="h-20 w-20">
-                        {!isGuest && profile.avatar && <AvatarImage src={profile.avatar} alt="Profile" className="object-cover" />}
-                        <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-bold">
-                          {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-10 w-10" />}
-                        </AvatarFallback>
+                      <Avatar className="h-20 w-20 border-2 border-primary/20">
+                          {(profile.avatar || userAvatar) && <AvatarImage src={profile.avatar || userAvatar || ''} alt={profile.name || 'Profile'} className="object-cover" />}
+                          <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
+                              {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-10 w-10" />}
+                          </AvatarFallback>
                       </Avatar>
                       <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Upload className="h-5 w-5 text-white" />
