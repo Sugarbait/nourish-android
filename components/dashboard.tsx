@@ -2031,7 +2031,12 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 )}
             </Card>
 
-             <Card className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
+             {(!isGuest && !convexProfile) ? (
+                <Card className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
+                  <CardContent className="pt-8"><Skeleton className="h-48 w-full rounded-lg" /></CardContent>
+                </Card>
+              ) : (
+              <Card className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl font-bold">
                         <div className="flex items-center gap-2"><Flame className="text-orange-400"/> Today's Summary</div>
@@ -2070,6 +2075,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     </div>
                 </CardContent>
             </Card>
+            )}
 
             <Card className="shadow-xl rounded-2xl border-border/50">
                 <CardHeader>
