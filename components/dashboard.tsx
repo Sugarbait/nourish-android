@@ -306,6 +306,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexDeleteMeal = useMutation(api.meals.deleteMealByLocalId);
   const convexUpdateMealItem = useMutation(api.meals.updateMealItem);
   const convexUpdateMealType = useMutation(api.meals.updateMealType);
+  const convexUpdateProfile = useMutation(api.users.updateProfile);
   const convexRedeemCoupon = useMutation(api.users.redeemCoupon);
   const convexConsumeMealCredit = useMutation(api.users.consumeMealCredit);
   const submitContactForm = useAction(api.contact.submitContactForm);
@@ -336,6 +337,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const selectedDateConvexMeals = useQuery(api.meals.getMealsForDate, userId ? { userId: userId as any, date: dateKey } : 'skip');
   // Fetch credits from Convex — source of truth for all authenticated users
   const convexCredits = useQuery(api.users.getCredits, userId ? { userId: userId as any } : 'skip');
+  const convexProfile = useQuery(api.users.getProfile, userId ? { userId: userId as any } : 'skip');
   const savedRecipes = useQuery(api.recipes.getSavedRecipes, userId ? { userId: userId as any } : 'skip') ?? [];
 
   // Read user display info from localStorage
@@ -553,6 +555,32 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Hydrate React state from convexProfile for authenticated users
+  useEffect(() => {
+    if (!isGuest && convexProfile) {
+      const loadedGoals = {
+        calories: convexProfile.calorieGoal,
+        protein: convexProfile.proteinGoal,
+        carbs: convexProfile.carbsGoal,
+        fat: convexProfile.fatGoal,
+        water: convexProfile.waterGoal,
+      };
+      setGoals(loadedGoals);
+      goalsForm.reset(loadedGoals);
+
+      const loadedProfile: UserProfile = {
+        name: convexProfile.name || '',
+        age: convexProfile.age || '',
+        weight: convexProfile.weight || '',
+        height: convexProfile.height || '',
+        activityLevel: (convexProfile.activityLevel as any) || 'moderate',
+        avatar: convexProfile.avatar || '',
+      };
+      setProfile(loadedProfile);
+      profileForm.reset(loadedProfile);
+    }
+  }, [convexProfile, isGuest, goalsForm, profileForm]);
+
   // Cross-device hydration: when Convex returns meals for the selected date, merge any
   // that aren't already in local state (identified by localId stored in Convex).
   useEffect(() => {
@@ -705,6 +733,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // Save data to localStorage whenever it changes
   useEffect(() => {
     if (!isMounted) return; // Don't save initial default state
+    if (!isGuest) return; // CLOUD SYNC: Don't save to localStorage if authenticated
     try {
         const dataToSave: AppData = { goals, history };
         localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(dataToSave));
@@ -1221,19 +1250,56 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   };
 
-  const handleProfileSubmit = (values: z.infer<typeof profileFormSchema>) => {
-      const updated = { ...defaultProfile, ...values };
+  const handleProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
+      const updated = { ...profile, ...values };
       setProfile(updated);
-      try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated)); } catch {}
-      setIsProfileOpen(false);
-      toast({ title: "Profile saved!", description: "Your profile has been updated." });
+      if (isGuest) {
+          try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated)); } catch {}
+          setIsProfileOpen(false);
+          toast({ title: "Profile saved!", description: "Your profile has been updated." });
+      } else if (userId) {
+          try {
+              await convexUpdateProfile({
+                  userId: userId as any,
+                  name: values.name,
+                  age: values.age,
+                  weight: values.weight,
+                  height: values.height,
+                  activityLevel: values.activityLevel,
+                  avatar: values.avatar,
+              });
+              setIsProfileOpen(false);
+              toast({ title: "Profile saved!", description: "Your profile has been updated." });
+          } catch (error) {
+              console.error("Failed to save profile:", error);
+              toast({ title: "Failed to save profile", description: "Please try again.", variant: "destructive" });
+          }
+      }
   };
 
-  const handleGoalsSubmit = (values: z.infer<typeof goalsFormSchema>) => {
+  const handleGoalsSubmit = async (values: z.infer<typeof goalsFormSchema>) => {
       setGoals(values);
       goalsForm.reset(values);
-      setGoalsOpen(false);
-      toast({ title: "Goals updated!", description: "Your daily nutritional goals have been saved."});
+      if (!isGuest && userId) {
+          try {
+              await convexUpdateProfile({
+                  userId: userId as any,
+                  calorieGoal: values.calories,
+                  proteinGoal: values.protein,
+                  carbsGoal: values.carbs,
+                  fatGoal: values.fat,
+                  waterGoal: values.water,
+              });
+              setGoalsOpen(false);
+              toast({ title: "Goals updated!", description: "Your daily nutritional goals have been saved."});
+          } catch (error) {
+              console.error("Failed to save goals:", error);
+              toast({ title: "Failed to save goals", description: "Please try again.", variant: "destructive" });
+          }
+      } else {
+          setGoalsOpen(false);
+          toast({ title: "Goals updated!", description: "Your daily nutritional goals have been saved."});
+      }
   }
 
   const handleWaterChange = (amount: number) => {

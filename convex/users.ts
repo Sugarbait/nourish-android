@@ -42,6 +42,11 @@ export const getProfile = query({
         fatGoal: 70,
         waterGoal: 8,
         dietaryRestrictions: "",
+        age: "",
+        weight: "",
+        height: "",
+        activityLevel: "moderate",
+        avatar: "",
       };
     }
     return profile;
@@ -59,6 +64,11 @@ export const updateProfile = mutation({
     fatGoal: v.optional(v.number()),
     waterGoal: v.optional(v.number()),
     dietaryRestrictions: v.optional(v.string()),
+    age: v.optional(v.string()),
+    weight: v.optional(v.string()),
+    height: v.optional(v.string()),
+    activityLevel: v.optional(v.string()),
+    avatar: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { userId, ...rest } = args;
@@ -83,6 +93,11 @@ export const updateProfile = mutation({
         waterGoal: rest.waterGoal ?? 8,
         name: rest.name,
         dietaryRestrictions: rest.dietaryRestrictions,
+        age: rest.age,
+        weight: rest.weight,
+        height: rest.height,
+        activityLevel: rest.activityLevel,
+        avatar: rest.avatar,
       });
     }
   },

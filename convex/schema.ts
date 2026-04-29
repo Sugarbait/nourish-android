@@ -31,6 +31,12 @@ export default defineSchema({
     userId: v.id("users"),
     name: v.optional(v.string()),
     email: v.string(),
+    // Demographics & Physical
+    age: v.optional(v.string()),
+    weight: v.optional(v.string()),
+    height: v.optional(v.string()),
+    activityLevel: v.optional(v.string()),
+    avatar: v.optional(v.string()),
     // Goals
     calorieGoal: v.number(),
     proteinGoal: v.number(),
