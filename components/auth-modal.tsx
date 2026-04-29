@@ -37,7 +37,9 @@ interface AuthModalProps {
 }
 
 function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 'resetVerify'): string {
-  const raw = (err?.message ?? '').toLowerCase();
+  console.error("Auth Error details:", { err, data: err?.data, message: err?.message });
+  const errString = typeof err?.data === 'string' ? err.data : (err?.message || '');
+  const raw = errString.toLowerCase();
 
   if (context === 'signIn') {
     if (raw.includes('verify') || raw.includes('verification'))
