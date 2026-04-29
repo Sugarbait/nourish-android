@@ -2,14 +2,17 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
-// Maps Stripe amount_total (cents) → credits to award
+// Maps Stripe amount_total (cents) → credits to award — must match CREDIT_PACKAGES in lib/credits.ts
 const AMOUNT_TO_CREDITS: Record<number, number> = {
-  199: 100,  // $1.99 Starter
-  499: 300,  // $4.99 Value
-  999: 800,  // $9.99 Pro
+  199: 50,   // $1.99 Starter
+  499: 150,  // $4.99 Value
+  999: 400,  // $9.99 Pro
 };
 
 const SUBSCRIPTION_CREDITS = 300;
+
+const MONTHLY_MS = 30 * 24 * 60 * 60 * 1000;
+const YEARLY_MS  = 365 * 24 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Helper: resolve a Convex userId (string from client_reference_id) or fall
@@ -41,11 +44,12 @@ async function resolveUserId(
 // ---------------------------------------------------------------------------
 export const activateSubscription = mutation({
   args: {
-    userId: v.string(),
-    customerEmail: v.string(),
+    userId:           v.string(),
+    customerEmail:    v.string(),
     stripeCustomerId: v.optional(v.string()),
+    isYearly:         v.optional(v.boolean()),
   },
-  handler: async (ctx, { userId, customerEmail, stripeCustomerId }) => {
+  handler: async (ctx, { userId, customerEmail, stripeCustomerId, isYearly }) => {
     const uid = await resolveUserId(ctx, userId, customerEmail);
     if (!uid) {
       console.error("[stripe] User not found:", { userId, customerEmail });
@@ -57,25 +61,27 @@ export const activateSubscription = mutation({
       await ctx.db.patch(uid, { stripeCustomerId });
     }
 
-    // Upsert subscription row
-    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    // Upsert subscription row — yearly gets a 365-day window
+    const plan   = isYearly ? "yearly" : "monthly";
+    const expiry = Date.now() + (isYearly ? YEARLY_MS : MONTHLY_MS);
+
     const existing = await ctx.db
       .query("subscriptions")
       .withIndex("by_userId", (q: any) => q.eq("userId", uid))
       .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { active: true, plan: "monthly", expiresAt: expiry });
+      await ctx.db.patch(existing._id, { active: true, plan, expiresAt: expiry });
     } else {
       await ctx.db.insert("subscriptions", {
         userId: uid,
-        plan: "monthly",
+        plan,
         active: true,
         expiresAt: expiry,
       });
     }
 
-    // Add 40 credits
+    // Add 300 subscription credits
     const today = new Date().toISOString().slice(0, 10);
     const credits = await ctx.db
       .query("credits")
@@ -106,9 +112,9 @@ export const activateSubscription = mutation({
 // ---------------------------------------------------------------------------
 export const addCreditPack = mutation({
   args: {
-    userId: v.string(),
-    customerEmail: v.string(),
-    amountTotal: v.number(),
+    userId:           v.string(),
+    customerEmail:    v.string(),
+    amountTotal:      v.number(),
     stripeCustomerId: v.optional(v.string()),
   },
   handler: async (ctx, { userId, customerEmail, amountTotal, stripeCustomerId }) => {
@@ -156,7 +162,7 @@ export const addCreditPack = mutation({
 
 // ---------------------------------------------------------------------------
 // Called by webhook on invoice.payment_succeeded (billing_reason = subscription_cycle)
-// Adds 40 renewal credits and extends the subscription expiry by 30 days.
+// Adds 300 renewal credits and extends expiry by 30 days (monthly) or 365 (yearly).
 // ---------------------------------------------------------------------------
 export const renewSubscription = mutation({
   args: { stripeCustomerId: v.string() },
@@ -171,25 +177,27 @@ export const renewSubscription = mutation({
       return;
     }
 
-    // Extend subscription expiry
-    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
     const sub = await ctx.db
       .query("subscriptions")
       .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
       .first();
 
+    const isYearly = sub?.plan === "yearly";
+    const expiry   = Date.now() + (isYearly ? YEARLY_MS : MONTHLY_MS);
+    const plan     = isYearly ? "yearly" : "monthly";
+
     if (sub) {
-      await ctx.db.patch(sub._id, { active: true, plan: "monthly", expiresAt: expiry });
+      await ctx.db.patch(sub._id, { active: true, plan, expiresAt: expiry });
     } else {
       await ctx.db.insert("subscriptions", {
         userId: user._id,
-        plan: "monthly",
+        plan,
         active: true,
         expiresAt: expiry,
       });
     }
 
-    // Add 40 renewal credits
+    // Add 300 renewal credits
     const today = new Date().toISOString().slice(0, 10);
     const credits = await ctx.db
       .query("credits")
@@ -221,7 +229,6 @@ export const renewSubscription = mutation({
 export const deactivateSubscription = mutation({
   args: { stripeCustomerId: v.string() },
   handler: async (ctx, { stripeCustomerId }) => {
-    // Find the user by stripeCustomerId
     const user = await ctx.db
       .query("users")
       .filter((q: any) => q.eq(q.field("stripeCustomerId"), stripeCustomerId))

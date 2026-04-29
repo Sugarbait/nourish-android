@@ -37,6 +37,7 @@ export const createCheckoutSession = action({
         "line_items[0][quantity]": "1",
         success_url: args.successUrl,
         cancel_url:  args.cancelUrl,
+        "metadata[priceKey]": args.priceKey,
       });
       if (args.customerEmail) params.set("customer_email", args.customerEmail);
       if (args.userId)        params.set("client_reference_id", args.userId);

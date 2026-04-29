@@ -58,12 +58,14 @@ http.route({
       const stripeCustomerId = typeof session.customer === "string" ? session.customer : undefined;
 
       if (session.mode === "subscription") {
+        const isYearly = session.metadata?.priceKey === "subscription_yearly";
         await ctx.runMutation(api.stripe.activateSubscription, {
           userId,
           customerEmail,
           stripeCustomerId,
+          isYearly,
         });
-        console.log("[stripe-webhook] Subscription activated for", customerEmail);
+        console.log("[stripe-webhook] Subscription activated for", customerEmail, isYearly ? "(yearly)" : "(monthly)");
       } else if (session.mode === "payment" && session.amount_total) {
         await ctx.runMutation(api.stripe.addCreditPack, {
           userId,

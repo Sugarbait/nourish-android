@@ -95,7 +95,7 @@ export default defineSchema({
   // Subscriptions
   subscriptions: defineTable({
     userId: v.id("users"),
-    plan: v.union(v.literal("monthly"), v.null()),
+    plan: v.union(v.literal("monthly"), v.literal("yearly"), v.null()),
     active: v.boolean(),
     expiresAt: v.optional(v.number()), // Unix timestamp ms
   }).index("by_userId", ["userId"]),

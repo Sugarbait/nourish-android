@@ -709,8 +709,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         const credData = await credRes.json();
         const convexCredits = credData?.value;
 
-        // Subscription gets checked here
-        const isActivated = sub?.active === true || (convexCredits && convexCredits.credits > 0);
+        // Only consider success if subscription is active OR credits actually increased
+        const prevCredits = loadCredits().credits;
+        const creditsIncreased = convexCredits && convexCredits.credits > prevCredits;
+        const isActivated = sub?.active === true || creditsIncreased;
 
         if (isActivated || attempts >= MAX_ATTEMPTS) {
           clearInterval(poll);
@@ -719,13 +721,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             // Sync Convex state into localStorage — Convex is source of truth,
             // so we replace (not add to) the local credit count.
             const existing = loadCredits();
+            const subPlan = sub?.plan === 'yearly' ? 'monthly' as const : 'monthly' as const;
             const merged = {
               ...existing,
               credits: convexCredits?.credits ?? existing.credits,
               dailyFreeMealUsed: convexCredits?.dailyFreeMealUsed ?? existing.dailyFreeMealUsed,
               lastFreeDate: convexCredits?.lastFreeDate ?? existing.lastFreeDate,
               subscription: sub?.active
-                ? { active: true, plan: 'monthly' as const, expiresAt: sub.expiresAt ? new Date(sub.expiresAt).toISOString() : null }
+                ? { active: true, plan: subPlan, expiresAt: sub.expiresAt ? new Date(sub.expiresAt).toISOString() : null }
                 : existing.subscription,
             };
             saveCredits(merged);
@@ -733,7 +736,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             toast({
               title: '🎉 Payment successful!',
               description: sub?.active
-                ? 'Your Nourish Pro subscription is now active.'
+                ? `Your Nourish Pro subscription is now active.`
                 : 'Your credits have been added to your account.',
             });
           }
