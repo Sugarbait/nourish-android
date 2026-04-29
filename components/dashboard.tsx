@@ -418,11 +418,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     foodWithMacros: FoodItem[];
   } | null>(null);
 
-  const handleDuplicateReplace = () => {
+  const handleDuplicateReplace = async () => {
     if (!pendingDuplicate) return;
     const { newMeal, duplicateOfId, foodWithMacros } = pendingDuplicate;
     // Remove the old meal first
-    removeMeal(duplicateOfId);
+    await removeMeal(duplicateOfId);
     // Log the new meal
     setHistory(current => ({
       ...current,
@@ -432,27 +432,34 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       },
     }));
     if (userId) {
-      const totals = foodWithMacros.reduce(
-        (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
-        { calories: 0, protein: 0, carbs: 0, fat: 0 }
-      );
-      convexLogMeal({
-        userId: userId as any,
-        date: dateKey,
-        mealType: newMeal.name.toLowerCase() as any,
-        name: newMeal.name,
-        ...totals,
-        healthScore: newMeal.healthAnalysis?.score,
-        healthAnalysis: newMeal.healthAnalysis?.analysis,
-        items: foodWithMacros,
-        localId: newMeal.id,
-      }).catch(console.error);
+      try {
+        const totals = foodWithMacros.reduce(
+          (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
+          { calories: 0, protein: 0, carbs: 0, fat: 0 }
+        );
+        await convexLogMeal({
+          userId: userId as any,
+          date: dateKey,
+          mealType: newMeal.name.toLowerCase() as any,
+          name: newMeal.name,
+          ...totals,
+          healthScore: newMeal.healthAnalysis?.score,
+          healthAnalysis: newMeal.healthAnalysis?.analysis,
+          items: foodWithMacros,
+          localId: newMeal.id,
+        });
+        toast({ title: `Replaced in ${newMeal.name}!`, description: 'Older entry was replaced. Review the results below.' });
+      } catch (error) {
+        console.error("Failed to replace meal:", error);
+        toast({ title: "Failed to replace meal", description: "Please try again.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: `Replaced in ${newMeal.name}!`, description: 'Older entry was replaced. Review the results below.' });
     }
-    toast({ title: `Replaced in ${newMeal.name}!`, description: 'Older entry was replaced. Review the results below.' });
     setPendingDuplicate(null);
   };
 
-  const handleDuplicateLogAgain = () => {
+  const handleDuplicateLogAgain = async () => {
     if (!pendingDuplicate) return;
     const { newMeal, foodWithMacros } = pendingDuplicate;
     // Append duplicate entry alongside the existing one
@@ -464,23 +471,30 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       },
     }));
     if (userId) {
-      const totals = foodWithMacros.reduce(
-        (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
-        { calories: 0, protein: 0, carbs: 0, fat: 0 }
-      );
-      convexLogMeal({
-        userId: userId as any,
-        date: dateKey,
-        mealType: newMeal.name.toLowerCase() as any,
-        name: newMeal.name,
-        ...totals,
-        healthScore: newMeal.healthAnalysis?.score,
-        healthAnalysis: newMeal.healthAnalysis?.analysis,
-        items: foodWithMacros,
-        localId: newMeal.id,
-      }).catch(console.error);
+      try {
+        const totals = foodWithMacros.reduce(
+          (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
+          { calories: 0, protein: 0, carbs: 0, fat: 0 }
+        );
+        await convexLogMeal({
+          userId: userId as any,
+          date: dateKey,
+          mealType: newMeal.name.toLowerCase() as any,
+          name: newMeal.name,
+          ...totals,
+          healthScore: newMeal.healthAnalysis?.score,
+          healthAnalysis: newMeal.healthAnalysis?.analysis,
+          items: foodWithMacros,
+          localId: newMeal.id,
+        });
+        toast({ title: `Added to ${newMeal.name}!`, description: 'Food logged as a duplicate. Review the results below.' });
+      } catch (error) {
+        console.error("Failed to log duplicate meal:", error);
+        toast({ title: "Failed to log meal", description: "Please try again.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: `Added to ${newMeal.name}!`, description: 'Food logged as a duplicate. Review the results below.' });
     }
-    toast({ title: `Added to ${newMeal.name}!`, description: 'Food logged as a duplicate. Review the results below.' });
     setPendingDuplicate(null);
   };
 
@@ -911,7 +925,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   };
 
-  const removeMeal = (mealId: string) => {
+  const removeMeal = async (mealId: string) => {
+    const previousHistory = history[dateKey];
     setHistory(current => ({
       ...current,
       [dateKey]: {
@@ -921,11 +936,21 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }));
     // Sync deletion to Convex for authenticated users
     if (userId) {
-      convexDeleteMeal({ userId: userId as any, localId: mealId }).catch(console.error);
+      try {
+        await convexDeleteMeal({ userId: userId as any, localId: mealId });
+        toast({ title: "Meal deleted", description: "Removed from your meal log." });
+      } catch (error) {
+        setHistory(current => ({ ...current, [dateKey]: previousHistory }));
+        console.error("Failed to delete meal:", error);
+        toast({ title: "Failed to delete meal", description: "Please try again.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "Meal deleted", description: "Removed from your meal log." });
     }
   };
 
-  const updateMealType = (mealId: string, newType: MealType) => {
+  const updateMealType = async (mealId: string, newType: MealType) => {
+    const previousHistory = history[dateKey];
     setHistory(current => ({
       ...current,
       [dateKey]: {
@@ -938,7 +963,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }));
     // Sync type change to Convex for authenticated users
     if (userId) {
-      convexUpdateMealType({ userId: userId as any, localId: mealId, mealType: newType.toLowerCase() as any, name: newType }).catch(console.error);
+      try {
+        await convexUpdateMealType({ userId: userId as any, localId: mealId, mealType: newType.toLowerCase() as any, name: newType });
+      } catch (error) {
+        setHistory(current => ({ ...current, [dateKey]: previousHistory }));
+        console.error("Failed to update meal type:", error);
+        toast({ title: "Failed to update meal", description: "Please try again.", variant: "destructive" });
+      }
     }
   };
 
