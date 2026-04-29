@@ -357,6 +357,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const [isMounted, setIsMounted] = useState(false);
   // selectedDate and dateKey moved above useQuery hooks
   const [goals, setGoals] = useState<DailyGoals>({ calories: 2200, protein: 150, carbs: 250, fat: 70, water: 8 });
+  // Use convexProfile directly for display to avoid flash of default values during hydration
+  const displayGoals = (!isGuest && convexProfile)
+    ? { calories: convexProfile.calorieGoal, protein: convexProfile.proteinGoal, carbs: convexProfile.carbsGoal, fat: convexProfile.fatGoal, water: convexProfile.waterGoal }
+    : goals;
   const [history, setHistory] = useState<Record<string, DailyData>>({});
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -788,11 +792,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     if (dateKey !== todayKey) return;
 
     const checks = [
-      { key: 'calories', value: intake.calories,  goal: goals.calories, name: 'Calorie Goal',    emoji: '🔥', message: 'You hit your calorie target for today. Amazing work!' },
-      { key: 'protein',  value: intake.protein,   goal: goals.protein,  name: 'Protein Goal',    emoji: '💪', message: 'Protein target crushed! Your muscles will thank you.' },
-      { key: 'carbs',    value: intake.carbs,     goal: goals.carbs,    name: 'Carbs Goal',      emoji: '🌾', message: 'Carb goal reached! Great energy balance today.' },
-      { key: 'fat',      value: intake.fat,       goal: goals.fat,      name: 'Fat Goal',        emoji: '✨', message: 'Fat target met! Healthy fats are key to wellbeing.' },
-      { key: 'water',    value: dailyData.water,  goal: goals.water,    name: 'Hydration Goal',  emoji: '💧', message: 'Fully hydrated! Your body is loving you right now.' },
+      { key: 'calories', value: intake.calories,  goal: displayGoals.calories, name: 'Calorie Goal',    emoji: '🔥', message: 'You hit your calorie target for today. Amazing work!' },
+      { key: 'protein',  value: intake.protein,   goal: displayGoals.protein,  name: 'Protein Goal',    emoji: '💪', message: 'Protein target crushed! Your muscles will thank you.' },
+      { key: 'carbs',    value: intake.carbs,     goal: displayGoals.carbs,    name: 'Carbs Goal',      emoji: '🌾', message: 'Carb goal reached! Great energy balance today.' },
+      { key: 'fat',      value: intake.fat,       goal: displayGoals.fat,      name: 'Fat Goal',        emoji: '✨', message: 'Fat target met! Healthy fats are key to wellbeing.' },
+      { key: 'water',    value: dailyData.water,  goal: displayGoals.water,    name: 'Hydration Goal',  emoji: '💧', message: 'Fully hydrated! Your body is loving you right now.' },
     ];
 
     for (const check of checks) {
@@ -2046,28 +2050,28 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <CardContent className="space-y-5 pb-6">
                     {/* Big calories ring */}
                     <div className="flex flex-col items-center gap-1 pt-2">
-                        <CircularProgress value={intake.calories} max={goals.calories} color="#f97316" size={148} strokeWidth={13}>
+                        <CircularProgress value={intake.calories} max={displayGoals.calories} color="#f97316" size={148} strokeWidth={13}>
                             <span className="text-3xl font-black tracking-tight">{intake.calories}</span>
-                            <span className="text-[11px] text-muted-foreground font-semibold">/ {goals.calories} kcal</span>
+                            <span className="text-[11px] text-muted-foreground font-semibold">/ {displayGoals.calories} kcal</span>
                         </CircularProgress>
                         <span className="text-sm font-semibold flex items-center gap-1.5 mt-1 text-orange-400"><Flame className="h-4 w-4" />Calories</span>
                     </div>
                     {/* Macro rings row */}
                     <div className="grid grid-cols-3 gap-2">
                         <div className="flex flex-col items-center gap-1.5">
-                            <CircularProgress value={intake.protein} max={goals.protein} color="#ef4444" size={80} strokeWidth={7}>
+                            <CircularProgress value={intake.protein} max={displayGoals.protein} color="#ef4444" size={80} strokeWidth={7}>
                                 <span className="text-base font-bold">{intake.protein}g</span>
                             </CircularProgress>
                             <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Drumstick className="h-3 w-3 text-red-400"/>Protein</span>
                         </div>
                         <div className="flex flex-col items-center gap-1.5">
-                            <CircularProgress value={intake.carbs} max={goals.carbs} color="#eab308" size={80} strokeWidth={7}>
+                            <CircularProgress value={intake.carbs} max={displayGoals.carbs} color="#eab308" size={80} strokeWidth={7}>
                                 <span className="text-base font-bold">{intake.carbs}g</span>
                             </CircularProgress>
                             <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Wheat className="h-3 w-3 text-yellow-400"/>Carbs</span>
                         </div>
                         <div className="flex flex-col items-center gap-1.5">
-                            <CircularProgress value={intake.fat} max={goals.fat} color="#a855f7" size={80} strokeWidth={7}>
+                            <CircularProgress value={intake.fat} max={displayGoals.fat} color="#a855f7" size={80} strokeWidth={7}>
                                 <span className="text-base font-bold">{intake.fat}g</span>
                             </CircularProgress>
                             <span className="text-xs text-muted-foreground font-medium flex items-center gap-1"><Beef className="h-3 w-3 text-purple-400"/>Fat</span>
@@ -2246,7 +2250,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 </CardHeader>
                 <CardContent className="space-y-4 pb-5">
                     <div className="flex justify-center gap-2 flex-wrap">
-                        {Array.from({ length: goals.water }).map((_, i) => (
+                        {Array.from({ length: displayGoals.water }).map((_, i) => (
                             <button
                                 key={i}
                                 onClick={() => handleWaterChange(i < dailyData.water ? -(dailyData.water - i) : i + 1 - dailyData.water)}
@@ -2261,8 +2265,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         ))}
                     </div>
                     <div className="flex justify-between items-center text-sm px-1">
-                        <span className="text-muted-foreground font-medium">{dailyData.water} of {goals.water} glasses</span>
-                        {dailyData.water >= goals.water && <span className="text-blue-400 font-semibold">✨ Great hydration!</span>}
+                        <span className="text-muted-foreground font-medium">{dailyData.water} of {displayGoals.water} glasses</span>
+                        {dailyData.water >= displayGoals.water && <span className="text-blue-400 font-semibold">✨ Great hydration!</span>}
                     </div>
                 </CardContent>
             </Card>
@@ -2369,11 +2373,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               <CardContent className="pb-5">
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: 'Calories',  value: `${goals.calories} kcal`, icon: <Flame className="h-4 w-4 text-orange-400"/>,  bg: 'bg-orange-500/10' },
-                    { label: 'Protein',   value: `${goals.protein} g`,     icon: <Drumstick className="h-4 w-4 text-red-400"/>,   bg: 'bg-red-500/10' },
-                    { label: 'Carbs',     value: `${goals.carbs} g`,       icon: <Wheat className="h-4 w-4 text-yellow-400"/>,     bg: 'bg-yellow-500/10' },
-                    { label: 'Fat',       value: `${goals.fat} g`,         icon: <Beef className="h-4 w-4 text-purple-400"/>,      bg: 'bg-purple-500/10' },
-                    { label: 'Water',     value: `${goals.water} glasses`, icon: <GlassWater className="h-4 w-4 text-blue-400"/>, bg: 'bg-blue-500/10', full: true },
+                    { label: 'Calories',  value: `${displayGoals.calories} kcal`, icon: <Flame className="h-4 w-4 text-orange-400"/>,  bg: 'bg-orange-500/10' },
+                    { label: 'Protein',   value: `${displayGoals.protein} g`,     icon: <Drumstick className="h-4 w-4 text-red-400"/>,   bg: 'bg-red-500/10' },
+                    { label: 'Carbs',     value: `${displayGoals.carbs} g`,       icon: <Wheat className="h-4 w-4 text-yellow-400"/>,     bg: 'bg-yellow-500/10' },
+                    { label: 'Fat',       value: `${displayGoals.fat} g`,         icon: <Beef className="h-4 w-4 text-purple-400"/>,      bg: 'bg-purple-500/10' },
+                    { label: 'Water',     value: `${displayGoals.water} glasses`, icon: <GlassWater className="h-4 w-4 text-blue-400"/>, bg: 'bg-blue-500/10', full: true },
                   ].map(item => (
                     <div key={item.label} className={`flex items-center gap-3 rounded-xl p-3 ${item.bg} ${item.full ? 'col-span-2' : ''}`}>
                       <div className="shrink-0">{item.icon}</div>
