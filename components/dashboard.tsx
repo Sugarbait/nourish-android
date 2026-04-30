@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.31";
+const BUILD_VERSION = "0.2.34";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1805,16 +1805,16 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <Form {...profileForm}>
                   <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-4 mt-2">
                     <FormField control={profileForm.control} name="name" render={({ field }) => (
-                      <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your name" {...field} disabled={isGuest} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your name" {...field} disabled={isGuest} onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="age" render={({ field }) => (
-                      <FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" placeholder="e.g. 28" {...field} disabled={isGuest} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" placeholder="e.g. 28" {...field} disabled={isGuest} onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="weight" render={({ field }) => (
-                      <FormItem><FormLabel>Weight</FormLabel><FormControl><Input placeholder="e.g. 165 lbs or 75 kg" {...field} disabled={isGuest} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Weight</FormLabel><FormControl><Input placeholder="e.g. 165 lbs or 75 kg" {...field} disabled={isGuest} onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="height" render={({ field }) => (
-                      <FormItem><FormLabel>Height</FormLabel><FormControl><Input placeholder="e.g. 5'10&quot; or 178 cm" {...field} disabled={isGuest} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Height</FormLabel><FormControl><Input placeholder="e.g. 5'10&quot; or 178 cm" {...field} disabled={isGuest} onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="activityLevel" render={({ field }) => (
                       <FormItem><FormLabel>Activity Level</FormLabel>
