@@ -254,12 +254,18 @@ export const addCredits = mutation({
   },
 });
 
+const VALID_COUPONS: Record<string, number> = {
+  NOURISH10: 10,
+  NOURISH15: 15,
+  NOURISH20: 20,
+  NOURISH25: 25,
+  NOURISH100: 100,
+  NOURISH200: 200,
+  NOURISH300: 300,
+};
+
 function getValidCoupons(): Record<string, number> {
-  try {
-    return JSON.parse(process.env.COUPON_CODES ?? "{}");
-  } catch {
-    return {};
-  }
+  return VALID_COUPONS;
 }
 
 export const redeemCoupon = mutation({
@@ -273,7 +279,6 @@ export const redeemCoupon = mutation({
     // Validate coupon code
     const coupons = getValidCoupons();
     const reward = coupons[uppercaseCode];
-    console.log("[redeemCoupon] code:", uppercaseCode, "| reward:", reward, "| available codes:", Object.keys(coupons).join(","));
     if (!reward) {
       throw new ConvexError("Invalid coupon code.");
     }
@@ -300,14 +305,12 @@ export const redeemCoupon = mutation({
         dailyFreeAIUsed: false,
         usedCoupons: [uppercaseCode],
       });
-      console.log("[redeemCoupon] new credits row created with", reward, "credits");
       return { success: true, reward };
     }
 
     // Enforce one-coupon rule (except for allowed users)
     const usedCoupons = row.usedCoupons ?? [];
     const isAllowedUser = user.email === "elitesquadp@protonmail.com";
-    console.log("[redeemCoupon] usedCoupons:", usedCoupons, "| isAllowedUser:", isAllowedUser);
     if (usedCoupons.length > 0 && !isAllowedUser) {
       throw new ConvexError("You have already redeemed a coupon code. Only one coupon is allowed per account.");
     }
@@ -317,7 +320,6 @@ export const redeemCoupon = mutation({
       credits: currentCredits + reward,
       usedCoupons: [...usedCoupons, uppercaseCode],
     });
-    console.log("[redeemCoupon] patched credits:", currentCredits, "+", reward, "=", currentCredits + reward);
 
     return { success: true, reward };
   },
