@@ -72,7 +72,7 @@ export default function TermsPage() {
             <ul className="list-disc list-inside space-y-1 mt-2">
               <li><strong className="text-foreground">Free tier:</strong> All users receive 1 free meal scan and 1 free AI message per day.</li>
               <li><strong className="text-foreground">Credit packs:</strong> One-time purchases of credits that never expire.</li>
-              <li><strong className="text-foreground">Monthly subscription ($5.99/mo):</strong> 300 credits per month that roll over to the following month if unused.</li>
+              <li><strong className="text-foreground">Monthly subscription ($5.99/mo):</strong> 300 credits per month that reset at the start of each billing cycle. Top-up credits purchased separately do not reset.</li>
             </ul>
             <p className="mt-2">
               All purchases are final. We do not offer refunds except where required by applicable law. Credits

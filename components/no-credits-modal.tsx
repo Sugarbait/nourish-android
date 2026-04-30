@@ -49,7 +49,7 @@ const CONTENT = {
 const PERKS = [
   '300 credits/mo — use for scans or AI coaching',
   'AI nutritional coach access included',
-  'Credits roll over — never lose what you earn',
+  '300 credits reset every month — always start fresh',
   'Cancel anytime, no hidden fees',
 ];
 

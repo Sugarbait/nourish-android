@@ -378,7 +378,7 @@ export default function SplashPage() {
             <FeatureCard icon={<Brain className="h-5 w-5" />} title="AI Nutrition Coach" desc="Ask anything about your diet. Your coach knows your history and helps you hit your goals." />
             <FeatureCard icon={<BarChart2 className="h-5 w-5" />} title="Nutrition Tracking" desc="Track your nutrition—calories, protein, carbs and fat—effortlessly across all meals." />
             <FeatureCard icon={<Droplets className="h-5 w-5" />} title="Water Tracking" desc="Stay hydrated with a simple tap-to-log tracker that keeps you on target all day." />
-            <FeatureCard icon={<RefreshCcw className="h-5 w-5" />} title="Rolling Credits" desc="Monthly credits that roll over — never lose what you've paid for." />
+            <FeatureCard icon={<RefreshCcw className="h-5 w-5" />} title="Fresh Credits Monthly" desc="300 credits reset every month — always start fresh with a full allowance." />
             <FeatureCard icon={<Shield className="h-5 w-5" />} title="Secure & Private" desc="Your data stays yours — protected with end-to-end security and stored safely in the cloud." />
           </div>
         </div>
@@ -410,9 +410,9 @@ export default function SplashPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 max-w-xl mx-auto">
             <PricingCard name="Free" price="$0" period="/ forever" features={['1 meal scan/day','1 AI message/day','Basic tracking']} cta="Get Started" onCta={openSignUp} />
             {billingCycle === 'monthly' ? (
-              <PricingCard name="Pro Monthly" price="$5.99" period="/ month" features={['300 credits/month','Credits roll over','1 free daily scan included','Cancel anytime']} cta="Subscribe" highlight onCta={openSignUp} />
+              <PricingCard name="Pro Monthly" price="$5.99" period="/ month" features={['300 credits/month','Credits reset monthly','1 free daily scan included','Cancel anytime']} cta="Subscribe" highlight onCta={openSignUp} />
             ) : (
-              <PricingCard name="Pro Yearly" price="$54.99" period="/ year" features={['300 credits/month','Credits roll over','1 free daily scan included','~$4.58/mo — Save 24%']} cta="Subscribe" highlight onCta={openSignUp} />
+              <PricingCard name="Pro Yearly" price="$54.99" period="/ year" features={['300 credits/month','Credits reset monthly','1 free daily scan included','~$4.58/mo — Save 24%']} cta="Subscribe" highlight onCta={openSignUp} />
             )}
           </div>
           <p className="text-center text-[11px] md:text-xs text-muted-foreground mt-6">

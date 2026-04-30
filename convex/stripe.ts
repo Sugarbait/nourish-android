@@ -197,7 +197,7 @@ export const renewSubscription = mutation({
       });
     }
 
-    // Add 300 renewal credits
+    // Reset credits to 300 each renewal (credits do not roll over)
     const today = new Date().toISOString().slice(0, 10);
     const credits = await ctx.db
       .query("credits")
@@ -205,11 +205,8 @@ export const renewSubscription = mutation({
       .first();
 
     if (credits) {
-      let mappedCredits = credits.credits ?? ((credits.mealCredits ?? 0) + (credits.aiCredits ?? 0));
       await ctx.db.patch(credits._id, {
-        credits: mappedCredits + SUBSCRIPTION_CREDITS,
-        mealCredits: undefined,
-        aiCredits: undefined,
+        credits: SUBSCRIPTION_CREDITS,
       });
     } else {
       await ctx.db.insert("credits", {
