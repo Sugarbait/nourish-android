@@ -268,56 +268,57 @@ export const redeemCoupon = mutation({
     code: v.string(),
   },
   handler: async (ctx, { userId, code }) => {
-    try {
-      const uppercaseCode = code.trim().toUpperCase();
-      const reward = getValidCoupons()[uppercaseCode];
-      
-      if (!reward) {
-        throw new ConvexError("Invalid coupon code.");
-      }
+    const uppercaseCode = code.trim().toUpperCase();
 
-      // Check if user exists
-      const user = await ctx.db.get(userId);
-      if (!user) {
-        throw new ConvexError("User not found. Please sign in again.");
-      }
-
-      const today = todayKey();
-      let row = await ctx.db
-        .query("credits")
-        .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .first();
-
-      if (!row) {
-        await ctx.db.insert("credits", {
-          userId,
-          credits: reward,
-          lastFreeDate: today,
-          dailyFreeMealUsed: false,
-          dailyFreeAIUsed: false,
-          usedCoupons: [uppercaseCode],
-        });
-        return { success: true, reward };
-      }
-
-      const usedCoupons = row.usedCoupons ?? [];
-      // Allow specific user to redeem multiple coupons
-      const isAllowedUser = user.email === "elitesquadp@protonmail.com";
-      if (usedCoupons.length > 0 && !isAllowedUser) {
-        throw new ConvexError("You have already redeemed a coupon code. Only one coupon is allowed per account.");
-      }
-
-      const mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
-      await ctx.db.patch(row._id, {
-        credits: mappedCredits + reward,
-        usedCoupons: [...usedCoupons, uppercaseCode],
-      });
-
-      return { success: true, reward };
-    } catch (err: any) {
-      if (err instanceof ConvexError) throw err;
-      console.error("Redeem Coupon Error:", err);
-      throw new ConvexError(`Server error: ${err.message || "Unknown error"}`);
+    // Validate coupon code
+    const coupons = getValidCoupons();
+    const reward = coupons[uppercaseCode];
+    console.log("[redeemCoupon] code:", uppercaseCode, "| reward:", reward, "| available codes:", Object.keys(coupons).join(","));
+    if (!reward) {
+      throw new ConvexError("Invalid coupon code.");
     }
+
+    // Verify user exists
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new ConvexError("User not found. Please sign in again.");
+    }
+
+    // Get or create credits row
+    const today = todayKey();
+    const row = await ctx.db
+      .query("credits")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!row) {
+      await ctx.db.insert("credits", {
+        userId,
+        credits: reward,
+        lastFreeDate: today,
+        dailyFreeMealUsed: false,
+        dailyFreeAIUsed: false,
+        usedCoupons: [uppercaseCode],
+      });
+      console.log("[redeemCoupon] new credits row created with", reward, "credits");
+      return { success: true, reward };
+    }
+
+    // Enforce one-coupon rule (except for allowed users)
+    const usedCoupons = row.usedCoupons ?? [];
+    const isAllowedUser = user.email === "elitesquadp@protonmail.com";
+    console.log("[redeemCoupon] usedCoupons:", usedCoupons, "| isAllowedUser:", isAllowedUser);
+    if (usedCoupons.length > 0 && !isAllowedUser) {
+      throw new ConvexError("You have already redeemed a coupon code. Only one coupon is allowed per account.");
+    }
+
+    const currentCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
+    await ctx.db.patch(row._id, {
+      credits: currentCredits + reward,
+      usedCoupons: [...usedCoupons, uppercaseCode],
+    });
+    console.log("[redeemCoupon] patched credits:", currentCredits, "+", reward, "=", currentCredits + reward);
+
+    return { success: true, reward };
   },
 });
