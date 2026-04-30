@@ -1399,8 +1399,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         handleOpenCoach();
       }
     } catch (err: any) {
-      // ConvexError message is usually in err.data or err.message
-      const errorMessage = err.data || err.message || 'Invalid or expired code.';
+      // Extract the most meaningful error message from Convex
+      let errorMessage = 'Invalid or expired code.';
+      if (typeof err?.data === 'string' && err.data.trim()) {
+        errorMessage = err.data;
+      } else if (err?.data?.message && typeof err.data.message === 'string') {
+        errorMessage = err.data.message;
+      } else if (err?.message && typeof err.message === 'string') {
+        // Strip Convex prefix like "[CONVEX M(users:redeemCoupon)] [Request ID: xxx]"
+        const stripped = err.message
+          .replace(/\[CONVEX[^\]]*\]\s*/g, '')
+          .replace(/\[Request ID:[^\]]*\]\s*/g, '')
+          .replace(/\s*Called by client[\s\S]*$/, '')
+          .trim();
+        if (stripped) errorMessage = stripped;
+      }
+      console.error('Coupon redemption error:', err);
       toast({ title: 'Coupon Failed', description: errorMessage, variant: 'destructive' });
     } finally {
       setIsRedeeming(false);
