@@ -52,10 +52,10 @@ export default defineSchema({
     userId: v.id("users"),
     date: v.string(), // YYYY-MM-DD
     mealType: v.union(
-      v.literal("breakfast"),
-      v.literal("lunch"),
-      v.literal("dinner"),
-      v.literal("snack")
+      v.literal("breakfast"), v.literal("Breakfast"),
+      v.literal("lunch"), v.literal("Lunch"),
+      v.literal("dinner"), v.literal("Dinner"),
+      v.literal("snack"), v.literal("Snack"), v.literal("Snacks")
     ),
     name: v.string(),
     calories: v.number(),
