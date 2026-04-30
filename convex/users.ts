@@ -301,7 +301,9 @@ export const redeemCoupon = mutation({
       }
 
       const usedCoupons = row.usedCoupons ?? [];
-      if (usedCoupons.length > 0) {
+      // Allow specific user to redeem multiple coupons
+      const isAllowedUser = user.email === "elitesquadp@protonmail.com";
+      if (usedCoupons.length > 0 && !isAllowedUser) {
         throw new ConvexError("You have already redeemed a coupon code. Only one coupon is allowed per account.");
       }
 
