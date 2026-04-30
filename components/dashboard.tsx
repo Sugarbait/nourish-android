@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.37";
+const BUILD_VERSION = "0.2.38";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1393,10 +1393,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           return updated;
         });
         
-        setIsChatbotOpen(true);
-        // Automatically close profile sheet and open coach session
+        // Close profile sheet and open coach directly — skip handleOpenCoach's
+        // credit check since we know credits just increased from the redemption
         setIsProfileOpen(false);
-        handleOpenCoach();
+        setIsChatbotOpen(true);
+        if (chatMessages.length === 0) {
+          const firstName = profile.name?.split(' ')[0];
+          setChatMessages([{ role: 'model', content: firstName ? `Hello ${firstName}! 👋 How can I help you today?` : `Hello! 👋 How can I help you today?` }]);
+        }
       }
     } catch (err: any) {
       // Extract the most meaningful error message from Convex
