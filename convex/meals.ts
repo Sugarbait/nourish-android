@@ -180,32 +180,32 @@ export const syncBatchMeals = mutation({
         if (!existingLocalIds.has(meal.localId)) {
           // Normalize mealType to lowercase and handle "Snacks" plural
           const rawType = meal.mealType.toLowerCase();
-          const normalizedType = (rawType === 'snacks' ? 'snack' : rawType) as any;
-          
+          const normalizedType = (rawType === 'snacks' ? 'snack' : rawType) as "breakfast" | "lunch" | "dinner" | "snack";
+
           await ctx.db.insert("meals", {
-          userId,
-          date: meal.date,
-          mealType: normalizedType,
-          name: meal.name,
-          calories: meal.calories,
-          protein: meal.protein,
-          carbs: meal.carbs,
-          fat: meal.fat,
-          items: meal.items,
-          localId: meal.localId,
-          healthScore: meal.healthScore,
-          healthAnalysis: meal.healthAnalysis,
-          createdAt: Date.now(),
-        });
-        addedCount++;
+            userId,
+            date: meal.date,
+            mealType: normalizedType,
+            name: meal.name,
+            calories: meal.calories,
+            protein: meal.protein,
+            carbs: meal.carbs,
+            fat: meal.fat,
+            items: meal.items,
+            localId: meal.localId,
+            healthScore: meal.healthScore,
+            healthAnalysis: meal.healthAnalysis,
+            createdAt: Date.now(),
+          });
+          addedCount++;
+        }
       }
+      return { addedCount };
+    } catch (error: any) {
+      console.error("syncBatchMeals error:", error);
+      throw new ConvexError(`Failed to sync meals: ${error.toString()}`);
     }
-    return { addedCount };
-  } catch (error: any) {
-    console.error("syncBatchMeals error:", error);
-    throw new ConvexError(`Failed to sync meals: ${error.toString()}`);
-  }
-},
+  },
 });
 
 /** Get all unique dates where the user has logged meals */
