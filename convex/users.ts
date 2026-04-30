@@ -307,11 +307,9 @@ export const redeemCoupon = mutation({
         throw new ConvexError("You have already redeemed a coupon code. Only one coupon is allowed per account.");
       }
 
-      let mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
+      const mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
       await ctx.db.patch(row._id, {
         credits: mappedCredits + reward,
-        mealCredits: undefined,
-        aiCredits: undefined,
         usedCoupons: [...usedCoupons, uppercaseCode],
       });
 
