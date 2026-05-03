@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.45";
+const BUILD_VERSION = "0.2.46";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -328,6 +328,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     // Basic validation to ensure it's not a junk string from previous versions
     if (id && (id === 'guest' || id.length < 10)) {
       localStorage.removeItem('nourish_user_id');
+      localStorage.removeItem('nourishai-credits');
       setUserId(null);
     } else {
       setUserId(id);
@@ -1980,6 +1981,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                             localStorage.removeItem('nourish_user_name');
                             localStorage.removeItem('nourish_user_avatar');
                             localStorage.removeItem('nourish_user_email');
+                            localStorage.removeItem('nourishai-credits');
                             window.location.href = '/';
                           }}
                         >
