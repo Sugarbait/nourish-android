@@ -12,17 +12,34 @@ async function getAccessToken(): Promise<string> {
   const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
   if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error("Missing Google OAuth credentials in Convex environment variables.");
+    const missing = [];
+    if (!clientId) missing.push("GOOGLE_CLIENT_ID");
+    if (!clientSecret) missing.push("GOOGLE_CLIENT_SECRET");
+    if (!refreshToken) missing.push("GOOGLE_REFRESH_TOKEN");
+    throw new Error(`Missing required Google OAuth credentials: ${missing.join(", ")}`);
   }
 
-  const client = new UserRefreshClient({
-    clientId,
-    clientSecret,
-    refreshToken,
-  });
-  const { token } = await client.getAccessToken();
-  if (!token) throw new Error("Failed to obtain Google access token.");
-  return token;
+  try {
+    const client = new UserRefreshClient({
+      clientId,
+      clientSecret,
+      refreshToken,
+    });
+    const { token } = await client.getAccessToken();
+    if (!token) {
+      throw new Error("getAccessToken returned no token");
+    }
+    return token;
+  } catch (error) {
+    console.error("Failed to get Google access token:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("invalid_grant")) {
+        throw new Error("Google refresh token has expired. Please update credentials.");
+      }
+      throw new Error(`Google authentication error: ${error.message}`);
+    }
+    throw new Error("Failed to authenticate with Google Vertex AI.");
+  }
 }
 
 async function callVertexGemini(
@@ -64,8 +81,19 @@ async function callVertexGemini(
 export const recognizeFoodFromImage = action({
   args: { imageDataUri: v.string() },
   handler: async (_ctx, { imageDataUri }) => {
+    // Validate image data URI format
+    if (!imageDataUri.startsWith("data:image/")) {
+      throw new Error("Invalid image format. Please use a valid image.");
+    }
+
     const [meta, base64Data] = imageDataUri.split(",");
     const mimeType = meta.match(/data:(.*);base64/)?.[1] || "image/jpeg";
+
+    // Validate credentials are configured
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REFRESH_TOKEN || !process.env.GOOGLE_PROJECT_ID) {
+      console.error("Missing Google Vertex AI credentials. Please check environment variables.");
+      throw new Error("AI service is temporarily unavailable. Please try again in a moment.");
+    }
 
     const contents = [
       {
@@ -82,25 +110,33 @@ export const recognizeFoodFromImage = action({
     const systemInstruction =
       "You are an expert at identifying food in images and analyzing nutritional value. Always respond with valid JSON only, no markdown code blocks.";
 
-    const response = await callVertexGemini(contents, systemInstruction);
-    const cleanResponse = response.replace(/```json\s*|\s*```/g, "").trim();
-    const parsed = JSON.parse(cleanResponse);
+    try {
+      const response = await callVertexGemini(contents, systemInstruction);
+      const cleanResponse = response.replace(/```json\s*|\s*```/g, "").trim();
+      const parsed = JSON.parse(cleanResponse);
 
-    if (!parsed.isFood || parsed.foodItems.length === 0) {
-      return { foodItems: [] };
+      if (!parsed.isFood || parsed.foodItems.length === 0) {
+        return { foodItems: [] };
+      }
+
+      return {
+        foodItems: parsed.foodItems.map((food: any) => ({
+          ...food,
+          confidence: 0.9,
+          protein: Math.round((food.calories * 0.25) / 4),
+          carbs:   Math.round((food.calories * 0.45) / 4),
+          fat:     Math.round((food.calories * 0.30) / 9),
+        })),
+        healthScore:    parsed.healthiness.score,
+        healthAnalysis: parsed.healthiness.analysis,
+      };
+    } catch (error) {
+      console.error("Food recognition failed:", error);
+      if (error instanceof Error && error.message.includes("401")) {
+        throw new Error("Authentication failed. Please check system credentials.");
+      }
+      throw new Error("Failed to analyze image. Please try again.");
     }
-
-    return {
-      foodItems: parsed.foodItems.map((food: any) => ({
-        ...food,
-        confidence: 0.9,
-        protein: Math.round((food.calories * 0.25) / 4),
-        carbs:   Math.round((food.calories * 0.45) / 4),
-        fat:     Math.round((food.calories * 0.30) / 9),
-      })),
-      healthScore:    parsed.healthiness.score,
-      healthAnalysis: parsed.healthiness.analysis,
-    };
   },
 });
 
@@ -164,6 +200,35 @@ export const lookupFoodNutrition = action({
     const response = await callVertexGemini(contents, systemInstruction);
     const cleanResponse = response.replace(/```json\s*|\s*```/g, "").trim();
     return JSON.parse(cleanResponse);
+  },
+});
+
+export const healthCheck = action({
+  args: {},
+  handler: async (_ctx) => {
+    const clientId     = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+    const projectId    = process.env.GOOGLE_PROJECT_ID;
+
+    const checks = {
+      GOOGLE_CLIENT_ID: !!clientId,
+      GOOGLE_CLIENT_SECRET: !!clientSecret,
+      GOOGLE_REFRESH_TOKEN: !!refreshToken,
+      GOOGLE_PROJECT_ID: !!projectId,
+      allConfigured: !!clientId && !!clientSecret && !!refreshToken && !!projectId,
+    };
+
+    if (!checks.allConfigured) {
+      throw new Error(`Missing Google OAuth credentials. Check: ${JSON.stringify(checks)}`);
+    }
+
+    try {
+      const token = await getAccessToken();
+      return { status: 'healthy', hasToken: !!token, credentials: checks };
+    } catch (error) {
+      throw new Error(`Credentials configured but token retrieval failed: ${error}`);
+    }
   },
 });
 
