@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.47";
+const BUILD_VERSION = "0.2.48";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1175,7 +1175,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const runFoodRecognition = async (dataUri: string) => {
     if (!isGuest) {
-      if (availableMealCredits(credits) <= 0) {
+      // Use Convex as authoritative credits source; if still loading skip check (optimistic)
+      const authoritativeCredits = convexCredits !== undefined ? {
+        ...credits,
+        credits: convexCredits.credits ?? 0,
+        dailyFreeMealUsed: convexCredits.dailyFreeMealUsed ?? false,
+      } : null;
+      if (authoritativeCredits !== null && availableMealCredits(authoritativeCredits) <= 0) {
         setNoCreditsType('meal');
         setNoCreditsOpen(true);
         return;
