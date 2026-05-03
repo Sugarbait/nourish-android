@@ -74,6 +74,10 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
 }
 
 function saveAuthToStorage(userId: string, name: string | null, avatarUrl: string | null, email?: string) {
+  const previousUserId = localStorage.getItem('nourish_user_id');
+  if (previousUserId && previousUserId !== userId) {
+    localStorage.removeItem('nourishai-credits');
+  }
   localStorage.setItem('nourish_user_id', userId);
   if (name) localStorage.setItem('nourish_user_name', name);
   else localStorage.removeItem('nourish_user_name');

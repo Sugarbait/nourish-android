@@ -177,6 +177,10 @@ export default function SplashPage() {
           name: msName,
           avatarUrl,
         });
+        const prevUserId = localStorage.getItem('nourish_user_id');
+        if (prevUserId && prevUserId !== (result.userId as string)) {
+          localStorage.removeItem('nourishai-credits');
+        }
         localStorage.setItem('nourish_user_id', result.userId as string);
         if (result.name) localStorage.setItem('nourish_user_name', result.name);
         const finalAvatar = avatarUrl || result.avatarUrl;
