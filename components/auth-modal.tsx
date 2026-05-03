@@ -124,6 +124,8 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     setConfirmPassword('');
   }, [defaultTab]);
 
+  const hasGoogleClientId = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setLoading(true);
@@ -434,8 +436,9 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
             <div className="space-y-2 mb-4">
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || !hasGoogleClientId}
                 onClick={() => googleLogin()}
+                title={!hasGoogleClientId ? 'Google sign-in not configured' : undefined}
                 className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium disabled:opacity-50"
               >
                 <GoogleIcon /> Continue with Google
