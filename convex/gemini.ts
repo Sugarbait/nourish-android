@@ -2,39 +2,38 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { UserRefreshClient } from "google-auth-library";
+import { GoogleAuth } from "google-auth-library";
 
 const MODEL = "gemini-3.1-flash-lite-preview";
 
-async function getAccessToken(): Promise<string> {
-  const clientId     = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+let authClient: GoogleAuth | null = null;
 
-  if (!clientId || !clientSecret || !refreshToken) {
-    const missing = [];
-    if (!clientId) missing.push("GOOGLE_CLIENT_ID");
-    if (!clientSecret) missing.push("GOOGLE_CLIENT_SECRET");
-    if (!refreshToken) missing.push("GOOGLE_REFRESH_TOKEN");
-    throw new Error(`Missing required Google OAuth credentials: ${missing.join(", ")}`);
-  }
-
-  try {
-    const client = new UserRefreshClient({
-      clientId,
-      clientSecret,
-      refreshToken,
+function getAuthClient(): GoogleAuth {
+  if (!authClient) {
+    authClient = new GoogleAuth({
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
     });
-    const { token } = await client.getAccessToken();
-    if (!token) {
-      throw new Error("getAccessToken returned no token");
+  }
+  return authClient;
+}
+
+async function getAccessToken(): Promise<string> {
+  try {
+    const auth = getAuthClient();
+    const client = await auth.getClient();
+    const credentials = client.credentials;
+
+    if (!credentials.access_token) {
+      const token = await client.getAccessToken();
+      return token.token || "";
     }
-    return token;
+
+    return credentials.access_token;
   } catch (error) {
-    console.error("Failed to get Google access token:", error);
+    console.error("Failed to get Google access token via ADC:", error);
     if (error instanceof Error) {
-      if (error.message.includes("invalid_grant")) {
-        throw new Error("Google refresh token has expired. Please update credentials.");
+      if (error.message.includes("not found") || error.message.includes("GOOGLE_APPLICATION_CREDENTIALS")) {
+        throw new Error("Google Application Default Credentials not found. Please configure ADC on your Convex server.");
       }
       throw new Error(`Google authentication error: ${error.message}`);
     }
@@ -47,7 +46,7 @@ async function callVertexGemini(
   systemInstruction?: string
 ): Promise<string> {
   const projectId = process.env.GOOGLE_PROJECT_ID;
-  if (!projectId) throw new Error("GOOGLE_PROJECT_ID is not set.");
+  if (!projectId) throw new Error("GOOGLE_PROJECT_ID is not set. Please configure this environment variable.");
 
   const token = await getAccessToken();
 
@@ -89,9 +88,9 @@ export const recognizeFoodFromImage = action({
     const [meta, base64Data] = imageDataUri.split(",");
     const mimeType = meta.match(/data:(.*);base64/)?.[1] || "image/jpeg";
 
-    // Validate credentials are configured
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REFRESH_TOKEN || !process.env.GOOGLE_PROJECT_ID) {
-      console.error("Missing Google Vertex AI credentials. Please check environment variables.");
+    // Validate Google Project ID is configured (required for ADC)
+    if (!process.env.GOOGLE_PROJECT_ID) {
+      console.error("Missing GOOGLE_PROJECT_ID environment variable.");
       throw new Error("AI service is temporarily unavailable. Please try again in a moment.");
     }
 
@@ -206,28 +205,27 @@ export const lookupFoodNutrition = action({
 export const healthCheck = action({
   args: {},
   handler: async (_ctx) => {
-    const clientId     = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-    const projectId    = process.env.GOOGLE_PROJECT_ID;
+    const projectId = process.env.GOOGLE_PROJECT_ID;
 
     const checks = {
-      GOOGLE_CLIENT_ID: !!clientId,
-      GOOGLE_CLIENT_SECRET: !!clientSecret,
-      GOOGLE_REFRESH_TOKEN: !!refreshToken,
       GOOGLE_PROJECT_ID: !!projectId,
-      allConfigured: !!clientId && !!clientSecret && !!refreshToken && !!projectId,
+      ADC_configured: !!process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCLOUD_PROJECT,
     };
 
-    if (!checks.allConfigured) {
-      throw new Error(`Missing Google OAuth credentials. Check: ${JSON.stringify(checks)}`);
+    if (!projectId) {
+      throw new Error("Missing GOOGLE_PROJECT_ID environment variable.");
     }
 
     try {
       const token = await getAccessToken();
-      return { status: 'healthy', hasToken: !!token, credentials: checks };
+      return {
+        status: 'healthy',
+        hasToken: !!token,
+        usingADC: true,
+        projectId,
+      };
     } catch (error) {
-      throw new Error(`Credentials configured but token retrieval failed: ${error}`);
+      throw new Error(`ADC authentication failed: ${error}`);
     }
   },
 });

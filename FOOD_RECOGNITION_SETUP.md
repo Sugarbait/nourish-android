@@ -15,24 +15,37 @@ The inconsistency was caused by:
 ### Solution Implemented
 - ✅ Removed insecure `/lib/openai-client.ts` with hardcoded keys
 - ✅ Centralized all AI operations through Convex backend (`/convex/gemini.ts`)
+- ✅ Switched to **Google Application Default Credentials (ADC)** for authentication
+- ✅ Eliminated need for multiple secret credentials (only `GOOGLE_PROJECT_ID` required)
 - ✅ Added diagnostic health checks to identify credential issues
 - ✅ Improved error messages to guide users and admins
 
 ## Required Environment Variables
 
-Configure these in your Convex deployment:
+The app uses **Google Application Default Credentials (ADC)** for authentication, which is simpler and more secure than explicit credentials.
 
-### Google Cloud Setup
-1. Create a Google Cloud project with Vertex AI enabled
-2. Generate OAuth 2.0 credentials (Service Account or User Credentials)
-3. Set the following environment variables in Convex:
+### Setup (ADC)
+1. Create a Google Cloud project with Vertex AI API enabled
+2. Configure ADC on your Convex server (Convex handles this automatically on Google Cloud infrastructure)
+3. Set only this environment variable in Convex:
 
 ```bash
-# Google OAuth Credentials (required for all AI features)
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REFRESH_TOKEN=your-refresh-token
+# Your Google Cloud Project ID (required for all AI features)
 GOOGLE_PROJECT_ID=your-project-id
+```
+
+### For Local Development
+If testing locally, set up ADC:
+
+```bash
+# Option 1: Use a service account key file
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
+
+# Option 2: Use gcloud auth (if running gcloud init)
+gcloud auth application-default login
+
+# Then set your project
+export GOOGLE_PROJECT_ID=your-project-id
 ```
 
 ## Testing Credentials
@@ -107,11 +120,12 @@ Return: { foodItems, healthScore, healthAnalysis }
 ## Verification Checklist
 
 Before deploying:
-- [ ] All 4 Google environment variables are set in Convex
-- [ ] Google refresh token is valid (not expired)
-- [ ] Vertex AI API is enabled in Google Cloud
+- [ ] `GOOGLE_PROJECT_ID` is set in Convex environment variables
+- [ ] Vertex AI API is enabled in your Google Cloud project
+- [ ] ADC is properly configured on Convex (automatic if running on Google Cloud)
+- [ ] Run the health check to validate credentials work
 - [ ] Test food recognition on multiple user profiles
-- [ ] Check server logs for credential errors
+- [ ] Check server logs for any credential errors
 - [ ] Verify error messages are helpful to users
 
 ## Supported Models
