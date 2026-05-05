@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.49";
+const BUILD_VERSION = "0.2.50";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1073,9 +1073,23 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       setAiHealthAnalysis(null);
       const reader = new FileReader();
       reader.onloadend = () => {
-        const dataUri = reader.result as string;
-        setImagePreview(dataUri);
-        runFoodRecognition(dataUri);
+        const rawDataUri = reader.result as string;
+        // Compress/resize before sending — raw gallery photos can be 5–20 MB
+        // which exceeds Convex argument limits and causes recognition failures.
+        const img = new window.Image();
+        img.onload = () => {
+          const MAX_DIM = 1024;
+          const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.round(img.width  * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+          setImagePreview(dataUri);
+          runFoodRecognition(dataUri);
+        };
+        img.src = rawDataUri;
       };
       reader.readAsDataURL(file);
     }
