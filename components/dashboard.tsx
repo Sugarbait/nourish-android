@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.48";
+const BUILD_VERSION = "0.2.49";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -870,6 +870,15 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intake, dailyData.water, dateKey, isMounted]);
 
+  // Reset scan state when the selected date changes so the upload button is always accessible
+  useEffect(() => {
+    setImagePreview(null);
+    setAiResults([]);
+    setAiHealthAnalysis(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    stopCamera();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateKey]);
 
   useEffect(() => {
     const getCameraPermission = async () => {
