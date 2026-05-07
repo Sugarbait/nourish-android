@@ -405,7 +405,8 @@ export const sendContactEmailInternal = internalAction({
       <p>App: <strong>${app}</strong></p>
     </div>
     <div class="label">From:</div>
-    <div class="value">${name} (&lt;${email}&gt;)</div>
+    <div class="value">${name}</div>
+    <div class="value" style="color:#10b981;font-size:14px;">${email}</div>
 
     <div class="label">Message:</div>
     <div class="message-box">
