@@ -362,8 +362,8 @@ export const sendContactEmailInternal = internalAction({
   handler: async (_ctx, { name, email, message, app }) => {
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
-    const user = process.env.SMTP_USER || "contactus@neoncell.ca";
-    const pass = process.env.SMTP_PASS;
+    const user = process.env.SMTP_CONTACT_USER || "contactus@neoncell.ca";
+    const pass = process.env.SMTP_CONTACT_PASS || process.env.SMTP_PASS;
 
     if (!host || !user || !pass) {
       console.error("[emails] SMTP credentials not fully set for contact form.");

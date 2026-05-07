@@ -1985,23 +1985,25 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         <MessageSquare className="h-4 w-4 text-primary" /> Contact Us
                       </h4>
                       <p className="text-[11px] text-muted-foreground mb-4">Have feedback or suggestions? We&apos;d love to hear from you.</p>
-                      
-                      <Form {...contactForm}>
-                        <form onSubmit={contactForm.handleSubmit(handleContactSubmit)} className="space-y-3">
-                          <FormField control={contactForm.control} name="name" render={({ field }) => (
-                            <FormItem><FormControl><Input placeholder="Your Name" {...field} className="h-8 text-xs" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                          )} />
-                          <FormField control={contactForm.control} name="email" render={({ field }) => (
-                            <FormItem><FormControl><Input placeholder="Your Email" {...field} className="h-8 text-xs" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                          )} />
-                          <FormField control={contactForm.control} name="message" render={({ field }) => (
-                            <FormItem><FormControl><Textarea placeholder="How can we improve Nourish?" {...field} className="min-h-[80px] text-xs resize-none" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                          )} />
-                          <Button type="submit" disabled={isContactSubmitting} className="w-full h-8 text-xs bg-muted hover:bg-muted/70 text-foreground transition-colors">
-                            {isContactSubmitting ? <Loader2 className="h-3 w-3 animate-spin"/> : 'Send Message'}
-                          </Button>
-                        </form>
-                      </Form>
+                      <div className="space-y-3">
+                        <FormField control={contactForm.control} name="name" render={({ field }) => (
+                          <FormItem><FormControl><Input placeholder="Your Name" {...field} className="h-8 text-xs" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
+                        )} />
+                        <FormField control={contactForm.control} name="email" render={({ field }) => (
+                          <FormItem><FormControl><Input placeholder="Your Email" {...field} className="h-8 text-xs" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
+                        )} />
+                        <FormField control={contactForm.control} name="message" render={({ field }) => (
+                          <FormItem><FormControl><Textarea placeholder="How can we improve Nourish?" {...field} className="min-h-[80px] text-xs resize-none" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
+                        )} />
+                        <Button
+                          type="button"
+                          disabled={isContactSubmitting}
+                          className="w-full h-8 text-xs bg-muted hover:bg-muted/70 text-foreground transition-colors"
+                          onClick={contactForm.handleSubmit(handleContactSubmit)}
+                        >
+                          {isContactSubmitting ? <Loader2 className="h-3 w-3 animate-spin"/> : 'Send Message'}
+                        </Button>
+                      </div>
                     </div>
 
                     <SheetFooter className="pt-2">
