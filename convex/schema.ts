@@ -140,6 +140,14 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"]),
 
+  // Saved AI coach conversations
+  conversations: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    messages: v.array(v.object({ role: v.string(), content: v.string() })),
+    createdAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   // Recipe shares (for public sharing)
   recipeShares: defineTable({
     userId: v.id("users"),

@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.68";
+const BUILD_VERSION = "0.2.69";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -43,6 +43,7 @@ import {
   Share2,
   Printer,
   TrendingUp,
+  History,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ReferenceLine } from 'recharts';
 import {
@@ -345,6 +346,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   // Auth state from localStorage
   const [userId, setUserId] = useState<string | null>(null);
+  const convexSaveConversation = useMutation(api.conversations.saveConversation);
+  const recentConversations = useQuery(api.conversations.getRecentConversations, userId ? { userId: userId as any } : 'skip') ?? [];
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
@@ -446,6 +449,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isCoachLoading, setIsCoachLoading] = useState(false);
+  const [showChatHistory, setShowChatHistory] = useState(false);
   const [coachTip] = useState(() => COACH_TIPS[Math.floor(Math.random() * COACH_TIPS.length)]);
   const [coachInput, setCoachInput] = useState("");
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
@@ -1570,6 +1574,17 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         setSelectedDate(startOfToday() > date ? date : startOfToday());
     }
   }
+
+  const saveCurrentConversation = async (messages: ChatMessage[]) => {
+    if (!userId || messages.length < 2) return;
+    const firstUserMsg = messages.find(m => m.role === 'user');
+    const title = firstUserMsg
+      ? firstUserMsg.content.slice(0, 60) + (firstUserMsg.content.length > 60 ? '…' : '')
+      : 'Conversation';
+    try {
+      await convexSaveConversation({ userId: userId as any, title, messages });
+    } catch {}
+  };
 
   const handleCoachSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2815,7 +2830,15 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setChatMessages([])}
+                onClick={() => setShowChatHistory(h => !h)}
+                title="Conversation history"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <History className="h-3.5 w-3.5" />
+                <span className="sr-only">History</span>
+              </button>
+              <button
+                onClick={async () => { await saveCurrentConversation(chatMessages); setChatMessages([]); setShowChatHistory(false); }}
                 title="Clear conversation"
                 className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
@@ -2823,7 +2846,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <span className="sr-only">Clear messages</span>
               </button>
               <button
-                onClick={() => { setIsChatbotOpen(false); setChatMessages([]); }}
+                onClick={async () => { await saveCurrentConversation(chatMessages); setIsChatbotOpen(false); setChatMessages([]); setShowChatHistory(false); }}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
               >
                 <X className="h-4 w-4" />
@@ -2831,6 +2854,33 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               </button>
             </div>
           </div>
+
+          {/* History Panel */}
+          {showChatHistory && (
+            <div className="border-b bg-muted/30 shrink-0">
+              <div className="px-4 py-2">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recent Conversations</p>
+                {recentConversations.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">No saved conversations yet.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {recentConversations.map((convo) => (
+                      <button
+                        key={convo._id}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-muted transition-colors flex items-center justify-between gap-2 group"
+                        onClick={() => { setChatMessages(convo.messages as ChatMessage[]); setShowChatHistory(false); }}
+                      >
+                        <span className="truncate text-foreground">{convo.title}</span>
+                        <span className="text-muted-foreground shrink-0 group-hover:text-foreground">
+                          {new Date(convo.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Messages */}
           <ScrollArea className="flex-1 px-4">
