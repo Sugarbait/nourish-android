@@ -69,7 +69,9 @@ export const getMealsForPastYear = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const today = new Date();
-    const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
     const startDate = oneYearAgo.toISOString().split('T')[0];
     const endDate = today.toISOString().split('T')[0];
 
