@@ -354,7 +354,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const sevenDaysAgo = format(subDays(new Date(), 6), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
   const recentMeals = useQuery(api.meals.getMealsForDateRange, userId ? { userId: userId as any, startDate: sevenDaysAgo, endDate: today } : 'skip');
-  const historicalMeals = useQuery(api.meals.getMealsForPastYear, userId ? { userId: userId as any } : 'skip');
+  const historicalMeals = useQuery(api.meals.getMealsForPastYear, userId ? { userId: userId as any } : 'skip') ?? [];
   const trackedDates = useQuery(api.meals.getTrackedDates, userId ? { userId: userId as any } : 'skip');
 
   const trackedDateObjects = useMemo(() => {
