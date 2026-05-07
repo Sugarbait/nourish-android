@@ -5,7 +5,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import nodemailer from "nodemailer";
 
-const SITE_URL = "https://nourish.neoncell.ca";
+const SITE_URL = process.env.SITE_URL || "https://nourish.neoncell.ca";
 
 export const sendVerificationEmail = internalAction({
   args: {
@@ -105,12 +105,16 @@ export const sendVerificationEmail = internalAction({
 </body>
 </html>`;
 
-    await transporter.sendMail({
-      from: `"Nourish" <${user}>`,
-      to: email,
-      subject: "Verify your Nourish account",
-      html,
-    });
+    try {
+      await transporter.sendMail({
+        from: `"Nourish" <${user}>`,
+        to: email,
+        subject: "Verify your Nourish account",
+        html,
+      });
+    } catch (error) {
+      throw new Error(`Verification email delivery failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     return { success: true };
   },
@@ -341,12 +345,16 @@ export const sendWelcomeEmail = internalAction({
 </body>
 </html>`;
 
-    await transporter.sendMail({
-      from: `"Nourish" <${user}>`,
-      to: email,
-      subject: `Welcome to Nourish, ${firstName}! 🎉`,
-      html,
-    });
+    try {
+      await transporter.sendMail({
+        from: `"Nourish" <${user}>`,
+        to: email,
+        subject: `Welcome to Nourish, ${firstName}! 🎉`,
+        html,
+      });
+    } catch (error) {
+      throw new Error(`Welcome email delivery failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     return { success: true };
   },
