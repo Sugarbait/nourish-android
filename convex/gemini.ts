@@ -2,11 +2,9 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { GoogleAuth } from "google-auth-library";
+import { UserRefreshClient } from "google-auth-library";
 
 const MODEL = "gemini-3.1-flash-lite-preview";
-
-let authClient: GoogleAuth | null = null;
 
 function getMostFrequentMealTypes(meals: any[]): string {
   const mealTypeCounts: Record<string, number> = {};
@@ -49,33 +47,24 @@ function buildHistoricalContext(historicalMeals: any[]): string {
   return `\nHISTORICAL PATTERNS (Past Year):\nTotal meals logged: ${totalMeals}\nAverage daily intake: ${avgDailyIntake} kcal\nFavorite meal types: ${favoriteTypes}\nAverage macro split: ${macroSplit}`;
 }
 
-function getAuthClient(): GoogleAuth {
-  if (!authClient) {
-    authClient = new GoogleAuth({
-      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-    });
-  }
-  return authClient;
-}
-
 async function getAccessToken(): Promise<string> {
+  const clientId     = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error("Missing Google OAuth credentials in Convex environment variables.");
+  }
+
   try {
-    const auth = getAuthClient();
-    const client = await auth.getClient();
-    const credentials = client.credentials;
-
-    if (!credentials.access_token) {
-      const token = await client.getAccessToken();
-      return token.token || "";
-    }
-
-    return credentials.access_token;
+    const client = new UserRefreshClient(clientId, clientSecret, refreshToken);
+    const tokenResponse = await client.getAccessToken();
+    const token = tokenResponse.token;
+    if (!token) throw new Error("Failed to obtain Google access token.");
+    return token;
   } catch (error) {
-    console.error("Failed to get Google access token via ADC:", error);
+    console.error("Failed to get Google access token via UserRefreshClient:", error);
     if (error instanceof Error) {
-      if (error.message.includes("not found") || error.message.includes("GOOGLE_APPLICATION_CREDENTIALS")) {
-        throw new Error("Google Application Default Credentials not found. Please configure ADC on your Convex server.");
-      }
       throw new Error(`Google authentication error: ${error.message}`);
     }
     throw new Error("Failed to authenticate with Google Vertex AI.");
