@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.63";
+const BUILD_VERSION = "0.2.64";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -2913,10 +2913,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           </ScrollArea>
 
           {/* Input */}
-          <div className="border-t px-4 py-3 shrink-0">
+          <div className="border-t px-4 pt-3 pb-2 shrink-0">
             <form onSubmit={handleCoachSubmit} className="flex items-center gap-2">
               <Input
-                placeholder="Ask your coach a question... (1 credit)"
+                placeholder="Ask your coach anything..."
                 value={coachInput}
                 onChange={(e) => setCoachInput(e.target.value)}
                 disabled={isCoachLoading}
@@ -2928,6 +2928,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <span className="sr-only">Send Message</span>
               </Button>
             </form>
+            <p className="text-[10px] text-muted-foreground mt-1.5 text-center">Each message costs 1 credit · You have {credits.credits} remaining</p>
           </div>
         </div>
       )}
