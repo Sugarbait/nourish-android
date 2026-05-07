@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.64";
+const BUILD_VERSION = "0.2.65";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -2928,7 +2928,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 <span className="sr-only">Send Message</span>
               </Button>
             </form>
-            <p className="text-[10px] text-muted-foreground mt-1.5 text-center">Each message costs 1 credit · You have {credits.credits} remaining</p>
+            <p className="text-[10px] text-muted-foreground mt-1.5 text-center">1 credit per question · You have {credits.credits} remaining</p>
           </div>
         </div>
       )}
