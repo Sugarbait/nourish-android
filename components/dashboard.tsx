@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.58";
+const BUILD_VERSION = "0.2.59";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -354,7 +354,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const sevenDaysAgo = format(subDays(new Date(), 6), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
   const recentMeals = useQuery(api.meals.getMealsForDateRange, userId ? { userId: userId as any, startDate: sevenDaysAgo, endDate: today } : 'skip');
-  const historicalMeals = useQuery(api.meals.getMealsForPastYear, userId ? { userId: userId as any } : 'skip') ?? [];
+  const _histStart = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]; })();
+  const _histEnd = new Date().toISOString().split('T')[0];
+  const historicalMeals = useQuery(api.meals.getMealsForDateRange, userId ? { userId: userId as any, startDate: _histStart, endDate: _histEnd } : 'skip') ?? [];
   const trackedDates = useQuery(api.meals.getTrackedDates, userId ? { userId: userId as any } : 'skip');
 
   const trackedDateObjects = useMemo(() => {
@@ -1606,7 +1608,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           height: profile.height,
           activityLevel: profile.activityLevel,
         },
-        historicalMeals: (historicalMeals || []).slice(-365).map((m: any) => ({
+        historicalMeals: (historicalMeals || []).slice(-90).map((m: any) => ({
           date: m.date,
           mealType: m.mealType,
           calories: m.calories,
