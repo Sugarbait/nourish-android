@@ -26,6 +26,7 @@ export const ChatWithCoachInputSchema = z.object({
   }).describe("The user's daily nutritional goals."),
   waterIntake: z.number().optional().describe("The user's water intake in glasses for the day."),
   profile: z.object({
+    name: z.string().optional(),
     age: z.string().optional(),
     weight: z.string().optional(),
     height: z.string().optional(),

@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.69";
+const BUILD_VERSION = "0.2.70";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1639,6 +1639,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         goals: goals,
         waterIntake: dailyData.water,
         profile: {
+          name: profile.name,
           age: profile.age,
           weight: profile.weight,
           height: profile.height,
