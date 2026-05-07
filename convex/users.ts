@@ -111,7 +111,7 @@ export const updateProfile = mutation({
   },
 });
 
-/** Get credits for user (returns defaults if no row yet). */
+/** Get credits for user (returns existing row or creates one with default free credits). */
 export const getCredits = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
@@ -123,7 +123,18 @@ export const getCredits = query({
     const today = todayKey();
 
     if (!row) {
+      // Ensure a credits row exists for this user with 1 free daily credit
+      const id = await ctx.db.insert("credits", {
+        userId,
+        credits: 0,
+        lastFreeDate: today,
+        dailyFreeMealUsed: false,
+        dailyFreeAIUsed: false,
+      });
+      const newRow = await ctx.db.get(id);
       return {
+        _id: newRow?._id,
+        userId,
         credits: 0,
         lastFreeDate: today,
         dailyFreeMealUsed: false,

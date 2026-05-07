@@ -55,19 +55,21 @@ export async function getNutritionForFood(foodName: string): Promise<{ name: str
 }
 
 export async function getCoachResponse(input: {
-  messages:    { role: string; content: string }[];
-  mealHistory: { name: string; items: { name: string; calories: number }[] }[];
-  goals:       { calories: number; protein: number; carbs: number; fat: number };
-  waterIntake?: number;
-  profile?: { age?: string; weight?: string; height?: string; activityLevel?: string };
+  messages:       { role: string; content: string }[];
+  mealHistory:    { name: string; items: { name: string; calories: number }[] }[];
+  goals:          { calories: number; protein: number; carbs: number; fat: number };
+  waterIntake?:   number;
+  profile?:       { age?: string; weight?: string; height?: string; activityLevel?: string };
+  historicalMeals?: any[];
 }): Promise<ChatWithCoachOutput> {
   try {
     return await getConvex().action(api.gemini.chatWithCoach, {
-      messages:    input.messages,
-      mealHistory: input.mealHistory,
-      goals:       input.goals,
-      waterIntake: input.waterIntake || 0,
-      profile:     input.profile,
+      messages:        input.messages,
+      mealHistory:     input.mealHistory,
+      goals:           input.goals,
+      waterIntake:     input.waterIntake || 0,
+      profile:         input.profile,
+      historicalMeals: input.historicalMeals,
     });
   } catch (error) {
     console.error('Error in getCoachResponse:', error);

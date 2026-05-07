@@ -64,11 +64,16 @@ export const createAccount: ReturnType<typeof action> = action({
       verificationTokenExpiry,
     });
 
-    await ctx.runAction(internal.emails.sendVerificationEmail, {
-      email: normalizedEmail,
-      name,
-      token: verificationToken,
-    });
+    try {
+      await ctx.runAction(internal.emails.sendVerificationEmail, {
+        email: normalizedEmail,
+        name,
+        token: verificationToken,
+      });
+    } catch (emailError) {
+      console.error("[auth] Failed to send verification email:", emailError);
+      // Continue anyway - user can still verify later by requesting a new email
+    }
 
     return { userId: userId as unknown as string, pendingVerification: true };
   },
@@ -203,5 +208,44 @@ export const resetPassword: ReturnType<typeof action> = action({
     }
 
     return { success: true };
+  },
+});
+
+/** Resend the verification email to a user */
+export const resendVerificationEmail: ReturnType<typeof action> = action({
+  args: { email: v.string() },
+  handler: async (ctx, { email }): Promise<{ sent: boolean }> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    let user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
+    if (!user) throw new ConvexError("No account found with this email address.");
+
+    // If already verified, no need to resend
+    if (user.emailVerified === true) {
+      throw new ConvexError("This email is already verified. You can sign in now.");
+    }
+
+    // Generate a new verification token
+    const verificationToken = crypto.randomUUID();
+    const verificationTokenExpiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+
+    await ctx.runMutation(internal.authInternal.updateUserVerification, {
+      userId: user._id,
+      emailVerified: false,
+      verificationToken,
+      verificationTokenExpiry,
+    });
+
+    try {
+      await ctx.runAction(internal.emails.sendVerificationEmail, {
+        email: normalizedEmail,
+        name: user.name || email,
+        token: verificationToken,
+      });
+    } catch (emailError) {
+      console.error("[auth] Failed to resend verification email:", emailError);
+      throw new ConvexError("Failed to send email. Please try again later.");
+    }
+
+    return { sent: true };
   },
 });

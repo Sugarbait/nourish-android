@@ -8,6 +8,34 @@ const MODEL = "gemini-3.1-flash-lite-preview";
 
 let authClient: GoogleAuth | null = null;
 
+function getMostFrequentMealTypes(meals: any[]): string {
+  const mealTypeCounts: Record<string, number> = {};
+  meals.forEach((meal) => {
+    const type = (meal.mealType || "unknown").toLowerCase();
+    mealTypeCounts[type] = (mealTypeCounts[type] || 0) + 1;
+  });
+  const sorted = Object.entries(mealTypeCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([type]) => type);
+  return sorted.length > 0 ? sorted.join(", ") : "varied";
+}
+
+function calculateHistoricalMacros(meals: any[]): string {
+  if (meals.length === 0) return "no data";
+  const totalCalories = meals.reduce((sum: number, m: any) => sum + (m.calories || 0), 0);
+  const totalProtein = meals.reduce((sum: number, m: any) => sum + (m.protein || 0), 0);
+  const totalCarbs = meals.reduce((sum: number, m: any) => sum + (m.carbs || 0), 0);
+  const totalFat = meals.reduce((sum: number, m: any) => sum + (m.fat || 0), 0);
+
+  if (totalCalories === 0) return "no data";
+  const proteinPct = Math.round((totalProtein * 4 / totalCalories) * 100);
+  const carbsPct = Math.round((totalCarbs * 4 / totalCalories) * 100);
+  const fatPct = Math.round((totalFat * 9 / totalCalories) * 100);
+
+  return `${proteinPct}% protein, ${carbsPct}% carbs, ${fatPct}% fat`;
+}
+
 function getAuthClient(): GoogleAuth {
   if (!authClient) {
     authClient = new GoogleAuth({
@@ -232,19 +260,24 @@ export const healthCheck = action({
 
 export const chatWithCoach = action({
   args: {
-    messages:    v.array(v.object({ role: v.string(), content: v.string() })),
-    mealHistory: v.array(v.any()),
-    goals:       v.object({ calories: v.number(), protein: v.number(), carbs: v.number(), fat: v.number(), water: v.optional(v.number()) }),
-    waterIntake: v.number(),
-    profile:     v.optional(v.object({ age: v.optional(v.string()), weight: v.optional(v.string()), height: v.optional(v.string()), activityLevel: v.optional(v.string()) })),
+    messages:       v.array(v.object({ role: v.string(), content: v.string() })),
+    mealHistory:    v.array(v.any()),
+    goals:          v.object({ calories: v.number(), protein: v.number(), carbs: v.number(), fat: v.number(), water: v.optional(v.number()) }),
+    waterIntake:    v.number(),
+    profile:        v.optional(v.object({ age: v.optional(v.string()), weight: v.optional(v.string()), height: v.optional(v.string()), activityLevel: v.optional(v.string()) })),
+    historicalMeals: v.optional(v.array(v.any())),
   },
-  handler: async (_ctx, { messages, mealHistory, goals, waterIntake, profile }) => {
+  handler: async (_ctx, { messages, mealHistory, goals, waterIntake, profile, historicalMeals }) => {
     const mealHistoryText =
       mealHistory.length > 0
         ? mealHistory
             .map((meal) => `- ${meal.name}: ${meal.items.map((item: any) => `${item.name} (${item.calories} kcal)`).join(", ")}`)
             .join("\n")
         : "No meals logged today - this is a great opportunity to provide meal planning advice and motivation!";
+
+    const historicalContext = historicalMeals && historicalMeals.length > 0
+      ? `\nHISTORICAL PATTERNS (Past Year):\nTotal meals logged: ${historicalMeals.length}\nAverage daily intake: ${Math.round(historicalMeals.reduce((sum: number, meal: any) => sum + meal.calories, 0) / Math.max(1, new Set(historicalMeals.map((m: any) => m.date)).size)} kcal\nFavorite meal types: ${getMostFrequentMealTypes(historicalMeals)}\nAverage macro split: ${calculateHistoricalMacros(historicalMeals)}`
+      : "";
 
     const currentIntake = mealHistory.reduce((total: number, meal: any) => {
       return total + meal.items.reduce((sum: number, item: any) => sum + item.calories, 0);
@@ -271,13 +304,14 @@ TODAY'S PROGRESS:
 - Water: ${waterIntake}/8 glasses (${waterNeeded > 0 ? `needs ${waterNeeded} more glasses` : "goal met!"})
 
 TODAY'S MEAL LOG:
-${mealHistoryText}
+${mealHistoryText}${historicalContext}
 
 HOW YOU CAN HELP:
 You can assist with meal planning, nutrition balance, hydration reminders, nutrition education, motivation & accountability, answering diet questions, helping understand eating patterns, and suggesting goal adjustments.
 
 YOUR APPROACH:
 - Be conversational, genuine, and encouraging—like talking to a friend who cares about their health
+- Reference their historical patterns and long-term trends to give personalized, evidence-based advice
 - Only suggest meals when relevant to the conversation; don't always push food recommendations
 - Reference their logged data when it's relevant, but don't be rigid about it
 - Keep it natural: 2-4 sentences usually works; longer responses are fine if needed

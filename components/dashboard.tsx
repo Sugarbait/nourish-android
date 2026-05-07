@@ -354,6 +354,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const sevenDaysAgo = format(subDays(new Date(), 6), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
   const recentMeals = useQuery(api.meals.getMealsForDateRange, userId ? { userId: userId as any, startDate: sevenDaysAgo, endDate: today } : 'skip');
+  const historicalMeals = useQuery(api.meals.getMealsForPastYear, userId ? { userId: userId as any } : 'skip');
   const trackedDates = useQuery(api.meals.getTrackedDates, userId ? { userId: userId as any } : 'skip');
 
   const trackedDateObjects = useMemo(() => {
@@ -682,9 +683,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   useEffect(() => {
     if (!convexCredits) return;
     setCredits(prev => {
+      // Don't overwrite non-zero localStorage credits with 0 from Convex
+      // (free daily credits should take precedence if user had them)
+      const convexCreditsValue = convexCredits.credits ?? prev.credits;
+      const finalCredits = (convexCreditsValue === 0 && prev.credits > 0) ? prev.credits : convexCreditsValue;
+
       const merged = {
         ...prev,
-        credits: convexCredits.credits ?? prev.credits,
+        credits: finalCredits,
         lastFreeDate: convexCredits.lastFreeDate ?? prev.lastFreeDate,
         dailyFreeMealUsed: convexCredits.dailyFreeMealUsed ?? prev.dailyFreeMealUsed,
         dailyFreeAIUsed: convexCredits.dailyFreeAIUsed ?? prev.dailyFreeAIUsed,
@@ -1607,6 +1613,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           height: profile.height,
           activityLevel: profile.activityLevel,
         },
+        historicalMeals: historicalMeals || [],
       };
 
       const response = await getCoachResponse(coachInputData);

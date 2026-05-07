@@ -65,6 +65,23 @@ export const getMealsForDateRange = query({
   },
 });
 
+export const getMealsForPastYear = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const today = new Date();
+    const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    const startDate = oneYearAgo.toISOString().split('T')[0];
+    const endDate = today.toISOString().split('T')[0];
+
+    return await ctx.db
+      .query("meals")
+      .withIndex("by_userId_date", (q) =>
+        q.eq("userId", userId).gte("date", startDate).lte("date", endDate)
+      )
+      .collect();
+  },
+});
+
 export const deleteMeal = mutation({
   args: { userId: v.id("users"), mealId: v.id("meals") },
   handler: async (ctx, { userId, mealId }) => {
