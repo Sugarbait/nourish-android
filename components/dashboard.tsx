@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.62";
+const BUILD_VERSION = "0.2.63";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -311,6 +311,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexUpdateProfile = useMutation(api.users.updateProfile);
   const convexRedeemCoupon = useMutation(api.users.redeemCoupon);
   const convexConsumeMealCredit = useMutation(api.users.consumeMealCredit);
+  const convexConsumeAICredit = useMutation(api.users.consumeAICredit);
   const submitContactForm = useAction(api.contact.submitContactForm);
   const convexDeleteSavedRecipe = useMutation(api.recipes.deleteSavedRecipe);
   const convexSyncBatchMeals = useMutation(api.meals.syncBatchMeals);
@@ -685,14 +686,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   useEffect(() => {
     if (!convexCredits) return;
     setCredits(prev => {
-      // Don't overwrite non-zero localStorage credits with 0 from Convex
-      // (free daily credits should take precedence if user had them)
-      const convexCreditsValue = convexCredits.credits ?? prev.credits;
-      const finalCredits = (convexCreditsValue === 0 && prev.credits > 0) ? prev.credits : convexCreditsValue;
-
       const merged = {
         ...prev,
-        credits: finalCredits,
+        credits: convexCredits.credits ?? prev.credits,
         lastFreeDate: convexCredits.lastFreeDate ?? prev.lastFreeDate,
         dailyFreeMealUsed: convexCredits.dailyFreeMealUsed ?? prev.dailyFreeMealUsed,
         dailyFreeAIUsed: convexCredits.dailyFreeAIUsed ?? prev.dailyFreeAIUsed,
@@ -1577,6 +1573,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       }
       saveCredits(updatedCredits);
       setCredits(updatedCredits);
+      if (userId) convexConsumeAICredit({ userId: userId as any }).catch(() => {});
     }
 
     const newUserMessage: ChatMessage = { role: 'user', content: coachInput };
