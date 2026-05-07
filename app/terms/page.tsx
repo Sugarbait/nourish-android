@@ -20,7 +20,7 @@ export default function TermsPage() {
       <main className="max-w-3xl mx-auto px-4 py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-black mb-2">Terms of Service</h1>
-          <p className="text-sm text-muted-foreground">Last updated: March 23, 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: May 7, 2026</p>
         </div>
 
         <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
@@ -111,7 +111,29 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">7. Intellectual Property</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">7. AI Coach — Disclaimer & Limitation of Liability</h2>
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-red-300/80 mb-4">
+              <p className="font-semibold text-red-300 mb-1">AI-Generated Content — Use at Your Own Risk</p>
+              <p>
+                The AI nutritional coach ("AI Coach") provided within Nourish generates responses using artificial intelligence and machine learning models. These responses are <strong>automatically generated</strong> and may contain errors, inaccuracies, outdated information, or advice that is unsuitable for your individual circumstances.
+              </p>
+            </div>
+            <p className="mb-3">By using the AI Coach, you expressly acknowledge and agree to all of the following:</p>
+            <ul className="list-disc list-inside space-y-2 mt-2">
+              <li><strong className="text-foreground">Not a healthcare professional.</strong> The AI Coach is not a licensed dietitian, nutritionist, physician, or any other regulated healthcare professional. Nothing it communicates constitutes professional medical, dietary, or health advice.</li>
+              <li><strong className="text-foreground">AI errors are inherent.</strong> Artificial intelligence systems can and do produce incorrect, incomplete, or misleading outputs. Nourish makes no representation or warranty that any information provided by the AI Coach is accurate, complete, current, or suitable for any particular purpose.</li>
+              <li><strong className="text-foreground">No reliance.</strong> You agree not to rely solely on the AI Coach for decisions regarding your health, nutrition, diet, medication, medical treatment, or any other matter affecting your physical or mental wellbeing. Always consult a qualified and licensed healthcare professional before making any health-related decisions.</li>
+              <li><strong className="text-foreground">No liability for AI outputs.</strong> To the fullest extent permitted by applicable law, Nourish, its owners, employees, contractors, and affiliates shall not be liable for any loss, injury, illness, damage, cost, or expense of any kind — whether direct, indirect, incidental, consequential, or otherwise — arising from or in connection with your use of, or reliance on, any content, advice, recommendation, or information provided by the AI Coach.</li>
+              <li><strong className="text-foreground">Indemnification.</strong> You agree to indemnify and hold harmless Nourish and its affiliates from any claims, damages, or expenses (including legal fees) arising from your use of the AI Coach or your violation of these Terms.</li>
+              <li><strong className="text-foreground">Experimental technology.</strong> AI technology is evolving rapidly. The AI Coach may be updated, modified, or discontinued at any time without notice. Nourish is not responsible for any changes in the AI Coach's behaviour or availability.</li>
+            </ul>
+            <p className="mt-3">
+              If you do not agree to these terms regarding the AI Coach, you must not use the AI Coach feature.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-base font-bold text-foreground mb-2">8. Intellectual Property</h2>
             <p>
               The Service and its original content, features, and functionality are owned by Nourish and are
               protected by international copyright, trademark, and other intellectual property laws.
@@ -124,7 +146,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">8. Limitation of Liability</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">9. Limitation of Liability</h2>
             <p>
               To the maximum extent permitted by applicable law, Nourish shall not be liable for any indirect,
               incidental, special, consequential, or punitive damages, including loss of profits, data, or goodwill,
@@ -137,7 +159,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">9. Termination</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">10. Termination</h2>
             <p>
               We reserve the right to suspend or terminate your account at our sole discretion, without notice,
               if you breach these Terms or engage in behaviour that is harmful to other users, us, or third parties.
@@ -149,7 +171,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">10. Changes to Terms</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">11. Changes to Terms</h2>
             <p>
               We reserve the right to modify these Terms at any time. Material changes will be communicated by
               updating the date at the top of this page and, where appropriate, by email notification. Your
@@ -158,7 +180,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">11. Governing Law</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">12. Governing Law</h2>
             <p>
               These Terms shall be governed by and construed in accordance with applicable laws, without regard
               to conflict of law principles.
@@ -166,7 +188,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">12. Contact</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">13. Contact</h2>
             <p>For questions about these Terms, contact us at:</p>
             <div className="mt-2 rounded-xl border border-white/5 bg-white/[0.03] p-4">
               <p><strong className="text-foreground">Nourish</strong></p>
