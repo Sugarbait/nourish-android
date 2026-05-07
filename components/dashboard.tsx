@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.57";
+const BUILD_VERSION = "0.2.58";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1606,7 +1606,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           height: profile.height,
           activityLevel: profile.activityLevel,
         },
-        historicalMeals: historicalMeals || [],
+        historicalMeals: (historicalMeals || []).slice(-365).map((m: any) => ({
+          date: m.date,
+          mealType: m.mealType,
+          calories: m.calories,
+          protein: m.protein,
+          carbs: m.carbs,
+          fat: m.fat,
+        })),
       };
 
       const response = await getCoachResponse(coachInputData);
