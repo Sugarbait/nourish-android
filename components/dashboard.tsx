@@ -1463,11 +1463,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const handleContactSubmit = async (values: z.infer<typeof contactFormSchema>) => {
     setIsContactSubmitting(true);
+    console.log('[ContactForm] Submitting with values:', values);
     try {
-      await submitContactForm({
+      const result = await submitContactForm({
         ...values,
         app: "Nourish",
       });
+      console.log('[ContactForm] Submit successful:', result);
       toast({ title: 'Message Sent!', description: 'Thank you for your feedback. We will get back to you soon.' });
       contactForm.reset({
         name: userName || "",
@@ -1475,7 +1477,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         message: "",
       });
     } catch (err: any) {
-      toast({ title: 'Failed to send', description: err.message || 'Please try again later.', variant: 'destructive' });
+      console.error('[ContactForm] Submit error:', err);
+      const errorMsg = err?.message || err?.toString?.() || 'Please try again later.';
+      toast({ title: 'Failed to send', description: errorMsg, variant: 'destructive' });
     } finally {
       setIsContactSubmitting(false);
     }
