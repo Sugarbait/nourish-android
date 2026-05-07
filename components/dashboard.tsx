@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.53";
+const BUILD_VERSION = "0.2.54";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1999,7 +1999,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           type="button"
                           disabled={isContactSubmitting}
                           className="w-full h-8 text-xs bg-muted hover:bg-muted/70 text-foreground transition-colors"
-                          onClick={contactForm.handleSubmit(handleContactSubmit)}
+                          onClick={async () => { const valid = await contactForm.trigger(); if (!valid) return; await handleContactSubmit(contactForm.getValues()); }}
                         >
                           {isContactSubmitting ? <Loader2 className="h-3 w-3 animate-spin"/> : 'Send Message'}
                         </Button>
