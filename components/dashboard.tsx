@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.60";
+const BUILD_VERSION = "0.2.61";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -2856,7 +2856,28 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         <span className="font-medium ml-2">Adjust my goals</span>
                       </Button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-3 px-2">💡 Tip: I can help adjust your nutrition targets anytime—just ask!</p>
+                    <p className="text-[11px] text-muted-foreground mt-3 px-2">💡 {[
+                      "I can help adjust your nutrition targets anytime—just ask!",
+                      "Try asking me to review your eating patterns from this week.",
+                      "I can suggest high-protein meal ideas based on your remaining goals.",
+                      "Ask me to create a full day meal plan tailored to your calorie target.",
+                      "Struggling with late-night snacking? I have strategies that actually work.",
+                      "I can help you hit your protein goal without going over on calories.",
+                      "Ask me about the best foods to eat before or after a workout.",
+                      "I can explain what your macro ratios mean and how to balance them.",
+                      "Try asking me for quick, healthy meal ideas under 400 calories.",
+                      "I can help you figure out why you might feel low energy during the day.",
+                      "Ask me to suggest healthy swaps for your favourite comfort foods.",
+                      "I can help you build better eating habits one small change at a time.",
+                      "Eating out? Ask me how to make smarter choices at restaurants.",
+                      "I can help you stay on track even on busy days—just describe your schedule.",
+                      "Ask me about the benefits of any food or ingredient you're curious about.",
+                      "I can help you understand food labels and what to watch out for.",
+                      "Try asking me for a high-fibre meal plan to improve digestion.",
+                      "Ask me how to increase your water intake throughout the day.",
+                      "I can help you prep meals in advance to make healthy eating easier.",
+                      "Ask me anything—nutrition, habits, goals. I'm here to help!",
+                    ][Math.floor(Math.random() * 20)]}</p>
                   </div>
                 </div>
               )}
