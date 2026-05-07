@@ -31,6 +31,7 @@ export const ChatWithCoachInputSchema = z.object({
     height: z.string().optional(),
     activityLevel: z.string().optional(),
   }).optional().describe("The user's physical profile data."),
+  historicalMeals: z.array(z.any()).optional().describe("The user's meal history for the past year for context and pattern analysis."),
 });
 export type ChatWithCoachInput = z.infer<typeof ChatWithCoachInputSchema>;
 

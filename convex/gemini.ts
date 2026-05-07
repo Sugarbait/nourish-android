@@ -36,6 +36,19 @@ function calculateHistoricalMacros(meals: any[]): string {
   return `${proteinPct}% protein, ${carbsPct}% carbs, ${fatPct}% fat`;
 }
 
+function buildHistoricalContext(historicalMeals: any[]): string {
+  if (!historicalMeals || historicalMeals.length === 0) return "";
+
+  const totalMeals = historicalMeals.length;
+  const uniqueDates = new Set(historicalMeals.map((m: any) => m.date)).size;
+  const totalCalories = historicalMeals.reduce((sum: number, m: any) => sum + (m.calories || 0), 0);
+  const avgDailyIntake = Math.round(totalCalories / Math.max(1, uniqueDates));
+  const favoriteTypes = getMostFrequentMealTypes(historicalMeals);
+  const macroSplit = calculateHistoricalMacros(historicalMeals);
+
+  return `\nHISTORICAL PATTERNS (Past Year):\nTotal meals logged: ${totalMeals}\nAverage daily intake: ${avgDailyIntake} kcal\nFavorite meal types: ${favoriteTypes}\nAverage macro split: ${macroSplit}`;
+}
+
 function getAuthClient(): GoogleAuth {
   if (!authClient) {
     authClient = new GoogleAuth({
@@ -276,7 +289,7 @@ export const chatWithCoach = action({
         : "No meals logged today - this is a great opportunity to provide meal planning advice and motivation!";
 
     const historicalContext = historicalMeals && historicalMeals.length > 0
-      ? `\nHISTORICAL PATTERNS (Past Year):\nTotal meals logged: ${historicalMeals.length}\nAverage daily intake: ${Math.round(historicalMeals.reduce((sum: number, meal: any) => sum + meal.calories, 0) / Math.max(1, new Set(historicalMeals.map((m: any) => m.date)).size)} kcal\nFavorite meal types: ${getMostFrequentMealTypes(historicalMeals)}\nAverage macro split: ${calculateHistoricalMacros(historicalMeals)}`
+      ? buildHistoricalContext(historicalMeals)
       : "";
 
     const currentIntake = mealHistory.reduce((total: number, meal: any) => {
