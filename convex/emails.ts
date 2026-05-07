@@ -362,12 +362,12 @@ export const sendContactEmailInternal = internalAction({
   handler: async (_ctx, { name, email, message, app }) => {
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);
-    const user = process.env.SMTP_USER || "no-reply@neoncell.ca";
+    const user = process.env.SMTP_USER || "contactus@neoncell.ca";
     const pass = process.env.SMTP_PASS;
 
     if (!host || !user || !pass) {
-      console.warn("[emails] SMTP credentials not fully set. Skipping contact email delivery.");
-      return;
+      console.error("[emails] SMTP credentials not fully set for contact form.");
+      throw new Error("Email service is not properly configured. Please try again later.");
     }
 
     const transporter = nodemailer.createTransport({
@@ -398,12 +398,12 @@ export const sendContactEmailInternal = internalAction({
     </div>
     <div class="label">From:</div>
     <div class="value">${name} (&lt;${email}&gt;)</div>
-    
+
     <div class="label">Message:</div>
     <div class="message-box">
       ${message.replace(/\n/g, '<br>')}
     </div>
-    
+
     <p style="font-size: 12px; color: #999; margin-top: 30px;">
       This is an automated notification.
     </p>
@@ -411,12 +411,18 @@ export const sendContactEmailInternal = internalAction({
 </body>
 </html>`;
 
-    await transporter.sendMail({
-      from: `"Nourish Contact Form" <${user}>`,
-      to: "contactus@neoncell.ca",
-      replyTo: email,
-      subject: `New Message from ${name} via ${app}`,
-      html,
-    });
+    try {
+      await transporter.sendMail({
+        from: `"Nourish Contact Form" <${user}>`,
+        to: "contactus@neoncell.ca",
+        replyTo: email,
+        subject: `New Message from ${name} via ${app}`,
+        html,
+      });
+      console.log(`[emails] Contact form message sent from ${email}`);
+    } catch (error) {
+      console.error("[emails] Failed to send contact form email:", error);
+      throw new Error(`Failed to send message: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   },
 });
