@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.56";
+const BUILD_VERSION = "0.2.57";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1387,16 +1387,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
     setIsChatbotOpen(true);
     
-    // Simple greeting if conversation is empty
-    if (chatMessages.length === 0) {
-      let greeting = `Hello! 👋 How can I help you today?`;
-      if (profile.name) {
-        const firstName = profile.name.split(' ')[0];
-        greeting = `Hello ${firstName}! 👋 How can I help you today?`;
-      }
-      setChatMessages([{ role: 'model', content: greeting }]);
-    }
-  }, [isGuest, credits.subscription?.active, chatMessages.length, isCoachLoading, dailyData.meals, dailyData.water, goals]);
+
+  }, [isGuest, credits.subscription?.active, credits.credits]);
 
   const handleManualSubmit = (values: z.infer<typeof manualFoodFormSchema>) => {
     addItemsToLog(values.items, values.mealType);
@@ -1433,10 +1425,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         // credit check since we know credits just increased from the redemption
         setIsProfileOpen(false);
         setIsChatbotOpen(true);
-        if (chatMessages.length === 0) {
-          const firstName = profile.name?.split(' ')[0];
-          setChatMessages([{ role: 'model', content: firstName ? `Hello ${firstName}! 👋 How can I help you today?` : `Hello! 👋 How can I help you today?` }]);
-        }
+
       }
     } catch (err: any) {
       // Extract the most meaningful error message from Convex
