@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.70";
+const BUILD_VERSION = "0.2.71";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -347,6 +347,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // Auth state from localStorage
   const [userId, setUserId] = useState<string | null>(null);
   const convexSaveConversation = useMutation(api.conversations.saveConversation);
+  const convexDeleteConversation = useMutation(api.conversations.deleteConversation);
   const recentConversations = useQuery(api.conversations.getRecentConversations, userId ? { userId: userId as any } : 'skip') ?? [];
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
@@ -450,6 +451,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isCoachLoading, setIsCoachLoading] = useState(false);
   const [showChatHistory, setShowChatHistory] = useState(false);
+  const [isLoadedFromHistory, setIsLoadedFromHistory] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [coachTip] = useState(() => COACH_TIPS[Math.floor(Math.random() * COACH_TIPS.length)]);
   const [coachInput, setCoachInput] = useState("");
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
@@ -1576,7 +1579,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   }
 
   const saveCurrentConversation = async (messages: ChatMessage[]) => {
-    if (!userId || messages.length < 2) return;
+    if (!userId || messages.length < 2 || isLoadedFromHistory) return;
     const firstUserMsg = messages.find(m => m.role === 'user');
     const title = firstUserMsg
       ? firstUserMsg.content.slice(0, 60) + (firstUserMsg.content.length > 60 ? '…' : '')
@@ -1615,6 +1618,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       if (userId) convexConsumeAICredit({ userId: userId as any }).catch(() => {});
     }
 
+    setIsLoadedFromHistory(false);
     const newUserMessage: ChatMessage = { role: 'user', content: coachInput };
     const newMessages = [...chatMessages, newUserMessage];
     setChatMessages(newMessages);
@@ -2865,18 +2869,34 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                   <p className="text-xs text-muted-foreground py-2">No saved conversations yet.</p>
                 ) : (
                   <div className="space-y-1">
-                    {recentConversations.map((convo) => (
-                      <button
-                        key={convo._id}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-muted transition-colors flex items-center justify-between gap-2 group"
-                        onClick={() => { setChatMessages(convo.messages as ChatMessage[]); setShowChatHistory(false); }}
-                      >
-                        <span className="truncate text-foreground">{convo.title}</span>
-                        <span className="text-muted-foreground shrink-0 group-hover:text-foreground">
-                          {new Date(convo.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </span>
-                      </button>
+                    {(showAllHistory ? recentConversations : recentConversations.slice(0, 3)).map((convo) => (
+                      <div key={convo._id} className="flex items-center gap-1 group">
+                        <button
+                          className="flex-1 text-left px-3 py-2 rounded-lg text-xs hover:bg-muted transition-colors flex items-center justify-between gap-2"
+                          onClick={() => { setChatMessages(convo.messages as ChatMessage[]); setIsLoadedFromHistory(true); setShowChatHistory(false); }}
+                        >
+                          <span className="truncate text-foreground">{convo.title}</span>
+                          <span className="text-muted-foreground shrink-0">
+                            {new Date(convo.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        </button>
+                        <button
+                          className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                          onClick={() => userId && convexDeleteConversation({ userId: userId as any, conversationId: convo._id })}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     ))}
+                    {recentConversations.length > 3 && (
+                      <button
+                        className="w-full text-center text-[10px] text-muted-foreground hover:text-foreground py-1 transition-colors"
+                        onClick={() => setShowAllHistory(h => !h)}
+                      >
+                        {showAllHistory ? 'Show less' : `Show ${recentConversations.length - 3} more`}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

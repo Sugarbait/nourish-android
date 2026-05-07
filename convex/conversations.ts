@@ -40,3 +40,12 @@ export const getRecentConversations = query({
     return convos.sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
   },
 });
+
+export const deleteConversation = mutation({
+  args: { userId: v.id("users"), conversationId: v.id("conversations") },
+  handler: async (ctx, { userId, conversationId }) => {
+    const convo = await ctx.db.get(conversationId);
+    if (!convo || convo.userId !== userId) return;
+    await ctx.db.delete(conversationId);
+  },
+});
