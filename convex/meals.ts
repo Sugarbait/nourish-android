@@ -72,15 +72,16 @@ export const getMealsForPastYear = query({
     const oneYearAgo = new Date(today);
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-    const startDate = oneYearAgo.toISOString().split('T')[0];
-    const endDate = today.toISOString().split('T')[0];
+    const startDateStr = oneYearAgo.toISOString().split('T')[0];
+    const endDateStr = today.toISOString().split('T')[0];
 
-    return await ctx.db
+    // Fetch all meals for user and filter by date range
+    const allMeals = await ctx.db
       .query("meals")
-      .withIndex("by_userId_date", (q) =>
-        q.eq("userId", userId).gte("date", startDate).lte("date", endDate)
-      )
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect();
+
+    return allMeals.filter((meal) => meal.date >= startDateStr && meal.date <= endDateStr);
   },
 });
 
