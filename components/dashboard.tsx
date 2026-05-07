@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.54";
+const BUILD_VERSION = "0.2.55";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -1986,20 +1986,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                       </h4>
                       <p className="text-[11px] text-muted-foreground mb-4">Have feedback or suggestions? We&apos;d love to hear from you.</p>
                       <div className="space-y-3">
-                        <FormField control={contactForm.control} name="name" render={({ field }) => (
-                          <FormItem><FormControl><Input placeholder="Your Name" {...field} className="h-8 text-xs" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                        )} />
-                        <FormField control={contactForm.control} name="email" render={({ field }) => (
-                          <FormItem><FormControl><Input placeholder="Your Email" {...field} className="h-8 text-xs" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                        )} />
-                        <FormField control={contactForm.control} name="message" render={({ field }) => (
-                          <FormItem><FormControl><Textarea placeholder="How can we improve Nourish?" {...field} className="min-h-[80px] text-xs resize-none" /></FormControl><FormMessage className="text-[10px]" /></FormItem>
-                        )} />
+                        <Input placeholder="Your Name" {...contactForm.register('name')} className="h-8 text-xs" />
+                        <Input placeholder="Your Email" {...contactForm.register('email')} className="h-8 text-xs" />
+                        <Textarea placeholder="How can we improve Nourish?" {...contactForm.register('message')} className="min-h-[80px] text-xs resize-none" />
                         <Button
                           type="button"
                           disabled={isContactSubmitting}
                           className="w-full h-8 text-xs bg-muted hover:bg-muted/70 text-foreground transition-colors"
-                          onClick={async () => { const valid = await contactForm.trigger(); if (!valid) return; await handleContactSubmit(contactForm.getValues()); }}
+                          onClick={async () => {
+                            const values = {
+                              name: contactForm.getValues('name'),
+                              email: contactForm.getValues('email'),
+                              message: contactForm.getValues('message'),
+                            };
+                            if (!values.name || !values.email || !values.message) return;
+                            await handleContactSubmit(values);
+                          }}
                         >
                           {isContactSubmitting ? <Loader2 className="h-3 w-3 animate-spin"/> : 'Send Message'}
                         </Button>
