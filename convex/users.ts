@@ -131,13 +131,15 @@ export const getCredits = query({
       };
     }
 
-    const mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
+    const subCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
+    const packCredits = row.purchasedCredits ?? 0;
+    const total = subCredits + packCredits;
 
     if (row.lastFreeDate !== today) {
-      return { ...row, credits: mappedCredits, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
+      return { ...row, credits: total, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
     }
 
-    return { ...row, credits: mappedCredits };
+    return { ...row, credits: total };
   },
 });
 
@@ -171,9 +173,15 @@ export const consumeMealCredit = mutation({
       return { success: true };
     }
 
-    let mappedCredits = row!.credits ?? ((row!.mealCredits ?? 0) + (row!.aiCredits ?? 0));
-    if (mappedCredits > 0) {
-      await ctx.db.patch(row!._id, { credits: mappedCredits - 1, mealCredits: undefined, aiCredits: undefined });
+    // Drain subscription credits first, then purchased pack credits
+    const subCredits = row!.credits ?? ((row!.mealCredits ?? 0) + (row!.aiCredits ?? 0));
+    if (subCredits > 0) {
+      await ctx.db.patch(row!._id, { credits: subCredits - 1, mealCredits: undefined, aiCredits: undefined });
+      return { success: true };
+    }
+    const packCredits = row!.purchasedCredits ?? 0;
+    if (packCredits > 0) {
+      await ctx.db.patch(row!._id, { purchasedCredits: packCredits - 1 });
       return { success: true };
     }
     return { success: false };
@@ -210,9 +218,15 @@ export const consumeAICredit = mutation({
       return { success: true };
     }
 
-    let mappedCredits = row!.credits ?? ((row!.mealCredits ?? 0) + (row!.aiCredits ?? 0));
-    if (mappedCredits > 0) {
-      await ctx.db.patch(row!._id, { credits: mappedCredits - 1, mealCredits: undefined, aiCredits: undefined });
+    // Drain subscription credits first, then purchased pack credits
+    const subCredits = row!.credits ?? ((row!.mealCredits ?? 0) + (row!.aiCredits ?? 0));
+    if (subCredits > 0) {
+      await ctx.db.patch(row!._id, { credits: subCredits - 1, mealCredits: undefined, aiCredits: undefined });
+      return { success: true };
+    }
+    const packCredits = row!.purchasedCredits ?? 0;
+    if (packCredits > 0) {
+      await ctx.db.patch(row!._id, { purchasedCredits: packCredits - 1 });
       return { success: true };
     }
     return { success: false };
@@ -238,15 +252,15 @@ export const addCredits = mutation({
     if (!row) {
       await ctx.db.insert("credits", {
         userId,
-        credits: addAmount,
+        credits: 0,
+        purchasedCredits: addAmount,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
       });
     } else {
-      let mappedCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
       await ctx.db.patch(row._id, {
-        credits: mappedCredits + addAmount,
+        purchasedCredits: (row.purchasedCredits ?? 0) + addAmount,
         mealCredits: undefined,
         aiCredits: undefined,
       });
@@ -299,7 +313,8 @@ export const redeemCoupon = mutation({
     if (!row) {
       await ctx.db.insert("credits", {
         userId,
-        credits: reward,
+        credits: 0,
+        purchasedCredits: reward,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
@@ -315,9 +330,8 @@ export const redeemCoupon = mutation({
       throw new ConvexError("You have already redeemed a coupon code. Only one coupon is allowed per account.");
     }
 
-    const currentCredits = row.credits ?? ((row.mealCredits ?? 0) + (row.aiCredits ?? 0));
     await ctx.db.patch(row._id, {
-      credits: currentCredits + reward,
+      purchasedCredits: (row.purchasedCredits ?? 0) + reward,
       usedCoupons: [...usedCoupons, uppercaseCode],
     });
 

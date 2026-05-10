@@ -90,7 +90,8 @@ export default defineSchema({
   // Credits tracking (replaces localStorage)
   credits: defineTable({
     userId: v.id("users"),
-    credits: v.number(),
+    credits: v.number(),               // subscription credits — reset to 300 on renewal
+    purchasedCredits: v.optional(v.number()), // pack/coupon credits — never expire
     mealCredits: v.optional(v.number()), // deprecated
     aiCredits: v.optional(v.number()),   // deprecated
     lastFreeDate: v.string(),

@@ -142,16 +142,17 @@ export const addCreditPack = mutation({
       .first();
 
     if (credits) {
-      let mappedCredits = credits.credits ?? ((credits.mealCredits ?? 0) + (credits.aiCredits ?? 0));
+      const existing = credits.purchasedCredits ?? 0;
       await ctx.db.patch(credits._id, {
-        credits: mappedCredits + amount,
+        purchasedCredits: existing + amount,
         mealCredits: undefined,
         aiCredits: undefined,
       });
     } else {
       await ctx.db.insert("credits", {
         userId: uid,
-        credits: amount,
+        credits: 0,
+        purchasedCredits: amount,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
@@ -197,7 +198,7 @@ export const renewSubscription = mutation({
       });
     }
 
-    // Reset credits to 300 each renewal (credits do not roll over)
+    // Reset subscription credits to 300 — purchased pack credits are preserved
     const today = new Date().toISOString().slice(0, 10);
     const credits = await ctx.db
       .query("credits")
@@ -207,11 +208,13 @@ export const renewSubscription = mutation({
     if (credits) {
       await ctx.db.patch(credits._id, {
         credits: SUBSCRIPTION_CREDITS,
+        // purchasedCredits intentionally not touched — pack credits never expire
       });
     } else {
       await ctx.db.insert("credits", {
         userId: user._id,
         credits: SUBSCRIPTION_CREDITS,
+        purchasedCredits: 0,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
