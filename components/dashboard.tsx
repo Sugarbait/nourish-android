@@ -44,6 +44,7 @@ import {
   Printer,
   TrendingUp,
   History,
+  Bell,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ReferenceLine } from 'recharts';
 import {
@@ -105,6 +106,8 @@ import {
 import type { RecognizeFoodOutput } from '@/ai/types/food';
 import type { SuggestRecipesOutput } from '@/ai/types/recipe';
 import { ModeToggle } from './mode-toggle';
+import { NotificationSettings } from './notification-settings';
+import { useNotification, DEFAULT_NOTIFICATION_PREFS } from './notification-context';
 import type { ChatWithCoachInput } from '@/ai/types/chat';
 
 type FoodItem = {
@@ -473,6 +476,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const [editingFoodItem, setEditingFoodItem] = useState<{ mealId: string; itemIndex: number; value: string } | null>(null);
 
   const [isContactSubmitting, setIsContactSubmitting] = useState(false);
+
+  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateNotificationPreferencesMut = useMutation((api as any).notifications.updateNotificationPreferences);
+  const { addNotification } = useNotification();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const notificationPrefs = (convexProfile as any)?.notificationPreferences ?? DEFAULT_NOTIFICATION_PREFS;
 
   const contactForm = useForm<z.infer<typeof contactFormSchema>>({
     resolver: zodResolver(contactFormSchema),
@@ -904,6 +915,74 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intake, dailyData.water, dateKey, isMounted]);
+
+  // Meal reminders at 8 AM, 12 PM, 6 PM
+  useEffect(() => {
+    if (!isMounted || isGuest || !notificationPrefs.mealReminders) return;
+
+    const MEAL_TIMES = [
+      { hour: 8,  name: 'Breakfast', emoji: '🥣' },
+      { hour: 12, name: 'Lunch',     emoji: '🥗' },
+      { hour: 18, name: 'Dinner',    emoji: '🍽️' },
+    ];
+
+    const checkMealReminder = () => {
+      const hour = new Date().getHours();
+      const todayStr = format(startOfToday(), 'yyyy-MM-dd');
+      for (const meal of MEAL_TIMES) {
+        const key = `meal-${todayStr}-${meal.hour}`;
+        if (hour === meal.hour && !notifiedRef.current.has(key)) {
+          notifiedRef.current.add(key);
+          addNotification(`Time for ${meal.name}! Log your meal to stay on track. ${meal.emoji}`, 'info', 5000);
+        }
+      }
+    };
+
+    checkMealReminder();
+    const interval = setInterval(checkMealReminder, 60_000);
+    return () => clearInterval(interval);
+  }, [isMounted, isGuest, notificationPrefs.mealReminders, addNotification]);
+
+  // Goal progress nudges when intake changes (today only)
+  useEffect(() => {
+    if (!isMounted || isGuest || !notificationPrefs.goalNudges) return;
+
+    const todayStr = format(startOfToday(), 'yyyy-MM-dd');
+    if (dateKey !== todayStr) return;
+
+    const checks = [
+      { key: 'protein', value: intake.protein, goal: displayGoals.protein, label: 'Protein' },
+      { key: 'carbs',   value: intake.carbs,   goal: displayGoals.carbs,   label: 'Carbs'   },
+    ];
+
+    for (const check of checks) {
+      if (check.goal <= 0) continue;
+      const pct = check.value / check.goal;
+      const base = `nudge-${todayStr}-${check.key}`;
+
+      if (pct >= 0.5 && pct < 0.75 && !notifiedRef.current.has(`${base}-50`)) {
+        notifiedRef.current.add(`${base}-50`);
+        addNotification(`You're halfway to your ${check.label.toLowerCase()} goal! Keep going. 💪`, 'info', 4000);
+      } else if (pct >= 0.9 && pct < 1 && !notifiedRef.current.has(`${base}-90`)) {
+        notifiedRef.current.add(`${base}-90`);
+        addNotification(`Almost there! Just a bit more ${check.label.toLowerCase()} to hit your target. 🎯`, 'info', 4000);
+      }
+    }
+  }, [isMounted, isGuest, notificationPrefs.goalNudges, intake, displayGoals, dateKey, addNotification]);
+
+  // Monthly credit reset notification (fires on the 1st of the month)
+  useEffect(() => {
+    if (!isMounted || isGuest || !notificationPrefs.creditResetAlert) return;
+
+    const today = new Date();
+    if (today.getDate() !== 1) return;
+
+    const key = `credit-reset-${today.getFullYear()}-${today.getMonth()}`;
+    if (!notifiedRef.current.has(key)) {
+      notifiedRef.current.add(key);
+      addNotification('Your monthly credits have been reset! You have a fresh 300 credits to use. 🎉', 'success', 6000);
+    }
+  }, [isMounted, isGuest, notificationPrefs.creditResetAlert, addNotification]);
 
   // Reset scan state when the selected date changes so the upload button is always accessible
   useEffect(() => {
@@ -1660,9 +1739,15 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       };
 
       const response = await getCoachResponse(coachInputData);
-  
+
       const coachMessage: ChatMessage = { role: 'model', content: response.response };
       setChatMessages(prev => [...prev, coachMessage]);
+
+      if (notificationPrefs.coachInsights) {
+        const msg = response.response;
+        const preview = msg.length > 60 ? msg.substring(0, 60).trimEnd() + '…' : msg;
+        addNotification(`Coach: ${preview}`, 'info', 5000);
+      }
     } catch (error) {
       const oldMessages = chatMessages.slice(0, -1);
       toast({ title: 'Coach Error', description: (error as Error).message, variant: 'destructive' });
@@ -1675,8 +1760,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   if (!isMounted) {
       return (
           <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <style>{`
+                @keyframes spin-border { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                .spin-circle { animation: spin-border 2s linear infinite; }
+              `}</style>
+              <div className="relative flex items-center justify-center" style={{ width: '80px', height: '80px' }}>
+                  <div className="absolute spin-circle" style={{ width: '80px', height: '80px', borderRadius: '50%', border: '2px solid transparent', borderTopColor: 'hsl(var(--primary))', borderRightColor: 'hsl(var(--primary) / 0.5)' }} />
+                  <img src="/favicon.ico" alt="Nourish" className="w-16 h-16 rounded-2xl relative z-10" />
               </div>
               <p className="text-sm text-muted-foreground font-medium">Loading Nourish…</p>
           </div>
@@ -2017,6 +2107,16 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     <div className="flex items-center justify-between pt-2 pb-1 border-t mt-2">
                       <span className="text-sm text-muted-foreground">Appearance</span>
                       <ModeToggle />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 pb-1 border-t mt-2">
+                      <span className="text-sm text-muted-foreground">Notifications</span>
+                      <button
+                        onClick={() => setIsNotificationSettingsOpen(true)}
+                        className="text-xs text-primary hover:text-primary/80 transition-colors"
+                      >
+                        Settings
+                      </button>
                     </div>
 
                     <div className="pt-4 border-t mt-2">
@@ -2647,6 +2747,41 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           </SheetFooter>
                         </form>
                       </Form>
+                    </SheetContent>
+                  </Sheet>
+
+                  <Sheet open={isNotificationSettingsOpen} onOpenChange={setIsNotificationSettingsOpen}>
+                    <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                      <SheetHeader className="mb-5">
+                        <SheetTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/> Notification Preferences</SheetTitle>
+                        <SheetDescription>Manage which notifications you want to receive in-app.</SheetDescription>
+                      </SheetHeader>
+                      <NotificationSettings
+                        preferences={notificationPrefs}
+                        onSave={async (prefs) => {
+                          if (!userId) {
+                            addNotification('Please sign in to save preferences', 'warning');
+                            return;
+                          }
+                          try {
+                            const result = await updateNotificationPreferencesMut({
+                              userId: userId as any,
+                              mealReminders: prefs.mealReminders,
+                              goalNudges: prefs.goalNudges,
+                              creditResetAlert: prefs.creditResetAlert,
+                              coachInsights: prefs.coachInsights,
+                            });
+                            if (result?.success) {
+                              addNotification('Notification preferences saved', 'success');
+                              setIsNotificationSettingsOpen(false);
+                            } else {
+                              addNotification('Could not save — profile not found', 'warning');
+                            }
+                          } catch {
+                            addNotification('Failed to save preferences', 'warning');
+                          }
+                        }}
+                      />
                     </SheetContent>
                   </Sheet>
                 </CardTitle>

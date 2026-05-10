@@ -5,6 +5,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ConvexClientProvider } from '@/components/convex-client-provider';
 import { GoogleOAuthWrapper } from '@/components/google-oauth-wrapper';
+import { NotificationProvider } from '@/components/notification-context';
+import { NotificationDisplay } from '@/components/notification-display';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -50,8 +52,11 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
           >
+            <NotificationProvider>
               {children}
               <Toaster />
+              <NotificationDisplay />
+            </NotificationProvider>
           </ThemeProvider>
           </GoogleOAuthWrapper>
         </ConvexClientProvider>

@@ -45,6 +45,13 @@ export default defineSchema({
     waterGoal: v.number(),
     // Diet preferences
     dietaryRestrictions: v.optional(v.string()),
+    // Notification preferences
+    notificationPreferences: v.optional(v.object({
+      mealReminders: v.boolean(),
+      goalNudges: v.boolean(),
+      creditResetAlert: v.boolean(),
+      coachInsights: v.boolean(),
+    })),
   }).index("by_userId", ["userId"]),
 
   // Meal logs
