@@ -48,7 +48,17 @@ function VerifyEmailContent() {
       })
       .catch((err: any) => {
         if (cancelled) return;
-        const msg = err?.message ?? 'Something went wrong. Please try again.';
+        let msg = 'Something went wrong. Please try again.';
+
+        const errMsg = err?.message ?? '';
+        if (errMsg.includes('expired') || errMsg.includes('Expired')) {
+          msg = 'This verification link has expired. Please sign up again to get a new link.';
+        } else if (errMsg.includes('invalid') || errMsg.includes('not found')) {
+          msg = 'This verification link is invalid. Please check your email and try the link again.';
+        } else if (errMsg.includes('already verified')) {
+          msg = 'This account has already been verified. Please sign in.';
+        }
+
         setErrorMessage(msg);
         setStatus('error');
       });
