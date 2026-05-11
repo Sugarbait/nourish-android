@@ -1751,11 +1751,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       const coachMessage: ChatMessage = { role: 'model', content: response.response };
       setChatMessages(prev => [...prev, coachMessage]);
 
-      if (notificationPrefs.coachInsights) {
-        const msg = response.response;
-        const preview = msg.length > 60 ? msg.substring(0, 60).trimEnd() + '…' : msg;
-        addNotification(`Coach: ${preview}`, 'info', 5000);
-      }
     } catch (error) {
       const oldMessages = chatMessages.slice(0, -1);
       toast({ title: 'Coach Error', description: (error as Error).message, variant: 'destructive' });
@@ -3047,7 +3042,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           )}
 
           {/* Messages */}
-          <div ref={chatScrollRef} className="flex-1 px-4 overflow-y-auto">
+          <div ref={chatScrollRef} className="flex-1 min-h-0 px-4 overflow-y-auto">
             <div className="space-y-4 py-4">
               {chatMessages.length === 0 && (
                 <div className="text-center space-y-4 py-6">
@@ -3121,8 +3116,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                   <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 border border-primary/20 relative">
                     <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
                   </div>
-                  <div className="bg-muted rounded-2xl px-3 py-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="bg-muted rounded-2xl px-3 py-2 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce [animation-delay:0ms]" />
+                    <span className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce [animation-delay:150ms]" />
+                    <span className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce [animation-delay:300ms]" />
                   </div>
                 </div>
               )}
