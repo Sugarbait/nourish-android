@@ -1077,6 +1077,18 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   useEffect(() => {
     const el = chatScrollRef.current;
+    if (!el) return;
+    const scrollToBottom = () => { el.scrollTop = el.scrollHeight; };
+    scrollToBottom();
+    const inner = el.firstElementChild;
+    if (!inner || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(scrollToBottom);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, [isChatbotOpen]);
+
+  useEffect(() => {
+    const el = chatScrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [chatMessages, isCoachLoading]);
 
