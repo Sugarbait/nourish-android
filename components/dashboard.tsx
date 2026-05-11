@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.78";
+const BUILD_VERSION = "0.2.79";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -970,9 +970,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   }, [isMounted, isGuest, notificationPrefs.goalNudges, intake, displayGoals, dateKey, addNotification]);
 
-  // Monthly credit reset notification (fires on the 1st of the month)
+  // Monthly credit reset notification (fires on the 1st of the month, subscribers only)
   useEffect(() => {
     if (!isMounted || isGuest || !notificationPrefs.creditResetAlert) return;
+    if (!credits.subscription?.active) return; // only subscribers get monthly resets
 
     const today = new Date();
     if (today.getDate() !== 1) return;
@@ -982,7 +983,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       notifiedRef.current.add(key);
       addNotification('Your monthly credits have been reset! You have a fresh 300 credits to use. 🎉', 'success', 6000);
     }
-  }, [isMounted, isGuest, notificationPrefs.creditResetAlert, addNotification]);
+  }, [isMounted, isGuest, notificationPrefs.creditResetAlert, credits.subscription?.active, addNotification]);
 
   // Reset scan state when the selected date changes so the upload button is always accessible
   useEffect(() => {

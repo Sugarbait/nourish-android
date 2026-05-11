@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Maps Stripe amount_total (cents) → credits to award — must match CREDIT_PACKAGES in lib/credits.ts
@@ -70,14 +70,16 @@ export const activateSubscription = mutation({
       .withIndex("by_userId", (q: any) => q.eq("userId", uid))
       .first();
 
+    const now = Date.now();
     if (existing) {
-      await ctx.db.patch(existing._id, { active: true, plan, expiresAt: expiry });
+      await ctx.db.patch(existing._id, { active: true, plan, expiresAt: expiry, lastCreditRefresh: now });
     } else {
       await ctx.db.insert("subscriptions", {
         userId: uid,
         plan,
         active: true,
         expiresAt: expiry,
+        lastCreditRefresh: now,
       });
     }
 
@@ -187,14 +189,16 @@ export const renewSubscription = mutation({
     const expiry   = Date.now() + (isYearly ? YEARLY_MS : MONTHLY_MS);
     const plan     = isYearly ? "yearly" : "monthly";
 
+    const now = Date.now();
     if (sub) {
-      await ctx.db.patch(sub._id, { active: true, plan, expiresAt: expiry });
+      await ctx.db.patch(sub._id, { active: true, plan, expiresAt: expiry, lastCreditRefresh: now });
     } else {
       await ctx.db.insert("subscriptions", {
         userId: user._id,
         plan,
         active: true,
         expiresAt: expiry,
+        lastCreditRefresh: now,
       });
     }
 
@@ -285,6 +289,60 @@ export const getCreditsForSync = query({
     } catch {
       return null;
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Cron: refresh monthly credits for active yearly subscribers.
+// Stripe only sends an invoice once per year for yearly plans, so without
+// this cron yearly users would not get the advertised 300 credits/month.
+// Runs daily; for each active yearly sub whose lastCreditRefresh is ≥30 days
+// old, resets credits to 300 (purchased pack credits untouched).
+// ---------------------------------------------------------------------------
+export const refreshYearlySubscribers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const cutoff = now - MONTHLY_MS;
+
+    const yearlySubs = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_active_plan", (q) => q.eq("active", true).eq("plan", "yearly"))
+      .collect();
+
+    let refreshed = 0;
+    for (const sub of yearlySubs) {
+      const last = sub.lastCreditRefresh ?? 0;
+      if (last > cutoff) continue; // refreshed within last 30 days
+
+      // Skip if subscription has actually expired
+      if (sub.expiresAt && sub.expiresAt < now) continue;
+
+      const credits = await ctx.db
+        .query("credits")
+        .withIndex("by_userId", (q: any) => q.eq("userId", sub.userId))
+        .first();
+
+      if (credits) {
+        await ctx.db.patch(credits._id, { credits: SUBSCRIPTION_CREDITS });
+      } else {
+        const today = new Date().toISOString().slice(0, 10);
+        await ctx.db.insert("credits", {
+          userId: sub.userId,
+          credits: SUBSCRIPTION_CREDITS,
+          purchasedCredits: 0,
+          lastFreeDate: today,
+          dailyFreeMealUsed: false,
+          dailyFreeAIUsed: false,
+        });
+      }
+
+      await ctx.db.patch(sub._id, { lastCreditRefresh: now });
+      refreshed++;
+    }
+
+    console.log("[stripe] Yearly credit refresh complete. Refreshed:", refreshed);
+    return { refreshed };
   },
 });
 

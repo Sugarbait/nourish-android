@@ -106,7 +106,10 @@ export default defineSchema({
     plan: v.union(v.literal("monthly"), v.literal("yearly"), v.null()),
     active: v.boolean(),
     expiresAt: v.optional(v.number()), // Unix timestamp ms
-  }).index("by_userId", ["userId"]),
+    lastCreditRefresh: v.optional(v.number()), // ms — when subscription credits were last refreshed (used by yearly cron)
+  })
+    .index("by_userId", ["userId"])
+    .index("by_active_plan", ["active", "plan"]),
 
   // Water logs
   waterLogs: defineTable({

@@ -38,3 +38,4 @@ yarn-error.log*
 
 # Turbopack
 .turbo
+.claude/worktrees/
