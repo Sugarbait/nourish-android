@@ -6,7 +6,8 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Leaf, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 
 function VerifyEmailContent() {
@@ -66,11 +67,8 @@ function VerifyEmailContent() {
 
           <div className="px-8 py-10 text-center">
             {/* Logo */}
-            <div className="flex items-center justify-center gap-2 mb-8">
-              <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
-                <Leaf className="h-5 w-5 text-primary" />
-              </div>
-              <span className="font-bold text-base">Nourish</span>
+            <div className="flex items-center justify-center mb-8">
+              <Image src="/logo.png" alt="Nourish" width={140} height={40} priority />
             </div>
 
             {status === 'loading' && (
