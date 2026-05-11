@@ -410,6 +410,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const resultsRef = useRef<HTMLDivElement>(null);
   const healthAnalysisRef = useRef<HTMLDivElement>(null);
   const calorieRef = useRef<HTMLParagraphElement>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   
   const [isMounted, setIsMounted] = useState(false);
   // selectedDate and dateKey moved above useQuery hooks
@@ -1072,6 +1073,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
     syncHistory();
   }, [isMounted, isGuest, userId, history, convexSyncBatchMeals, convexSyncBatchWater]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isCoachLoading]);
 
   const progressData = useMemo(() => {
     if (!recentMeals) return [];
@@ -3119,6 +3124,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                   </div>
                 </div>
               )}
+              <div ref={chatBottomRef} />
             </div>
           </ScrollArea>
 
