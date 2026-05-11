@@ -5,11 +5,11 @@ import { v } from "convex/values";
 
 // Price IDs
 const STRIPE_PRICES: Record<string, string> = {
-  subscription:        "price_1TIBSQJodftDQSSFFtgp0U7r",
-  subscription_yearly: "price_1TO8ZGJodftDQSSFzZKjT5px",
-  starter:             "price_1TIBVLJodftDQSSFfLLMr6QE",
-  value:               "price_1TIBY2JodftDQSSFXF5N9ZLn",
-  pro:                 "price_1TIBd9JodftDQSSFGsriUBlI",
+  subscription:        "price_1TRNFt2aieB6RS0mySbIRdhI", // $5.99/month
+  subscription_yearly: "price_1TRNIw2aieB6RS0mkVaiTzk0", // $54.99/year
+  starter:             "price_1TRNHJ2aieB6RS0mAbOIFhUu", // $1.99
+  value:               "price_1TRNLA2aieB6RS0mNHGMJBQf", // $4.99
+  pro:                 "price_1TRNne2aieB6RS0mnroiTobX", // $9.99
 };
 
 /** Create a Stripe Checkout Session using plain fetch (no SDK) */
