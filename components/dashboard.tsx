@@ -411,6 +411,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const healthAnalysisRef = useRef<HTMLDivElement>(null);
   const calorieRef = useRef<HTMLParagraphElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   
   const [isMounted, setIsMounted] = useState(false);
   // selectedDate and dateKey moved above useQuery hooks
@@ -1075,7 +1076,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   }, [isMounted, isGuest, userId, history, convexSyncBatchMeals, convexSyncBatchWater]);
 
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = chatScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [chatMessages, isCoachLoading]);
 
   const progressData = useMemo(() => {
@@ -3045,7 +3047,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           )}
 
           {/* Messages */}
-          <ScrollArea className="flex-1 px-4">
+          <div ref={chatScrollRef} className="flex-1 px-4 overflow-y-auto">
             <div className="space-y-4 py-4">
               {chatMessages.length === 0 && (
                 <div className="text-center space-y-4 py-6">
@@ -3126,7 +3128,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               )}
               <div ref={chatBottomRef} />
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Input */}
           <div className="border-t px-4 pt-3 pb-2 shrink-0">
