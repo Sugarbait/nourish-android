@@ -7,12 +7,16 @@ import { v } from "convex/values";
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
+type VerifyResult =
+  | { success: true; email: string }
+  | { success: false; error: string; locked?: boolean; unlockAt?: number; msRemaining?: number; attemptsRemaining?: number };
+
 export const verifyAdmin = action({
   args: {
     email: v.string(),
     password: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<VerifyResult> => {
     const now = Date.now();
     const stats = await ctx.runQuery(internal.adminAuth._getFailureStats, {
       email: args.email,
