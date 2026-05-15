@@ -3390,7 +3390,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           </div>
 
           {/* Input */}
-          <div className="border-t px-4 pt-3 pb-3 shrink-0 bg-background">
+          <div className="border-t px-4 pt-3 pb-8 shrink-0 bg-background">
             <form onSubmit={handleCoachSubmit} className="flex items-center gap-2">
               <Input
                 placeholder="Ask your coach anything..."
