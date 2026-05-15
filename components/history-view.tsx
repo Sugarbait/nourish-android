@@ -140,41 +140,51 @@ function CalendarHeatmap({
         Daily Breakdown
       </h3>
       <Card>
-        <CardContent className="pt-4 pb-3 px-3 overflow-x-auto">
-          <div className="flex gap-1" style={{ minWidth: 'max-content' }}>
-            {/* Day-of-week labels column */}
-            <div className="flex flex-col gap-1 mr-1 pt-5">
-              {DAY_LABELS.map((l) => (
-                <div key={l} className="h-7 flex items-center">
-                  <span className="text-[10px] text-muted-foreground w-6">{l[0]}</span>
-                </div>
-              ))}
-            </div>
-            {/* Week columns */}
+        <CardContent className="pt-4 pb-3 px-3">
+          {/* CSS grid: first column = day labels, rest = one column per week, fills full width */}
+          <div
+            className="grid gap-1"
+            style={{ gridTemplateColumns: `20px repeat(${weeks.length}, 1fr)` }}
+          >
+            {/* Header row: empty label cell + week labels */}
+            <div className="h-5" />
             {weeks.map((week, wi) => {
               const firstReal = week.find(Boolean);
               const label = firstReal ? format(new Date(firstReal.date + 'T00:00:00'), 'MMM d') : '';
+              const showLabel = wi === 0 || (firstReal && new Date(firstReal.date + 'T00:00:00').getDate() <= 7);
               return (
-                <div key={wi} className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted-foreground h-5 flex items-end mb-0 whitespace-nowrap">
-                    {wi === 0 || (firstReal && new Date(firstReal.date + 'T00:00:00').getDate() <= 7) ? label : ''}
+                <div key={wi} className="h-5 flex items-end">
+                  <span className="text-[9px] text-muted-foreground leading-none truncate">
+                    {showLabel ? label : ''}
                   </span>
-                  {week.map((day, di) => {
-                    if (!day) return <div key={di} className="h-7 w-7 rounded-sm" />;
-                    const pct = day.calories / goalCals;
-                    const isSelected = day.date === selectedDate;
-                    return (
-                      <button
-                        key={day.date}
-                        onClick={() => onSelectDay(day.date)}
-                        title={`${format(new Date(day.date + 'T00:00:00'), 'EEE MMM d')} · ${day.calories} kcal`}
-                        className={`h-7 w-7 rounded-sm transition-all hover:scale-110 hover:ring-2 hover:ring-primary/60 ${heatColor(pct)} ${isSelected ? 'ring-2 ring-primary scale-110' : ''}`}
-                      />
-                    );
-                  })}
                 </div>
               );
             })}
+
+            {/* 7 day rows */}
+            {DAY_LABELS.map((dayLabel, di) => (
+              <>
+                {/* Day label */}
+                <div key={`label-${di}`} className="flex items-center">
+                  <span className="text-[10px] text-muted-foreground">{dayLabel[0]}</span>
+                </div>
+                {/* One cell per week for this day */}
+                {weeks.map((week, wi) => {
+                  const day = week[di];
+                  if (!day) return <div key={wi} className="rounded-sm aspect-square" />;
+                  const pct = day.calories / goalCals;
+                  const isSelected = day.date === selectedDate;
+                  return (
+                    <button
+                      key={wi}
+                      onClick={() => onSelectDay(day.date)}
+                      title={`${format(new Date(day.date + 'T00:00:00'), 'EEE MMM d')} · ${day.calories} kcal`}
+                      className={`rounded-sm aspect-square w-full transition-all hover:ring-2 hover:ring-primary/60 ${heatColor(pct)} ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                    />
+                  );
+                })}
+              </>
+            ))}
           </div>
           {/* Legend */}
           <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/40">
