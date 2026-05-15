@@ -2671,7 +2671,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                     />
                                                 </div>
                                             )}
-                                            <ul className="space-y-2 flex-1 min-w-0">
+                                            <div className="flex-1 min-w-0 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-muted-foreground whitespace-nowrap">Meal type:</span>
+                                                <Select value={meal.name} onValueChange={(val) => updateMealType(meal.id, val as MealType)}>
+                                                    <SelectTrigger className="h-7 flex-1 text-xs">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Breakfast">Breakfast</SelectItem>
+                                                        <SelectItem value="Lunch">Lunch</SelectItem>
+                                                        <SelectItem value="Dinner">Dinner</SelectItem>
+                                                        <SelectItem value="Snacks">Snacks</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <ul className="space-y-2">
                                             {meal.items.map((item, index) => (
                                                 <li key={index} className="flex justify-between items-center text-sm gap-2">
                                                     {editingFoodItem?.mealId === meal.id && editingFoodItem?.itemIndex === index ? (
@@ -2715,6 +2730,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 </li>
                                             ))}
                                             </ul>
+                                            </div>
                                         </div>
                                         {meal.healthAnalysis && (
                                             <details className="mt-3 group">
@@ -2738,20 +2754,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 </div>
                                             </details>
                                         )}
-                                        <div className="mt-3 flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground whitespace-nowrap">Meal type:</span>
-                                            <Select value={meal.name} onValueChange={(val) => updateMealType(meal.id, val as MealType)}>
-                                                <SelectTrigger className="h-8 w-[130px] text-xs">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Breakfast">Breakfast</SelectItem>
-                                                    <SelectItem value="Lunch">Lunch</SelectItem>
-                                                    <SelectItem value="Dinner">Dinner</SelectItem>
-                                                    <SelectItem value="Snacks">Snacks</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button
