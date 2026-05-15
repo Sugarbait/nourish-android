@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as adminAuth from "../adminAuth.js";
 import type * as adminBroadcast from "../adminBroadcast.js";
+import type * as adminStats from "../adminStats.js";
 import type * as adminTotp from "../adminTotp.js";
 import type * as adminTotpDb from "../adminTotpDb.js";
 import type * as aiMessages from "../aiMessages.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   adminAuth: typeof adminAuth;
   adminBroadcast: typeof adminBroadcast;
+  adminStats: typeof adminStats;
   adminTotp: typeof adminTotp;
   adminTotpDb: typeof adminTotpDb;
   aiMessages: typeof aiMessages;
