@@ -8,6 +8,8 @@ import {
   Droplets,
   Flame,
   TrendingUp,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -84,118 +86,125 @@ interface HistoryViewProps {
   setHistoryDrillDate: (d: string | null) => void;
 }
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-function heatColor(pct: number): string {
-  if (pct <= 0) return 'bg-muted/30';
-  if (pct < 0.5) return 'bg-emerald-900/60';
-  if (pct < 0.8) return 'bg-emerald-600/80';
-  if (pct < 1.0) return 'bg-emerald-400';
-  if (pct < 1.2) return 'bg-orange-400';
-  return 'bg-red-500';
-}
-
-function CalendarHeatmap({
+function WeekAccordions({
   dailyData,
   goals,
   onSelectDay,
-  selectedDate,
 }: {
   dailyData: HistoryDayData[];
   goals: DailyGoals;
   onSelectDay: (date: string) => void;
-  selectedDate: string | null;
 }) {
-  const byDate = useMemo(() => {
-    const m: Record<string, HistoryDayData> = {};
-    dailyData.forEach((d) => (m[d.date] = d));
-    return m;
+  // Group days into weeks (Mon–Sun)
+  const weeks = useMemo(() => {
+    const sorted = [...dailyData].sort((a, b) => b.date.localeCompare(a.date)); // newest first
+    const groups: HistoryDayData[][] = [];
+    let current: HistoryDayData[] = [];
+    let currentWeekMonday = '';
+    for (const day of sorted) {
+      const d = new Date(day.date + 'T00:00:00');
+      const dow = d.getDay(); // 0=Sun
+      const diff = (dow === 0 ? -6 : 1 - dow);
+      const monday = new Date(d);
+      monday.setDate(d.getDate() + diff);
+      const mondayStr = format(monday, 'yyyy-MM-dd');
+      if (mondayStr !== currentWeekMonday) {
+        if (current.length) groups.push(current);
+        current = [day];
+        currentWeekMonday = mondayStr;
+      } else {
+        current.push(day);
+      }
+    }
+    if (current.length) groups.push(current);
+    return groups;
   }, [dailyData]);
 
-  // Build weeks: pad so the first day lands on correct weekday column
-  const weeks = useMemo(() => {
-    if (!dailyData.length) return [];
-    const sorted = [...dailyData].sort((a, b) => a.date.localeCompare(b.date));
-    const firstDate = new Date(sorted[0].date + 'T00:00:00');
-    const lastDate = new Date(sorted[sorted.length - 1].date + 'T00:00:00');
-    // pad start to Sunday
-    const startPad = firstDate.getDay();
-    // pad end to Saturday
-    const endPad = 6 - lastDate.getDay();
-    const cells: (HistoryDayData | null)[] = [
-      ...Array(startPad).fill(null),
-      ...sorted,
-      ...Array(endPad).fill(null),
-    ];
-    const result: (HistoryDayData | null)[][] = [];
-    for (let i = 0; i < cells.length; i += 7) result.push(cells.slice(i, i + 7));
-    return result;
-  }, [dailyData]);
+  const [openWeeks, setOpenWeeks] = useState<Set<number>>(() => new Set([0]));
+  const toggle = (i: number) => setOpenWeeks(prev => {
+    const next = new Set(prev);
+    next.has(i) ? next.delete(i) : next.add(i);
+    return next;
+  });
 
   const goalCals = Math.max(goals.calories, 1);
 
   return (
     <div>
-      <h3 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wide">
-        Daily Breakdown
-      </h3>
-      <Card>
-        <CardContent className="pt-4 pb-3 px-3">
-          {/* CSS grid: first column = day labels, rest = one column per week, fills full width */}
-          <div
-            className="grid gap-1"
-            style={{ gridTemplateColumns: `20px repeat(${weeks.length}, 1fr)` }}
-          >
-            {/* Header row: empty label cell + week labels */}
-            <div className="h-5" />
-            {weeks.map((week, wi) => {
-              const firstReal = week.find(Boolean);
-              const label = firstReal ? format(new Date(firstReal.date + 'T00:00:00'), 'MMM d') : '';
-              const showLabel = wi === 0 || (firstReal && new Date(firstReal.date + 'T00:00:00').getDate() <= 7);
-              return (
-                <div key={wi} className="h-5 flex items-end">
-                  <span className="text-[9px] text-muted-foreground leading-none truncate">
-                    {showLabel ? label : ''}
-                  </span>
-                </div>
-              );
-            })}
+      <h3 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wide">Daily Breakdown</h3>
+      <div className="space-y-2">
+        {weeks.map((week, wi) => {
+          const isOpen = openWeeks.has(wi);
+          const totalCals = week.reduce((s, d) => s + d.calories, 0);
+          const totalProtein = week.reduce((s, d) => s + d.protein, 0);
+          const activeDays = week.filter(d => d.calories > 0).length;
+          const newest = week[0];
+          const oldest = week[week.length - 1];
+          const weekLabel = newest.date === oldest.date
+            ? format(new Date(newest.date + 'T00:00:00'), 'MMM d')
+            : `${format(new Date(oldest.date + 'T00:00:00'), 'MMM d')} – ${format(new Date(newest.date + 'T00:00:00'), 'MMM d')}`;
 
-            {/* 7 day rows */}
-            {DAY_LABELS.map((dayLabel, di) => (
-              <>
-                {/* Day label */}
-                <div key={`label-${di}`} className="flex items-center">
-                  <span className="text-[10px] text-muted-foreground">{dayLabel[0]}</span>
+          return (
+            <Card key={wi} className="overflow-hidden">
+              {/* Week header row — always visible */}
+              <button
+                className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
+                onClick={() => toggle(wi)}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <div className="text-left min-w-0">
+                    <p className="font-semibold text-sm">{weekLabel}</p>
+                    <p className="text-xs text-muted-foreground">{activeDays} active day{activeDays !== 1 ? 's' : ''}</p>
+                  </div>
                 </div>
-                {/* One cell per week for this day */}
-                {weeks.map((week, wi) => {
-                  const day = week[di];
-                  if (!day) return <div key={wi} className="rounded-sm aspect-square" />;
-                  const pct = day.calories / goalCals;
-                  const isSelected = day.date === selectedDate;
-                  return (
-                    <button
-                      key={wi}
-                      onClick={() => onSelectDay(day.date)}
-                      title={`${format(new Date(day.date + 'T00:00:00'), 'EEE MMM d')} · ${day.calories} kcal`}
-                      className={`rounded-sm aspect-square w-full transition-all hover:ring-2 hover:ring-primary/60 ${heatColor(pct)} ${isSelected ? 'ring-2 ring-primary' : ''}`}
-                    />
-                  );
-                })}
-              </>
-            ))}
-          </div>
-          {/* Legend */}
-          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/40">
-            <span className="text-[10px] text-muted-foreground">Less</span>
-            {[0, 0.4, 0.7, 0.95, 1.1, 1.3].map((p) => (
-              <div key={p} className={`h-3 w-3 rounded-sm ${heatColor(p)}`} />
-            ))}
-            <span className="text-[10px] text-muted-foreground">Over goal</span>
-          </div>
-        </CardContent>
-      </Card>
+                <div className="flex items-center gap-4 shrink-0 text-right">
+                  <div>
+                    <p className="font-black text-orange-400 text-base leading-none">{totalCals.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">kcal total</p>
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="font-bold text-blue-400 text-sm leading-none">{Math.round(totalProtein)}g</p>
+                    <p className="text-[10px] text-muted-foreground">protein</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Expanded day rows */}
+              {isOpen && (
+                <div className="border-t border-border/50">
+                  {week.map((day) => {
+                    const pct = Math.min((day.calories / goalCals) * 100, 100);
+                    return (
+                      <button
+                        key={day.date}
+                        onClick={() => onSelectDay(day.date)}
+                        className={`w-full px-4 py-2.5 flex items-center gap-3 hover:bg-muted/40 active:bg-muted/60 transition-colors border-b border-border/30 last:border-0 ${day.calories === 0 ? 'opacity-40' : ''}`}
+                      >
+                        <div className="w-14 text-left shrink-0">
+                          <p className="text-xs font-semibold">{format(new Date(day.date + 'T00:00:00'), 'EEE')}</p>
+                          <p className="text-[10px] text-muted-foreground">{format(new Date(day.date + 'T00:00:00'), 'MMM d')}</p>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                            <div className="h-full bg-orange-400 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{day.mealCount} meal{day.mealCount !== 1 ? 's' : ''} · {day.water}💧</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="font-bold text-sm">{day.calories > 0 ? day.calories.toLocaleString() : '—'}</p>
+                          <p className="text-[10px] text-muted-foreground">kcal</p>
+                        </div>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -629,12 +638,11 @@ export function HistoryView({
                   </Card>
                 )}
 
-                {/* Calendar heatmap — tap any day to drill in */}
-                <CalendarHeatmap
+                {/* Week accordions — tap week to expand, tap day to drill in */}
+                <WeekAccordions
                   dailyData={dailyData}
                   goals={goals}
                   onSelectDay={setHistoryDrillDate}
-                  selectedDate={historyDrillDate}
                 />
 
                 {activeDays.length === 0 && (
