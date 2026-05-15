@@ -13,15 +13,19 @@ export const verifyAdmin = action({
     password: v.string(),
   },
   handler: async (ctx, args) => {
-    const attempts = await ctx.runQuery(internal.adminAuth._getRecentFailures, {
+    const now = Date.now();
+    const stats = await ctx.runQuery(internal.adminAuth._getFailureStats, {
       email: args.email,
-      since: Date.now() - WINDOW_MS,
+      since: now - WINDOW_MS,
     });
-    if (attempts >= MAX_ATTEMPTS) {
+    if (stats.count >= MAX_ATTEMPTS) {
+      const unlockAt = (stats.oldestAt ?? now) + WINDOW_MS;
       return {
         success: false,
         locked: true,
-        error: "Too many failed attempts. Please wait 15 minutes and try again.",
+        unlockAt,
+        msRemaining: Math.max(0, unlockAt - now),
+        error: "Too many failed attempts. Please wait and try again.",
       };
     }
 
@@ -42,9 +46,25 @@ export const verifyAdmin = action({
     if (!match) {
       await ctx.runMutation(internal.adminAuth._recordFailure, {
         email: args.email,
-        at: Date.now(),
+        at: now,
       });
-      return { success: false, error: "Invalid credentials" };
+      const newCount = stats.count + 1;
+      const remaining = Math.max(0, MAX_ATTEMPTS - newCount);
+      if (remaining === 0) {
+        const unlockAt = (stats.oldestAt ?? now) + WINDOW_MS;
+        return {
+          success: false,
+          locked: true,
+          unlockAt,
+          msRemaining: Math.max(0, unlockAt - now),
+          error: "Too many failed attempts. Please wait and try again.",
+        };
+      }
+      return {
+        success: false,
+        attemptsRemaining: remaining,
+        error: "Invalid credentials",
+      };
     }
 
     await ctx.runMutation(internal.adminAuth._clearFailures, { email: args.email });

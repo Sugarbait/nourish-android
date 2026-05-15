@@ -8,7 +8,7 @@ import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ShieldCheck, Lock } from 'lucide-react';
 
 function AdminSignInForm() {
   const router = useRouter();
@@ -22,6 +22,9 @@ function AdminSignInForm() {
   const [verifiedEmail, setVerifiedEmail] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState('');
+  const [lockoutUnlockAt, setLockoutUnlockAt] = useState<number | null>(null);
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
   const [isLoading, setIsLoading] = useState(false);
   const totpRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +49,19 @@ function AdminSignInForm() {
     if (step === 'totp') setTimeout(() => totpRef.current?.focus(), 100);
   }, [step]);
 
+  // Tick clock every second while locked out so countdown updates
+  useEffect(() => {
+    if (!lockoutUnlockAt) return;
+    const id = setInterval(() => {
+      setNow(Date.now());
+      if (Date.now() >= lockoutUnlockAt) {
+        setLockoutUnlockAt(null);
+        setError('');
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [lockoutUnlockAt]);
+
   useEffect(() => {
     if (!verifiedEmail || totpStatus === undefined) return;
     if (totpStatus.enabled) {
@@ -66,13 +82,21 @@ function AdminSignInForm() {
   const handleCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setAttemptsRemaining(null);
     setIsLoading(true);
     try {
-      const result = await verifyAdmin({ email, password });
+      const result: any = await verifyAdmin({ email, password });
       if (!result.success) {
-        setError((result as any).locked
-          ? 'Too many failed attempts. Please wait 15 minutes and try again.'
-          : 'Invalid admin credentials. Please try again.');
+        if (result.locked && result.unlockAt) {
+          setLockoutUnlockAt(result.unlockAt);
+          setNow(Date.now());
+          setError('Too many failed attempts.');
+        } else {
+          setError('Invalid admin credentials. Please try again.');
+          if (typeof result.attemptsRemaining === 'number') {
+            setAttemptsRemaining(result.attemptsRemaining);
+          }
+        }
         setIsLoading(false);
         return;
       }
@@ -82,6 +106,11 @@ function AdminSignInForm() {
       setIsLoading(false);
     }
   };
+
+  const isLocked = lockoutUnlockAt !== null && now < lockoutUnlockAt;
+  const lockoutSecondsLeft = isLocked ? Math.ceil((lockoutUnlockAt! - now) / 1000) : 0;
+  const lockoutMins = Math.floor(lockoutSecondsLeft / 60);
+  const lockoutSecs = lockoutSecondsLeft % 60;
 
   const handleTotp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,18 +219,36 @@ function AdminSignInForm() {
           autoComplete="current-password"
         />
       </div>
-      {error && (
+      {isLocked ? (
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700 text-red-800 dark:text-red-300 rounded-lg text-sm flex gap-3">
+          <Lock className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-bold mb-1">Account Temporarily Locked</p>
+            <p className="text-xs mb-2">Too many failed sign-in attempts. For security, this account is locked.</p>
+            <p className="text-xs font-mono">
+              Unlocks in <span className="font-bold text-base">{lockoutMins}:{lockoutSecs.toString().padStart(2, '0')}</span>
+            </p>
+          </div>
+        </div>
+      ) : error ? (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg text-sm flex gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <div className="flex-1">
+            <span>{error}</span>
+            {attemptsRemaining !== null && attemptsRemaining > 0 && (
+              <span className="block mt-1 text-xs font-medium">
+                {attemptsRemaining} attempt{attemptsRemaining !== 1 ? 's' : ''} remaining before lockout.
+              </span>
+            )}
+          </div>
         </div>
-      )}
+      ) : null}
       <Button
         type="submit"
         className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-        disabled={isLoading}
+        disabled={isLoading || isLocked}
       >
-        {isLoading ? 'Signing in...' : 'Continue →'}
+        {isLocked ? `Locked (${lockoutMins}:${lockoutSecs.toString().padStart(2, '0')})` : isLoading ? 'Signing in...' : 'Continue →'}
       </Button>
     </form>
   );

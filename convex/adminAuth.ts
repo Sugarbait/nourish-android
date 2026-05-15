@@ -13,6 +13,19 @@ export const _getRecentFailures = internalQuery({
   },
 });
 
+export const _getFailureStats = internalQuery({
+  args: { email: v.string(), since: v.number() },
+  handler: async (ctx, { email, since }) => {
+    const rows = await ctx.db
+      .query("adminLoginAttempts")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .collect();
+    const recent = rows.filter((r) => r.at >= since);
+    const oldestAt = recent.length ? Math.min(...recent.map((r) => r.at)) : null;
+    return { count: recent.length, oldestAt };
+  },
+});
+
 export const _recordFailure = internalMutation({
   args: { email: v.string(), at: v.number() },
   handler: async (ctx, { email, at }) => {
