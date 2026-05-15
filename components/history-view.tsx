@@ -440,7 +440,7 @@ export function HistoryView({
                   return (
                     <Card key={idx}>
                       <CardContent className="pt-4 pb-4">
-                        <div className="flex items-start gap-3 mb-3">
+                        <div className="flex items-start gap-3">
                           {imageUrl && (
                             <div className="rounded-2xl overflow-hidden flex-shrink-0 w-24 aspect-square">
                               <img
@@ -451,30 +451,32 @@ export function HistoryView({
                               />
                             </div>
                           )}
-                          <div className="flex items-start justify-between gap-2 flex-1 min-w-0">
-                            <div className="min-w-0">
-                              <p className="font-semibold capitalize truncate">{name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {items.length} item{items.length !== 1 ? 's' : ''}
-                              </p>
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-semibold capitalize truncate">{name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {items.length} item{items.length !== 1 ? 's' : ''}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="font-bold text-orange-400">{Math.round(calories)} kcal</p>
+                              </div>
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="font-bold text-orange-400">{Math.round(calories)} kcal</p>
+                            <div className="grid grid-cols-3 gap-1.5 text-center">
+                              <div className="bg-blue-500/10 rounded-lg py-1">
+                                <p className="text-sm font-bold text-blue-400">{Math.round(protein)}g</p>
+                                <p className="text-[10px] text-muted-foreground">Protein</p>
+                              </div>
+                              <div className="bg-yellow-500/10 rounded-lg py-1">
+                                <p className="text-sm font-bold text-yellow-400">{Math.round(carbs)}g</p>
+                                <p className="text-[10px] text-muted-foreground">Carbs</p>
+                              </div>
+                              <div className="bg-red-500/10 rounded-lg py-1">
+                                <p className="text-sm font-bold text-red-400">{Math.round(fat)}g</p>
+                                <p className="text-[10px] text-muted-foreground">Fat</p>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 text-center">
-                          <div className="bg-blue-500/10 rounded-lg py-1.5">
-                            <p className="text-sm font-bold text-blue-400">{Math.round(protein)}g</p>
-                            <p className="text-[10px] text-muted-foreground">Protein</p>
-                          </div>
-                          <div className="bg-yellow-500/10 rounded-lg py-1.5">
-                            <p className="text-sm font-bold text-yellow-400">{Math.round(carbs)}g</p>
-                            <p className="text-[10px] text-muted-foreground">Carbs</p>
-                          </div>
-                          <div className="bg-red-500/10 rounded-lg py-1.5">
-                            <p className="text-sm font-bold text-red-400">{Math.round(fat)}g</p>
-                            <p className="text-[10px] text-muted-foreground">Fat</p>
                           </div>
                         </div>
                         {items.length > 0 && (
