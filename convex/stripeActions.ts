@@ -3,6 +3,21 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 
+// Validate user-supplied redirect URLs against the APP_URL allowlist (comma-separated origins).
+function isAllowedRedirect(url: string | undefined | null): boolean {
+  if (!url) return false;
+  const allowed = (process.env.APP_URL ?? "").split(",").map(s => s.trim()).filter(Boolean);
+  if (allowed.length === 0) return false;
+  try {
+    const parsed = new URL(url);
+    return allowed.some(origin => {
+      try { return parsed.origin === new URL(origin).origin; } catch { return false; }
+    });
+  } catch {
+    return false;
+  }
+}
+
 // Price IDs
 const STRIPE_PRICES: Record<string, string> = {
   subscription:        "price_1TRNFt2aieB6RS0mySbIRdhI", // $5.99/month
@@ -28,6 +43,10 @@ export const createCheckoutSession = action({
 
       const priceId = STRIPE_PRICES[args.priceKey];
       if (!priceId) return { url: null, error: `Unknown price key: ${args.priceKey}` };
+
+      if (!isAllowedRedirect(args.successUrl) || !isAllowedRedirect(args.cancelUrl)) {
+        return { url: null, error: "Invalid redirect URL" };
+      }
 
       const mode = args.priceKey.startsWith("subscription") ? "subscription" : "payment";
 
@@ -76,6 +95,10 @@ export const getBillingPortalUrl = action({
   handler: async (_ctx, args): Promise<{ url: string }> => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error("STRIPE_SECRET_KEY not set in Convex environment.");
+
+    if (!isAllowedRedirect(args.returnUrl)) {
+      throw new Error("Invalid returnUrl");
+    }
 
     const params = new URLSearchParams({
       customer:   args.stripeCustomerId,

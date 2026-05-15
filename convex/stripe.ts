@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, internalMutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Maps Stripe amount_total (cents) → credits to award — must match CREDIT_PACKAGES in lib/credits.ts
@@ -42,7 +42,7 @@ async function resolveUserId(
 // ---------------------------------------------------------------------------
 // Called by webhook on checkout.session.completed with mode === 'subscription'
 // ---------------------------------------------------------------------------
-export const activateSubscription = mutation({
+export const activateSubscription = internalMutation({
   args: {
     userId:           v.string(),
     customerEmail:    v.string(),
@@ -112,7 +112,7 @@ export const activateSubscription = mutation({
 // ---------------------------------------------------------------------------
 // Called by webhook on checkout.session.completed with mode === 'payment'
 // ---------------------------------------------------------------------------
-export const addCreditPack = mutation({
+export const addCreditPack = internalMutation({
   args: {
     userId:           v.string(),
     customerEmail:    v.string(),
@@ -167,7 +167,7 @@ export const addCreditPack = mutation({
 // Called by webhook on invoice.payment_succeeded (billing_reason = subscription_cycle)
 // Adds 300 renewal credits and extends expiry by 30 days (monthly) or 365 (yearly).
 // ---------------------------------------------------------------------------
-export const renewSubscription = mutation({
+export const renewSubscription = internalMutation({
   args: { stripeCustomerId: v.string() },
   handler: async (ctx, { stripeCustomerId }) => {
     const user = await ctx.db
@@ -230,7 +230,7 @@ export const renewSubscription = mutation({
 // ---------------------------------------------------------------------------
 // Called by webhook on customer.subscription.deleted (cancellation)
 // ---------------------------------------------------------------------------
-export const deactivateSubscription = mutation({
+export const deactivateSubscription = internalMutation({
   args: { stripeCustomerId: v.string() },
   handler: async (ctx, { stripeCustomerId }) => {
     const user = await ctx.db

@@ -130,7 +130,7 @@ Before deploying:
 
 ## Supported Models
 
-Current: `gemini-3.1-flash-lite-preview`  
+Current: `gemini-3.1-flash-lite`  
 - Fast response time
 - Optimized for food recognition
 - Supports image and text analysis

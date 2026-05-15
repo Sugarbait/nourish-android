@@ -85,7 +85,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_userId_date", ["userId", "date"])
-    .index("by_userId", ["userId"]),
+    .index("by_userId", ["userId"])
+    .index("by_userId_localId", ["userId", "localId"]),
 
   // Credits tracking (replaces localStorage)
   credits: defineTable({

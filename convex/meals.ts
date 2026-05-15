@@ -75,13 +75,12 @@ export const getMealsForPastYear = query({
     const startDateStr = oneYearAgo.toISOString().split('T')[0];
     const endDateStr = today.toISOString().split('T')[0];
 
-    // Fetch all meals for user and filter by date range
-    const allMeals = await ctx.db
+    return await ctx.db
       .query("meals")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .withIndex("by_userId_date", (q) =>
+        q.eq("userId", userId).gte("date", startDateStr).lte("date", endDateStr)
+      )
       .collect();
-
-    return allMeals.filter((meal) => meal.date >= startDateStr && meal.date <= endDateStr);
   },
 });
 
@@ -98,11 +97,12 @@ export const deleteMeal = mutation({
 export const deleteMealByLocalId = mutation({
   args: { userId: v.id("users"), localId: v.string() },
   handler: async (ctx, { userId, localId }) => {
-    const meals = await ctx.db
+    const match = await ctx.db
       .query("meals")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    const match = meals.find((m) => m.localId === localId);
+      .withIndex("by_userId_localId", (q) =>
+        q.eq("userId", userId).eq("localId", localId)
+      )
+      .first();
     if (match) await ctx.db.delete(match._id);
   },
 });
@@ -120,11 +120,12 @@ export const updateMealItem = mutation({
     fat: v.number(),
   },
   handler: async (ctx, { userId, localId, itemIndex, name, calories, protein, carbs, fat }) => {
-    const meals = await ctx.db
+    const meal = await ctx.db
       .query("meals")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    const meal = meals.find((m) => m.localId === localId);
+      .withIndex("by_userId_localId", (q) =>
+        q.eq("userId", userId).eq("localId", localId)
+      )
+      .first();
     if (!meal) return; // not yet synced — skip
     const updatedItems = meal.items.map((item, idx) =>
       idx === itemIndex ? { ...item, name, calories, protein, carbs, fat } : item
@@ -152,11 +153,12 @@ export const updateMealType = mutation({
     name: v.string(),
   },
   handler: async (ctx, { userId, localId, mealType, name }) => {
-    const meals = await ctx.db
+    const meal = await ctx.db
       .query("meals")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    const meal = meals.find((m) => m.localId === localId);
+      .withIndex("by_userId_localId", (q) =>
+        q.eq("userId", userId).eq("localId", localId)
+      )
+      .first();
     if (!meal) return;
     await ctx.db.patch(meal._id, { mealType, name });
   },

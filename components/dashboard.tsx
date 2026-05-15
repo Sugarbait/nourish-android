@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.79";
+const BUILD_VERSION = "0.2.82";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -211,7 +211,7 @@ type UserProfile = z.infer<typeof profileFormSchema>;
 
 const defaultProfile: UserProfile = { name: '', age: '', weight: '', height: '', activityLevel: 'moderate', avatar: '' };
 
-function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, children }: {
+const CircularProgress = React.memo(function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, children }: {
   value: number; max: number; color: string; size?: number; strokeWidth?: number; children?: React.ReactNode;
 }) {
   const radius = (size - strokeWidth) / 2;
@@ -229,7 +229,7 @@ function CircularProgress({ value, max, color, size = 80, strokeWidth = 8, child
       <div className="relative flex flex-col items-center justify-center">{children}</div>
     </div>
   );
-}
+});
 
 // Parse formatted text and return JSX elements
 function parseFormattedText(text: string): React.ReactNode[] {
@@ -252,8 +252,10 @@ function parseFormattedText(text: string): React.ReactNode[] {
     } else if (match[4]) {
       elements.push(<em key={`i2-${match.index}`}>{match[4]}</em>);
     } else if (match[5] && match[6]) {
+      const rawHref = match[6].trim();
+      const safeHref = /^(https?:|mailto:|\/)/i.test(rawHref) ? rawHref : '#';
       elements.push(
-        <a key={`a-${match.index}`} href={match[6]} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+        <a key={`a-${match.index}`} href={safeHref} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
           {match[5]}
         </a>
       );
@@ -273,7 +275,7 @@ type TypewriterMessageProps = {
   isLoading?: boolean;
 };
 
-function TypewriterMessage({ content, isLoading = false }: TypewriterMessageProps) {
+const TypewriterMessage = React.memo(function TypewriterMessage({ content, isLoading = false }: TypewriterMessageProps) {
   const [displayedText, setDisplayedText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
 
@@ -303,7 +305,7 @@ function TypewriterMessage({ content, isLoading = false }: TypewriterMessageProp
       {!isComplete && !isLoading && <span className="animate-pulse">|</span>}
     </div>
   );
-}
+});
 
 const COACH_TIPS = [
   "I can help adjust your nutrition targets anytime—just ask!",
@@ -769,30 +771,29 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     const poll = setInterval(async () => {
       attempts++;
       try {
-        // Query Convex for updated subscription state
-        const subRes = await fetch(`${CONVEX_URL}/api/query`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            path: 'stripe:getSubscription',
-            args: { userId: currentUserId ?? '' },
-            format: 'json',
+        // Query Convex for updated subscription state + credits in parallel
+        const [subRes, credRes] = await Promise.all([
+          fetch(`${CONVEX_URL}/api/query`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              path: 'stripe:getSubscription',
+              args: { userId: currentUserId ?? '' },
+              format: 'json',
+            }),
           }),
-        });
-        const subData = await subRes.json();
+          fetch(`${CONVEX_URL}/api/query`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              path: 'stripe:getCreditsForSync',
+              args: { userId: currentUserId ?? '' },
+              format: 'json',
+            }),
+          }),
+        ]);
+        const [subData, credData] = await Promise.all([subRes.json(), credRes.json()]);
         const sub = subData?.value;
-
-        // Query Convex for updated credits
-        const credRes = await fetch(`${CONVEX_URL}/api/query`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            path: 'stripe:getCreditsForSync',
-            args: { userId: currentUserId ?? '' },
-            format: 'json',
-          }),
-        });
-        const credData = await credRes.json();
         const convexCredits = credData?.value;
 
         // Only consider success if subscription is active OR credits actually increased
@@ -1058,12 +1059,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           }
         });
 
-        if (allMeals.length > 0) {
-          await convexSyncBatchMeals({ userId: userId as any, meals: allMeals });
-        }
-        if (allWater.length > 0) {
-          await convexSyncBatchWater({ userId: userId as any, logs: allWater });
-        }
+        await Promise.all([
+          allMeals.length > 0
+            ? convexSyncBatchMeals({ userId: userId as any, meals: allMeals })
+            : Promise.resolve(),
+          allWater.length > 0
+            ? convexSyncBatchWater({ userId: userId as any, logs: allWater })
+            : Promise.resolve(),
+        ]);
         
         hasSyncedRef.current = true;
         console.log(`Synced ${allMeals.length} meals and ${allWater.length} water logs to Convex.`);

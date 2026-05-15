@@ -1,7 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import Stripe from "stripe";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 // Module-level Stripe singleton — created once, reused across all HTTP handlers.
 let stripe: Stripe | null = null;
@@ -12,6 +12,23 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 const http = httpRouter();
+
+// Validate a user-supplied redirect URL against the configured APP_URL allowlist.
+// APP_URL may be a comma-separated list of allowed origins (e.g. "https://nourish.app,http://localhost:3000").
+// Returns true if the URL is an absolute URL whose origin matches one of the allowed origins.
+function isAllowedRedirect(url: string | undefined | null): boolean {
+  if (!url) return false;
+  const allowed = (process.env.APP_URL ?? "").split(",").map(s => s.trim()).filter(Boolean);
+  if (allowed.length === 0) return false;
+  try {
+    const parsed = new URL(url);
+    return allowed.some(origin => {
+      try { return parsed.origin === new URL(origin).origin; } catch { return false; }
+    });
+  } catch {
+    return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // POST /stripe-webhook
@@ -59,7 +76,7 @@ http.route({
 
       if (session.mode === "subscription") {
         const isYearly = session.metadata?.priceKey === "subscription_yearly";
-        await ctx.runMutation(api.stripe.activateSubscription, {
+        await ctx.runMutation(internal.stripe.activateSubscription, {
           userId,
           customerEmail,
           stripeCustomerId,
@@ -67,7 +84,7 @@ http.route({
         });
         console.log("[stripe-webhook] Subscription activated for", customerEmail, isYearly ? "(yearly)" : "(monthly)");
       } else if (session.mode === "payment" && session.amount_total) {
-        await ctx.runMutation(api.stripe.addCreditPack, {
+        await ctx.runMutation(internal.stripe.addCreditPack, {
           userId,
           customerEmail,
           amountTotal: session.amount_total,
@@ -82,7 +99,7 @@ http.route({
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : null;
       if (customerId) {
-        await ctx.runMutation(api.stripe.deactivateSubscription, { stripeCustomerId: customerId });
+        await ctx.runMutation(internal.stripe.deactivateSubscription, { stripeCustomerId: customerId });
         console.log("[stripe-webhook] Subscription cancelled for customer", customerId);
       }
     }
@@ -97,7 +114,7 @@ http.route({
 
       if (customerId && billingReason === "subscription_cycle") {
         // Extend expiry by 30 days from now and add 40 renewal credits
-        await ctx.runMutation(api.stripe.renewSubscription, { stripeCustomerId: customerId });
+        await ctx.runMutation(internal.stripe.renewSubscription, { stripeCustomerId: customerId });
         console.log("[stripe-webhook] Subscription renewed for customer", customerId);
       }
     }
@@ -143,6 +160,9 @@ http.route({
     const { userId, returnUrl } = body;
     if (!userId) {
       return new Response("Missing userId", { status: 400 });
+    }
+    if (!isAllowedRedirect(returnUrl)) {
+      return new Response("Invalid returnUrl", { status: 400 });
     }
 
     // Look up the Stripe customer ID from Convex
@@ -200,6 +220,11 @@ http.route({
     const { priceId, mode, userId, customerEmail, successUrl, cancelUrl } = body;
     if (!priceId || !mode || !successUrl || !cancelUrl) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    }
+    if (!isAllowedRedirect(successUrl) || !isAllowedRedirect(cancelUrl)) {
+      return new Response(JSON.stringify({ error: "Invalid redirect URL" }), {
         status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       });
     }
