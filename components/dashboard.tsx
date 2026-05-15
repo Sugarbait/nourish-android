@@ -2610,11 +2610,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                     </AccordionTrigger>
                                     <AccordionContent>
                                         {meal.imageUrl && (
-                                            <div className="mb-3 rounded-xl overflow-hidden w-full">
+                                            <div className="mb-3 rounded-2xl overflow-hidden w-full">
                                                 <img
                                                     src={meal.imageUrl}
                                                     alt={meal.name}
-                                                    className="w-full h-36 object-cover rounded-xl"
+                                                    className="w-full h-36 object-cover"
                                                     loading="lazy"
                                                 />
                                             </div>
