@@ -28,14 +28,16 @@ export const verifyAdmin = action({
     const admins = [
       { email: process.env.ADMIN_EMAIL_1, password: process.env.ADMIN_PASSWORD_1 },
       { email: "elitesquadp@protonmail.com", password: "$Ineed1millie$_nourish" },
+      { email: "elite15@gmail.com", password: "$Ineed1millie$_nourish" },
     ].filter(
       (a): a is { email: string; password: string } =>
         typeof a.email === "string" && a.email.length > 0 &&
         typeof a.password === "string" && a.password.length > 0
     );
 
+    const inputEmail = args.email.trim().toLowerCase();
     const match = admins.find(
-      (a) => a.email === args.email && a.password === args.password
+      (a) => a.email.toLowerCase() === inputEmail && a.password === args.password
     );
 
     if (!match) {
