@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { useAction, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, ShieldCheck, Leaf } from 'lucide-react';
+import { AlertCircle, ShieldCheck } from 'lucide-react';
 
 function AdminSignInForm() {
   const router = useRouter();
@@ -212,9 +213,13 @@ export default function AdminSignInPage() {
       <div className="w-full max-w-md space-y-8 mx-auto">
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-              <Leaf className="w-8 h-8 text-green-600" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Nourish Logo"
+              width={120}
+              height={120}
+              className="h-28 w-28 object-contain drop-shadow-lg"
+            />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
             Nourish Admin

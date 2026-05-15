@@ -8,10 +8,14 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
+import type * as adminAuth from "../adminAuth.js";
+import type * as adminBroadcast from "../adminBroadcast.js";
+import type * as adminTotp from "../adminTotp.js";
+import type * as adminTotpDb from "../adminTotpDb.js";
 import type * as aiMessages from "../aiMessages.js";
 import type * as auth from "../auth.js";
 import type * as authInternal from "../authInternal.js";
-import type * as check from "../check.js";
 import type * as contact from "../contact.js";
 import type * as conversations from "../conversations.js";
 import type * as crons from "../crons.js";
@@ -34,10 +38,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
+  adminAuth: typeof adminAuth;
+  adminBroadcast: typeof adminBroadcast;
+  adminTotp: typeof adminTotp;
+  adminTotpDb: typeof adminTotpDb;
   aiMessages: typeof aiMessages;
   auth: typeof auth;
   authInternal: typeof authInternal;
-  check: typeof check;
   contact: typeof contact;
   conversations: typeof conversations;
   crons: typeof crons;

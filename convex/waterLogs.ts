@@ -37,6 +37,18 @@ export const setWaterGlasses = mutation({
   },
 });
 
+export const getWaterForDateRange = query({
+  args: { userId: v.id("users"), startDate: v.string(), endDate: v.string() },
+  handler: async (ctx, { userId, startDate, endDate }) => {
+    return await ctx.db
+      .query("waterLogs")
+      .withIndex("by_userId_date", (q) =>
+        q.eq("userId", userId).gte("date", startDate).lte("date", endDate)
+      )
+      .collect();
+  },
+});
+
 /** Batch sync water logs from local storage to Convex */
 export const syncBatchWater = mutation({
   args: {

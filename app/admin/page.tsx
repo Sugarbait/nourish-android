@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
@@ -11,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import {
   LogOut, Trash2, AlertTriangle, Users, TrendingUp, Settings,
   Ban, ShieldCheck, X, Mail, Search, ChevronLeft, ChevronRight,
-  Leaf,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -89,7 +89,13 @@ export default function AdminPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Leaf className="w-6 h-6 text-green-500" />
+              <Image
+                src="/logo-icon.png"
+                alt="Nourish Logo"
+                width={48}
+                height={48}
+                className="w-12 h-12 object-contain"
+              />
               <h1 className="text-2xl md:text-3xl font-bold">Nourish Admin</h1>
             </div>
             <p className="text-muted-foreground text-sm">Signed in as <span className="font-medium text-foreground">{adminEmail}</span></p>
@@ -224,6 +230,7 @@ export default function AdminPage() {
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground">Joined</th>
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground hidden lg:table-cell">Plan</th>
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground hidden lg:table-cell">Credits</th>
+                    <th className="text-left py-3 px-2 font-medium text-muted-foreground hidden lg:table-cell">Meals</th>
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground">Status</th>
                     <th className="text-right py-3 px-2 font-medium text-muted-foreground">Actions</th>
                   </tr>
@@ -255,6 +262,7 @@ export default function AdminPage() {
                           <span>{user.credits.credits} + {user.credits.purchasedCredits} pack</span>
                         ) : '—'}
                       </td>
+                      <td className="py-3 px-2 hidden lg:table-cell text-muted-foreground">—</td>
                       <td className="py-3 px-2">
                         {user.banned ? (
                           <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded-full font-medium flex items-center gap-1 w-fit">
