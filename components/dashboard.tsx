@@ -2188,7 +2188,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         </Button>
                       </SheetClose>
                     )}
-                    {userEmail === 'elitesquadp@protonmail.com' && (
+                    {userEmail?.toLowerCase() === 'elitesquadp@protonmail.com' && (
                       <a
                         href="/admin"
                         className="block w-full text-center text-xs text-green-600 dark:text-green-400 hover:underline mt-2 font-medium"
