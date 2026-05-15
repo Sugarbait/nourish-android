@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.3.3";
+const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.8";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
