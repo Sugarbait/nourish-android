@@ -585,7 +585,9 @@ export function HistoryView({
                           <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={Math.floor(dailyData.length / 6)} />
                           <YAxis tick={{ fontSize: 10 }} />
                           <Tooltip
-                            contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                            contentStyle={{ fontSize: 12, borderRadius: 8, backgroundColor: '#1a1a1a', border: '1px solid #333', color: '#fff' }}
+                            labelStyle={{ color: '#aaa' }}
+                            itemStyle={{ color: '#fff' }}
                             formatter={(val: number) => [`${val} kcal`, 'Calories']}
                           />
                           <ReferenceLine
@@ -625,7 +627,9 @@ export function HistoryView({
                           <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={Math.floor(dailyData.length / 6)} />
                           <YAxis tick={{ fontSize: 10 }} />
                           <Tooltip
-                            contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                            contentStyle={{ fontSize: 12, borderRadius: 8, backgroundColor: '#1a1a1a', border: '1px solid #333', color: '#fff' }}
+                            labelStyle={{ color: '#aaa' }}
+                            itemStyle={{ color: '#fff' }}
                             formatter={(val: number, name: string) => [`${val}g`, name]}
                           />
                           <Legend wrapperStyle={{ fontSize: 11 }} />
