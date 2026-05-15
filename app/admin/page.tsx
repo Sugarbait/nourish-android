@@ -82,25 +82,25 @@ export default function AdminPage() {
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-background p-3 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Image
                 src="/logo-icon.png"
                 alt="Nourish Logo"
-                width={48}
-                height={48}
-                className="w-12 h-12 object-contain"
+                width={40}
+                height={40}
+                className="w-9 h-9 md:w-12 md:h-12 object-contain"
               />
-              <h1 className="text-2xl md:text-3xl font-bold">Nourish Admin</h1>
+              <h1 className="text-xl md:text-3xl font-bold">Nourish Admin</h1>
             </div>
-            <p className="text-muted-foreground text-sm">Signed in as <span className="font-medium text-foreground">{adminEmail}</span></p>
+            <p className="text-muted-foreground text-xs md:text-sm truncate">Signed in as <span className="font-medium text-foreground">{adminEmail}</span></p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-4 sm:flex sm:items-center gap-2">
             <Button asChild variant="outline" size="sm" className="gap-1.5">
               <Link href="/admin/app-data"><BarChart2 className="w-4 h-4" /><span className="hidden sm:inline">App Data</span></Link>
             </Button>
@@ -310,8 +310,8 @@ export default function AdminPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 pt-4 border-t">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
                 </p>
                 <div className="flex items-center gap-2">
