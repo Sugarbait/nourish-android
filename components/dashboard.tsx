@@ -680,23 +680,32 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       defaultValues: defaultProfile,
   });
 
-  // Load data from localStorage on mount
+  // Load data on mount — guests use localStorage, authenticated users rely on Convex
   useEffect(() => {
     try {
-        const savedData = localStorage.getItem(APP_STORAGE_KEY);
-        if (savedData) {
-            const parsedData: AppData = JSON.parse(savedData);
-            const loadedGoals: DailyGoals = { ...parsedData.goals, water: parsedData.goals.water ?? 8 };
-            setGoals(loadedGoals);
-            setHistory(parsedData.history);
-            goalsForm.reset(loadedGoals);
+        const isAuth = !!localStorage.getItem('nourish_user_id');
+        if (!isAuth) {
+            // Guest: load history, goals, and profile from localStorage
+            const savedData = localStorage.getItem(APP_STORAGE_KEY);
+            if (savedData) {
+                const parsedData: AppData = JSON.parse(savedData);
+                const loadedGoals: DailyGoals = { ...parsedData.goals, water: parsedData.goals.water ?? 8 };
+                setGoals(loadedGoals);
+                setHistory(parsedData.history);
+                goalsForm.reset(loadedGoals);
+            }
+            const savedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+            if (savedProfile) {
+                const parsedProfile: UserProfile = JSON.parse(savedProfile);
+                setProfile(parsedProfile);
+                profileForm.reset(parsedProfile);
+            }
+        } else {
+            // Authenticated: wipe any stale guest data so Convex is the clean source of truth
+            localStorage.removeItem(APP_STORAGE_KEY);
+            localStorage.removeItem(PROFILE_STORAGE_KEY);
         }
-        const savedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
-        if (savedProfile) {
-            const parsedProfile: UserProfile = JSON.parse(savedProfile);
-            setProfile(parsedProfile);
-            profileForm.reset(parsedProfile);
-        }
+        // Credits: keep local cache for fast initial render; Convex overrides shortly after
         setCredits(loadCredits());
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
