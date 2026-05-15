@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   LogOut, Trash2, AlertTriangle, Users, TrendingUp, Settings, BarChart2,
-  Ban, ShieldCheck, X, Mail, Search, ChevronLeft, ChevronRight,
+  Ban, ShieldCheck, X, Mail, Search, ChevronLeft, ChevronRight, UserCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -72,6 +72,7 @@ export default function AdminPage() {
   const totalUsers = allUsers?.length ?? 0;
   const activeSubscribers = allUsers?.filter((u) => u.subscription?.active).length ?? 0;
   const bannedCount = allUsers?.filter((u) => u.banned).length ?? 0;
+  const verifiedCount = allUsers?.filter((u) => u.emailVerified).length ?? 0;
 
   // Filtered + paginated users
   const filtered = (allUsers ?? []).filter((u) => {
@@ -117,7 +118,7 @@ export default function AdminPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -136,6 +137,16 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-500">{activeSubscribers}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-blue-500" /> Verified
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-blue-500">{verifiedCount}</p>
             </CardContent>
           </Card>
           <Card>
