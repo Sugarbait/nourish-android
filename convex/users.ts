@@ -338,3 +338,87 @@ export const redeemCoupon = mutation({
     return { success: true, reward };
   },
 });
+
+// ── Admin queries ──────────────────────────────────────────────────────────
+
+export const getAllUsersWithDetails = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    const subscriptions = await ctx.db.query("subscriptions").collect();
+    const credits = await ctx.db.query("credits").collect();
+    const meals = await ctx.db.query("meals").collect();
+
+    const subMap = new Map(subscriptions.map((s) => [s.userId.toString(), s]));
+    const credMap = new Map(credits.map((c) => [c.userId.toString(), c]));
+    const mealCount = new Map<string, number>();
+    for (const m of meals) {
+      const key = m.userId.toString();
+      mealCount.set(key, (mealCount.get(key) ?? 0) + 1);
+    }
+
+    return users.map((u) => {
+      const sub = subMap.get(u._id.toString()) ?? null;
+      const cred = credMap.get(u._id.toString()) ?? null;
+      return {
+        _id: u._id,
+        _creationTime: u._creationTime,
+        email: u.email,
+        name: u.name ?? null,
+        authProvider: u.authProvider ?? null,
+        emailVerified: u.emailVerified ?? false,
+        banned: u.banned ?? false,
+        bannedAt: u.bannedAt ?? null,
+        subscription: sub
+          ? { plan: sub.plan, active: sub.active, expiresAt: sub.expiresAt ?? null }
+          : null,
+        credits: cred
+          ? { credits: cred.credits, purchasedCredits: cred.purchasedCredits ?? 0 }
+          : null,
+        mealCount: mealCount.get(u._id.toString()) ?? 0,
+      };
+    });
+  },
+});
+
+export const banUser = mutation({
+  args: { userId: v.id("users"), banned: v.boolean() },
+  handler: async (ctx, { userId, banned }) => {
+    await ctx.db.patch(userId, {
+      banned,
+      bannedAt: banned ? Date.now() : undefined,
+    });
+  },
+});
+
+export const deleteUser = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    // Delete related data
+    const meals = await ctx.db.query("meals").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const m of meals) await ctx.db.delete(m._id);
+
+    const profiles = await ctx.db.query("profiles").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const p of profiles) await ctx.db.delete(p._id);
+
+    const creds = await ctx.db.query("credits").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const c of creds) await ctx.db.delete(c._id);
+
+    const subs = await ctx.db.query("subscriptions").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const s of subs) await ctx.db.delete(s._id);
+
+    const water = await ctx.db.query("waterLogs").withIndex("by_userId_date", (q) => q.eq("userId", userId)).collect();
+    for (const w of water) await ctx.db.delete(w._id);
+
+    const msgs = await ctx.db.query("aiMessages").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const m of msgs) await ctx.db.delete(m._id);
+
+    const recipes = await ctx.db.query("savedRecipes").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const r of recipes) await ctx.db.delete(r._id);
+
+    const convos = await ctx.db.query("conversations").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const c of convos) await ctx.db.delete(c._id);
+
+    await ctx.db.delete(userId);
+  },
+});

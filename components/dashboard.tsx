@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.82";
+const BUILD_VERSION = "0.2.84";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -2187,6 +2187,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           <Power className="h-4 w-4 mr-2" /> Sign Out
                         </Button>
                       </SheetClose>
+                    )}
+                    {userEmail === 'elitesquadp@protonmail.com' && (
+                      <a
+                        href="/admin"
+                        className="block w-full text-center text-xs text-green-600 dark:text-green-400 hover:underline mt-2 font-medium"
+                      >
+                        Admin Panel
+                      </a>
                     )}
                     <p className="text-center text-xs text-muted-foreground mt-4">Build {BUILD_VERSION}</p>
                   </form>

@@ -29,6 +29,10 @@ export const loginUser: ReturnType<typeof action> = action({
       throw new ConvexError("Please verify your email before signing in. Check your inbox for the verification link.");
     }
 
+    if (user.banned) {
+      throw new ConvexError("Your account has been suspended. Please contact support.");
+    }
+
     return {
       userId: user._id as unknown as string,
       name: user.name ?? null,
@@ -97,11 +101,12 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
     });
 
     if (byOAuth) {
+      if (byOAuth.banned) throw new ConvexError("Your account has been suspended. Please contact support.");
       await ctx.runMutation(internal.authInternal.updateOAuthUser, {
         userId: byOAuth._id,
         name,
         avatarUrl,
-        // Let's ensure the email is normalized on update too if we had an oauthEmail field, 
+        // Let's ensure the email is normalized on update too if we had an oauthEmail field,
         // but since we don't, we skip it.
       });
       return {
