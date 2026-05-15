@@ -2032,15 +2032,41 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         <p className="text-xs text-muted-foreground mt-0.5">Credits available</p>
                       </div>
                       {credits.subscription?.active ? (
-                        <div className="flex items-center gap-2 text-xs text-green-500 font-medium">
-                          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                          Monthly Pro active
-                          {credits.subscription.expiresAt && (
-                            <span className="text-muted-foreground font-normal ml-auto">
-                              renews {new Date(credits.subscription.expiresAt).toLocaleDateString()}
-                            </span>
+                        <>
+                          <div className="flex items-center gap-2 text-xs text-green-500 font-medium">
+                            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                            Pro active
+                            {credits.subscription.expiresAt && (
+                              <span className="text-muted-foreground font-normal ml-auto">
+                                renews {new Date(credits.subscription.expiresAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          {/* Stripe portal — pause, update payment, or cancel */}
+                          {userId && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={async () => {
+                                if (!stripeCustomerId) {
+                                  toast({ title: 'Could not open billing portal', description: 'No Stripe account linked. Subscribe first.', variant: 'destructive' });
+                                  return;
+                                }
+                                try {
+                                  const result = await getBillingPortalUrl({ stripeCustomerId, returnUrl: window.location.href });
+                                  if (result.url) window.location.href = result.url;
+                                } catch (err: any) {
+                                  toast({ title: 'Could not open billing portal', description: err.message || 'Please try again later.', variant: 'destructive' });
+                                }
+                              }}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                              Manage Subscription
+                            </Button>
                           )}
-                        </div>
+                        </>
                       ) : (
                         <p className="text-xs text-muted-foreground">
                           Free plan &bull; 1 free scan daily &bull; Subscribe to unlock AI coach
@@ -2071,34 +2097,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                             Subscribe — $5.99/mo
                           </Button>
                         </SheetClose>
-                      )}
-                      {userId && credits.subscription?.active && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-muted-foreground hover:text-foreground"
-                          onClick={async () => {
-                            if (!stripeCustomerId) {
-                              toast({ title: 'Could not open billing portal', description: 'No Stripe account linked. Subscribe first.', variant: 'destructive' });
-                              return;
-                            }
-                            try {
-                              const result = await getBillingPortalUrl({
-                                stripeCustomerId,
-                                returnUrl: window.location.href,
-                              });
-                              if (result.url) {
-                                window.location.href = result.url;
-                              }
-                            } catch (err: any) {
-                              toast({ title: 'Could not open billing portal', description: err.message || 'Please try again later.', variant: 'destructive' });
-                            }
-                          }}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                          Manage / Cancel Subscription
-                        </Button>
                       )}
                     </div>
 
