@@ -440,25 +440,27 @@ export function HistoryView({
                   return (
                     <Card key={idx}>
                       <CardContent className="pt-4 pb-4">
-                        {imageUrl && (
-                          <div className="mb-3 rounded-2xl overflow-hidden w-full">
-                            <img
-                              src={imageUrl}
-                              alt={name}
-                              className="w-full h-36 object-cover"
-                              loading="lazy"
-                            />
-                          </div>
-                        )}
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div>
-                            <p className="font-semibold capitalize">{name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {items.length} item{items.length !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-orange-400">{Math.round(calories)} kcal</p>
+                        <div className="flex items-start gap-3 mb-3">
+                          {imageUrl && (
+                            <div className="rounded-2xl overflow-hidden flex-shrink-0 w-24 aspect-square">
+                              <img
+                                src={imageUrl}
+                                alt={name}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-start justify-between gap-2 flex-1 min-w-0">
+                            <div className="min-w-0">
+                              <p className="font-semibold capitalize truncate">{name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {items.length} item{items.length !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-orange-400">{Math.round(calories)} kcal</p>
+                            </div>
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center">

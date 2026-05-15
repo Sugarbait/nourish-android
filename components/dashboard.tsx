@@ -2660,17 +2660,18 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                        {meal.imageUrl && (
-                                            <div className="mb-3 rounded-2xl overflow-hidden w-full">
-                                                <img
-                                                    src={meal.imageUrl}
-                                                    alt={meal.name}
-                                                    className="w-full h-36 object-cover"
-                                                    loading="lazy"
-                                                />
-                                            </div>
-                                        )}
-                                        <ul className="space-y-2 pl-2 pt-1">
+                                        <div className="flex gap-3 items-start pt-1">
+                                            {meal.imageUrl && (
+                                                <div className="rounded-2xl overflow-hidden flex-shrink-0 w-24 aspect-square">
+                                                    <img
+                                                        src={meal.imageUrl}
+                                                        alt={meal.name}
+                                                        className="w-full h-full object-cover"
+                                                        loading="lazy"
+                                                    />
+                                                </div>
+                                            )}
+                                            <ul className="space-y-2 flex-1 min-w-0">
                                             {meal.items.map((item, index) => (
                                                 <li key={index} className="flex justify-between items-center text-sm gap-2">
                                                     {editingFoodItem?.mealId === meal.id && editingFoodItem?.itemIndex === index ? (
@@ -2713,7 +2714,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                     <span className="text-muted-foreground shrink-0">{item.calories} kcal</span>
                                                 </li>
                                             ))}
-                                        </ul>
+                                            </ul>
+                                        </div>
                                         {meal.healthAnalysis && (
                                             <details className="mt-3 group">
                                                 <summary className="flex items-center gap-1.5 text-xs font-medium text-primary cursor-pointer select-none list-none">
