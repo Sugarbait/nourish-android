@@ -1201,31 +1201,17 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       if (videoRef.current) {
           const canvas = document.createElement('canvas');
           const video = videoRef.current;
-          
-          // Calculate 16:9 aspect ratio dimensions
-          const aspectRatio = 16 / 9;
-          let captureWidth = video.videoWidth;
-          let captureHeight = video.videoHeight;
-          
-          // Adjust to maintain 16:9 ratio
-          if (captureWidth / captureHeight > aspectRatio) {
-              // Video is wider than 16:9, crop width
-              captureWidth = captureHeight * aspectRatio;
-          } else {
-              // Video is taller than 16:9, crop height  
-              captureHeight = captureWidth / aspectRatio;
-          }
-          
-          canvas.width = captureWidth;
-          canvas.height = captureHeight;
-          
+
+          // Square crop matching the square viewport (object-cover)
+          const size = Math.min(video.videoWidth, video.videoHeight);
+          canvas.width = size;
+          canvas.height = size;
+
           const context = canvas.getContext('2d');
           if (context) {
-              // Center the crop
-              const startX = (video.videoWidth - captureWidth) / 2;
-              const startY = (video.videoHeight - captureHeight) / 2;
-              
-              context.drawImage(video, startX, startY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
+              const startX = (video.videoWidth - size) / 2;
+              const startY = (video.videoHeight - size) / 2;
+              context.drawImage(video, startX, startY, size, size, 0, 0, size, size);
               const dataUri = canvas.toDataURL('image/jpeg', 0.9);
               setImagePreview(dataUri);
               stopCamera();
