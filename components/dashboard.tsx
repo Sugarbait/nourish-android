@@ -2285,9 +2285,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     <CardDescription>Use your camera or upload a photo to instantly identify food for {format(selectedDate, 'PPP')}.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="relative aspect-video w-full rounded-xl border-2 border-dashed border-border/60 flex items-center justify-center bg-muted/30 overflow-hidden">
+                    <div className="relative aspect-square w-full rounded-xl border-2 border-dashed border-border/60 flex items-center justify-center bg-muted/30 overflow-hidden">
                         {imagePreview && <Image src={imagePreview} alt="Food preview" fill className="object-cover" />}
-                        <video ref={videoRef} className={`w-full h-full aspect-video rounded-md object-cover ${isCameraOn ? 'block' : 'hidden'}`} autoPlay muted playsInline />
+                        <video ref={videoRef} className={`w-full h-full object-cover rounded-md ${isCameraOn ? 'block' : 'hidden'}`} autoPlay muted playsInline />
                         
                         {!imagePreview && !isCameraOn && (
                             <div className="text-center text-muted-foreground p-4">
@@ -3013,17 +3013,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       </main>
       )}
 
-      {/* Floating Chat Widget — only shown on dashboard tab */}
-      {activeNav === 'dashboard' && (
-        <Button
-          onClick={handleOpenCoach}
-          className={`fixed bottom-20 right-4 rounded-full w-14 h-14 shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 transition-all duration-200 z-40 bg-primary text-primary-foreground border-2 border-black ${isChatbotOpen ? 'hidden' : ''}`}
-          size="icon"
-        >
-          <MessageCircle className="h-6 w-6" />
-          <span className="sr-only">Open AI Coach</span>
-        </Button>
-      )}
 
       {/* Chat Widget Panel — fixed bottom-right, only on dashboard tab */}
       {activeNav === 'dashboard' && isChatbotOpen && (
