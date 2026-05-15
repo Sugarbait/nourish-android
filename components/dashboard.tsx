@@ -528,11 +528,29 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     newMeal: Meal;
     duplicateOfId: string;
     foodWithMacros: FoodItem[];
+    dataUri?: string;
   } | null>(null);
+
+  // Helper: upload meal image (if present) and attach to a previously-logged meal.
+  // Must run AFTER convexLogMeal completes — otherwise attachMealImage finds no record.
+  const uploadAndAttachMealImage = async (localId: string, dataUri: string | undefined) => {
+    if (!userId || !dataUri) return;
+    try {
+      const storageId = await uploadMealImage(dataUri);
+      if (!storageId) return;
+      await convexAttachMealImage({
+        userId: userId as any,
+        localId,
+        imageStorageId: storageId as any,
+      });
+    } catch (err) {
+      console.error('Failed to attach meal image:', err);
+    }
+  };
 
   const handleDuplicateReplace = async () => {
     if (!pendingDuplicate) return;
-    const { newMeal, duplicateOfId, foodWithMacros } = pendingDuplicate;
+    const { newMeal, duplicateOfId, foodWithMacros, dataUri } = pendingDuplicate;
     // Remove the old meal first
     await removeMeal(duplicateOfId);
     // Log the new meal
@@ -560,6 +578,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           items: foodWithMacros,
           localId: newMeal.id,
         });
+        uploadAndAttachMealImage(newMeal.id, dataUri);
         toast({ title: `Replaced in ${newMeal.name}!`, description: 'Older entry was replaced. Review the results below.' });
       } catch (error) {
         console.error("Failed to replace meal:", error);
@@ -573,7 +592,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const handleDuplicateLogAgain = async () => {
     if (!pendingDuplicate) return;
-    const { newMeal, foodWithMacros } = pendingDuplicate;
+    const { newMeal, foodWithMacros, dataUri } = pendingDuplicate;
     // Append duplicate entry alongside the existing one
     setHistory(current => ({
       ...current,
@@ -599,6 +618,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           items: foodWithMacros,
           localId: newMeal.id,
         });
+        uploadAndAttachMealImage(newMeal.id, dataUri);
         toast({ title: `Added to ${newMeal.name}!`, description: 'Food logged as a duplicate. Review the results below.' });
       } catch (error) {
         console.error("Failed to log duplicate meal:", error);
@@ -1217,6 +1237,17 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   };
 
+  // Release the camera if the component unmounts while the stream is live —
+  // otherwise the device's recording indicator stays on after navigation.
+  useEffect(() => {
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
   const handleCapturePhoto = () => {
       if (videoRef.current) {
           const canvas = document.createElement('canvas');
@@ -1276,7 +1307,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           setImagePreview(dataUri);
           runFoodRecognition(dataUri);
         };
+        img.onerror = () => {
+          toast({ title: 'Could not read image', description: 'The selected file is not a valid image.', variant: 'destructive' });
+        };
         img.src = rawDataUri;
+      };
+      reader.onerror = () => {
+        toast({ title: 'Could not read file', description: 'Please try a different image.', variant: 'destructive' });
       };
       reader.readAsDataURL(file);
     }
@@ -1475,7 +1512,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         );
 
         if (duplicateMeal) {
-            setPendingDuplicate({ newMeal, duplicateOfId: duplicateMeal.id, foodWithMacros });
+            setPendingDuplicate({ newMeal, duplicateOfId: duplicateMeal.id, foodWithMacros, dataUri });
         } else {
             setHistory(current => ({
               ...current,
@@ -1484,34 +1521,33 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 water: current[dateKey]?.water || 0,
               },
             }));
-            
-            // Sync new AI-scanned meal to Convex for authenticated users
+
+            // Sync new AI-scanned meal to Convex for authenticated users.
+            // Meal must be logged BEFORE attempting image attachment — otherwise
+            // attachMealImage finds no matching meal and silently no-ops.
             if (userId) {
               const totals = foodWithMacros.reduce(
                 (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
                 { calories: 0, protein: 0, carbs: 0, fat: 0 }
               );
-              convexLogMeal({
-                userId: userId as any,
-                date: dateKey,
-                mealType: normalizeMealType(mealType),
-                name: mealType,
-                ...totals,
-                healthScore: result.healthScore,
-                healthAnalysis: result.healthAnalysis,
-                items: foodWithMacros,
-                localId: newMeal.id,
-              }).catch(console.error);
-              // Upload compressed meal image in background and attach to Convex record
-              uploadMealImage(dataUri).then(storageId => {
-                if (storageId) {
-                  convexAttachMealImage({
+              (async () => {
+                try {
+                  await convexLogMeal({
                     userId: userId as any,
+                    date: dateKey,
+                    mealType: normalizeMealType(mealType),
+                    name: mealType,
+                    ...totals,
+                    healthScore: result.healthScore,
+                    healthAnalysis: result.healthAnalysis,
+                    items: foodWithMacros,
                     localId: newMeal.id,
-                    imageStorageId: storageId as any,
-                  }).catch(console.error);
+                  });
+                  await uploadAndAttachMealImage(newMeal.id, dataUri);
+                } catch (err) {
+                  console.error('Failed to sync meal to Convex:', err);
                 }
-              });
+              })();
             }
             toast({ title: `Added to ${mealType}!`, description: 'Food recognized and logged. Review the results below.' });
         }
