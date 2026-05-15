@@ -436,9 +436,20 @@ export function HistoryView({
                   const protein = isConvexMeal ? (meal.protein || 0) : items.reduce((s: number, i: any) => s + i.protein, 0);
                   const carbs = isConvexMeal ? (meal.carbs || 0) : items.reduce((s: number, i: any) => s + i.carbs, 0);
                   const fat = isConvexMeal ? (meal.fat || 0) : items.reduce((s: number, i: any) => s + i.fat, 0);
+                  const imageUrl = meal.imageUrl as string | undefined;
                   return (
                     <Card key={idx}>
                       <CardContent className="pt-4 pb-4">
+                        {imageUrl && (
+                          <div className="mb-3 rounded-2xl overflow-hidden w-full">
+                            <img
+                              src={imageUrl}
+                              alt={name}
+                              className="w-full h-36 object-cover"
+                              loading="lazy"
+                            />
+                          </div>
+                        )}
                         <div className="flex items-start justify-between gap-2 mb-3">
                           <div>
                             <p className="font-semibold capitalize">{name}</p>

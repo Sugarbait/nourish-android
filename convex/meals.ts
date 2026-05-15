@@ -90,12 +90,20 @@ export const attachMealImage = mutation({
 export const getMealsForDateRange = query({
   args: { userId: v.id("users"), startDate: v.string(), endDate: v.string() },
   handler: async (ctx, { userId, startDate, endDate }) => {
-    return await ctx.db
+    const meals = await ctx.db
       .query("meals")
       .withIndex("by_userId_date", (q) =>
         q.eq("userId", userId).gte("date", startDate).lte("date", endDate)
       )
       .collect();
+    return await Promise.all(
+      meals.map(async (meal) => ({
+        ...meal,
+        imageUrl: meal.imageStorageId
+          ? await ctx.storage.getUrl(meal.imageStorageId)
+          : null,
+      }))
+    );
   },
 });
 

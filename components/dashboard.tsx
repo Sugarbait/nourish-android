@@ -552,7 +552,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         await convexLogMeal({
           userId: userId as any,
           date: dateKey,
-          mealType: newMeal.name.toLowerCase() as any,
+          mealType: normalizeMealType(newMeal.name),
           name: newMeal.name,
           ...totals,
           healthScore: newMeal.healthAnalysis?.score,
@@ -591,7 +591,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         await convexLogMeal({
           userId: userId as any,
           date: dateKey,
-          mealType: newMeal.name.toLowerCase() as any,
+          mealType: normalizeMealType(newMeal.name),
           name: newMeal.name,
           ...totals,
           healthScore: newMeal.healthAnalysis?.score,
@@ -1321,7 +1321,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     // Sync type change to Convex for authenticated users
     if (userId) {
       try {
-        await convexUpdateMealType({ userId: userId as any, localId: mealId, mealType: newType.toLowerCase() as any, name: newType });
+        await convexUpdateMealType({ userId: userId as any, localId: mealId, mealType: normalizeMealType(newType), name: newType });
       } catch (error) {
         setHistory(current => ({ ...current, [dateKey]: previousHistory }));
         console.error("Failed to update meal type:", error);
@@ -1373,6 +1373,12 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       setIsLookingUpNutrition(false);
       setEditingFoodItem(null);
     }
+  };
+
+  // Convex schema accepts only singular meal types — normalize "Snacks"/"snacks" to "snack"
+  const normalizeMealType = (t: string): "breakfast" | "lunch" | "dinner" | "snack" => {
+    const lower = t.toLowerCase();
+    return (lower === 'snacks' ? 'snack' : lower) as any;
   };
 
   const getMealTypeByTime = (): MealType => {
@@ -1488,7 +1494,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               convexLogMeal({
                 userId: userId as any,
                 date: dateKey,
-                mealType: mealType.toLowerCase() as any,
+                mealType: normalizeMealType(mealType),
                 name: mealType,
                 ...totals,
                 healthScore: result.healthScore,
@@ -1541,7 +1547,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       convexLogMeal({
         userId: userId as any,
         date: dateKey,
-        mealType: mealName.toLowerCase() as any,
+        mealType: normalizeMealType(mealName),
         name: mealName,
         ...totals,
         items,
