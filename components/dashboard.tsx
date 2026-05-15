@@ -3482,7 +3482,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             className="flex flex-col items-center justify-center relative"
           >
             <div className="absolute -top-5 flex flex-col items-center">
-              <div className={`h-14 w-14 rounded-full flex items-center justify-center shadow-xl border-4 border-background ring-2 ${isCameraOn ? 'bg-gradient-to-br from-orange-400 to-red-500 shadow-red-500/40 ring-red-500/30 animate-pulse' : 'bg-gradient-to-br from-green-400 to-emerald-600 shadow-emerald-500/40 ring-emerald-500/30'}`}>
+              <div className={`h-14 w-14 rounded-full flex items-center justify-center shadow-xl border-4 border-background ring-2 ${isCameraOn ? 'bg-gradient-to-br from-orange-400 to-red-500 shadow-red-500/40 ring-red-500/30' : 'bg-gradient-to-br from-green-400 to-emerald-600 shadow-emerald-500/40 ring-emerald-500/30'}`}>
                 {isCameraOn ? <Camera className="h-6 w-6 text-white" strokeWidth={2} /> : <ScanLine className="h-6 w-6 text-white" strokeWidth={2} />}
               </div>
               <span className={`text-[10px] font-semibold mt-1.5 ${isCameraOn ? 'text-red-500' : 'text-emerald-500'}`}>{isCameraOn ? 'Capture' : 'Scan'}</span>
