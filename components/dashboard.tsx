@@ -2346,9 +2346,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                             </div>
                         ): (
                             <>
-                                <Button onClick={startCamera} disabled={hasCameraPermission === false} className="flex-1 rounded-full">
-                                    <Video className="mr-2"/> Start Camera
-                                </Button>
                                 <Button asChild className="flex-1 rounded-full">
                                     <label htmlFor="food-upload" className="cursor-pointer flex items-center justify-center">
                                         <Upload className="mr-2"/> Upload Photo <span className="opacity-70 ml-1.5 text-[10px] font-medium border rounded-full px-1.5 py-0.5 border-current">(1 credit)</span>
@@ -3478,7 +3475,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
           {/* Scan — elevated center button */}
           <button
-            onClick={() => { setActiveNav('dashboard'); setTimeout(() => { document.getElementById('scan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); }}
+            onClick={() => { setActiveNav('dashboard'); setTimeout(() => { document.getElementById('scan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); startCamera(); }, 50); }}
             className="flex flex-col items-center justify-center relative"
           >
             <div className="absolute -top-5 flex flex-col items-center">
