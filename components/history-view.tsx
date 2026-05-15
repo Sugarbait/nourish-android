@@ -21,7 +21,6 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { Button } from './ui/button';
 
@@ -307,53 +306,57 @@ export function HistoryView({
               {r.label}
             </button>
           ))}
-          <Popover open={showCustom} onOpenChange={setShowCustom}>
-            <PopoverTrigger asChild>
-              <button
-                className={`flex-1 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  isCustomRange
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                }`}
+          <button
+            className={`flex-1 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              isCustomRange
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+            }`}
+            onClick={() => setShowCustom(true)}
+          >
+            Custom
+          </button>
+
+          {/* Full-screen custom range picker overlay */}
+          {showCustom && (
+            <div className="fixed inset-0 z-50 flex flex-col" onClick={() => setShowCustom(false)}>
+              <div className="flex-1 bg-black/50" />
+              <div
+                className="bg-background rounded-t-2xl p-5 space-y-4 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
               >
-                Custom
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-3 space-y-3" align="end">
-              <p className="text-xs font-medium">Select date range</p>
-              <div className="flex gap-2 items-center">
-                <Calendar
-                  mode="single"
-                  selected={customRangeStart}
-                  onSelect={setCustomRangeStart}
-                  disabled={(d) => d > new Date()}
-                  initialFocus
-                  className="rounded-lg border"
-                />
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold">Select Date Range</p>
+                  <button onClick={() => setShowCustom(false)} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
+                </div>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="range"
+                    selected={{ from: customRangeStart, to: customRangeEnd }}
+                    onSelect={(range) => {
+                      setCustomRangeStart(range?.from);
+                      setCustomRangeEnd(range?.to);
+                    }}
+                    disabled={(d) => d > new Date()}
+                    numberOfMonths={1}
+                    initialFocus
+                    className="rounded-lg border"
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground px-1">
+                  <span>From: <strong>{customRangeStart ? format(customRangeStart, 'MMM d, yyyy') : '—'}</strong></span>
+                  <span>To: <strong>{customRangeEnd ? format(customRangeEnd, 'MMM d, yyyy') : '—'}</strong></span>
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={!customRangeStart || !customRangeEnd}
+                  onClick={() => { setIsCustomRange(true); setShowCustom(false); }}
+                >
+                  Apply Range
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                Start: {customRangeStart ? format(customRangeStart, 'MMM d, yyyy') : '—'}
-              </p>
-              <Calendar
-                mode="single"
-                selected={customRangeEnd}
-                onSelect={setCustomRangeEnd}
-                disabled={(d) => d > new Date() || (customRangeStart ? d < customRangeStart : false)}
-                className="rounded-lg border"
-              />
-              <p className="text-xs text-muted-foreground text-center">
-                End: {customRangeEnd ? format(customRangeEnd, 'MMM d, yyyy') : '—'}
-              </p>
-              <Button
-                size="sm"
-                className="w-full"
-                disabled={!customRangeStart || !customRangeEnd}
-                onClick={() => { setIsCustomRange(true); setShowCustom(false); }}
-              >
-                Apply Range
-              </Button>
-            </PopoverContent>
-          </Popover>
+            </div>
+          )}
         </div>
       </div>
 
