@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import {
   LogOut, Trash2, AlertTriangle, Users, TrendingUp, Settings,
   Ban, ShieldCheck, X, Mail, Search, ChevronLeft, ChevronRight,
-  Leaf, UtensilsCrossed, Zap,
+  Leaf,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -22,7 +22,18 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [adminEmail, setAdminEmail] = useState('');
 
-  const allUsers = useQuery(api.users.getAllUsersWithDetails);
+  const rawUsers = useQuery(api.users.adminListUsers);
+  const rawSubs = useQuery(api.users.adminListSubscriptions);
+  const rawCredits = useQuery(api.users.adminListCredits);
+
+  // Join client-side
+  const allUsers = rawUsers && rawSubs && rawCredits
+    ? rawUsers.map((u) => {
+        const sub = rawSubs.find((s) => s.userId === u._id) ?? null;
+        const cred = rawCredits.find((c) => c.userId === u._id) ?? null;
+        return { ...u, subscription: sub, credits: cred };
+      })
+    : undefined;
 
   const banUser = useMutation(api.users.banUser);
   const deleteUser = useMutation(api.users.deleteUser);
@@ -60,7 +71,6 @@ export default function AdminPage() {
   // Stats
   const totalUsers = allUsers?.length ?? 0;
   const activeSubscribers = allUsers?.filter((u) => u.subscription?.active).length ?? 0;
-  const totalMeals = allUsers?.reduce((sum, u) => sum + u.mealCount, 0) ?? 0;
   const bannedCount = allUsers?.filter((u) => u.banned).length ?? 0;
 
   // Filtered + paginated users
@@ -98,7 +108,7 @@ export default function AdminPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -117,16 +127,6 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-500">{activeSubscribers}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <UtensilsCrossed className="w-4 h-4 text-emerald-500" /> Meals Logged
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{totalMeals.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card>
@@ -160,15 +160,70 @@ export default function AdminPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-3">
+              {paginated.map((user) => (
+                <div key={user._id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{user.email}</p>
+                      {user.name && <p className="text-xs text-muted-foreground">{user.name}</p>}
+                      <p className="text-xs text-muted-foreground mt-0.5">{new Date(user._creationTime).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={user.banned ? "text-green-600 hover:text-green-700 h-8 w-8" : "text-amber-600 hover:text-amber-700 h-8 w-8"}
+                        onClick={() => setConfirmBan({ id: user._id as Id<'users'>, email: user.email, banned: user.banned })}
+                      >
+                        {user.banned ? <ShieldCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-600 hover:text-red-700 h-8 w-8"
+                        onClick={() => setConfirmDelete({ id: user._id as Id<'users'>, email: user.email })}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {user.banned ? (
+                      <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <Ban className="w-3 h-3" /> Banned
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3" /> Active
+                      </span>
+                    )}
+                    {user.subscription?.active ? (
+                      <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded-full font-medium capitalize">
+                        {user.subscription.plan ?? 'subscribed'}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Free</span>
+                    )}
+                    {user.authProvider && <span className="text-xs text-muted-foreground capitalize">{user.authProvider}</span>}
+                  </div>
+                </div>
+              ))}
+              {paginated.length === 0 && (
+                <p className="py-8 text-center text-muted-foreground text-sm">No users found.</p>
+              )}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground">User</th>
-                    <th className="text-left py-3 px-2 font-medium text-muted-foreground hidden md:table-cell">Joined</th>
+                    <th className="text-left py-3 px-2 font-medium text-muted-foreground">Joined</th>
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground hidden lg:table-cell">Plan</th>
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground hidden lg:table-cell">Credits</th>
-                    <th className="text-left py-3 px-2 font-medium text-muted-foreground hidden md:table-cell">Meals</th>
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground">Status</th>
                     <th className="text-right py-3 px-2 font-medium text-muted-foreground">Actions</th>
                   </tr>
@@ -178,12 +233,12 @@ export default function AdminPage() {
                     <tr key={user._id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="py-3 px-2">
                         <div>
-                          <p className="font-medium truncate max-w-[160px]">{user.email}</p>
+                          <p className="font-medium truncate max-w-[200px]">{user.email}</p>
                           {user.name && <p className="text-xs text-muted-foreground">{user.name}</p>}
                           {user.authProvider && <p className="text-xs text-muted-foreground capitalize">{user.authProvider}</p>}
                         </div>
                       </td>
-                      <td className="py-3 px-2 hidden md:table-cell text-muted-foreground">
+                      <td className="py-3 px-2 text-muted-foreground text-xs">
                         {new Date(user._creationTime).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-2 hidden lg:table-cell">
@@ -200,7 +255,6 @@ export default function AdminPage() {
                           <span>{user.credits.credits} + {user.credits.purchasedCredits} pack</span>
                         ) : '—'}
                       </td>
-                      <td className="py-3 px-2 hidden md:table-cell text-muted-foreground">{user.mealCount}</td>
                       <td className="py-3 px-2">
                         {user.banned ? (
                           <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded-full font-medium flex items-center gap-1 w-fit">

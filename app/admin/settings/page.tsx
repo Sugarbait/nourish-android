@@ -167,29 +167,31 @@ export default function AdminSettingsPage() {
         )}
 
         <Card className="border-2">
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className={`h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center ${
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className={`h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center ${
+                  isEnabled
+                    ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'
+                    : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400'
+                }`}>
+                  {isEnabled ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+                </div>
+                <div>
+                  <CardTitle>Two-Factor Authentication</CardTitle>
+                  <CardDescription>
+                    {isEnabled ? 'Your admin account is protected with TOTP.' : 'Add an extra layer of security to your admin account.'}
+                  </CardDescription>
+                </div>
+              </div>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start sm:self-auto shrink-0 ${
                 isEnabled
-                  ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'
-                  : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
               }`}>
-                {isEnabled ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
-              </div>
-              <div>
-                <CardTitle>Two-Factor Authentication (TOTP)</CardTitle>
-                <CardDescription>
-                  {isEnabled ? 'Your admin account is protected with TOTP.' : 'Add an extra layer of security to your admin account.'}
-                </CardDescription>
-              </div>
+                {isEnabled ? 'Enabled' : 'Disabled'}
+              </span>
             </div>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${
-              isEnabled
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
-                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
-            }`}>
-              {isEnabled ? 'Enabled' : 'Disabled'}
-            </span>
           </CardHeader>
 
           <CardContent className="space-y-6">

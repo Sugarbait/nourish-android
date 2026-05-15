@@ -341,43 +341,45 @@ export const redeemCoupon = mutation({
 
 // ── Admin queries ──────────────────────────────────────────────────────────
 
-export const getAllUsersWithDetails = query({
+export const adminListUsers = query({
   args: {},
   handler: async (ctx) => {
     const users = await ctx.db.query("users").collect();
-    const subscriptions = await ctx.db.query("subscriptions").collect();
-    const credits = await ctx.db.query("credits").collect();
-    const meals = await ctx.db.query("meals").collect();
+    return users.map((u) => ({
+      _id: u._id,
+      _creationTime: u._creationTime,
+      email: u.email,
+      name: u.name ?? null,
+      authProvider: u.authProvider ?? null,
+      emailVerified: u.emailVerified ?? false,
+      banned: u.banned ?? false,
+      bannedAt: u.bannedAt ?? null,
+    }));
+  },
+});
 
-    const subMap = new Map(subscriptions.map((s) => [s.userId.toString(), s]));
-    const credMap = new Map(credits.map((c) => [c.userId.toString(), c]));
-    const mealCount = new Map<string, number>();
-    for (const m of meals) {
-      const key = m.userId.toString();
-      mealCount.set(key, (mealCount.get(key) ?? 0) + 1);
-    }
+export const adminListSubscriptions = query({
+  args: {},
+  handler: async (ctx) => {
+    const subs = await ctx.db.query("subscriptions").collect();
+    return subs.map((s) => ({
+      userId: s.userId,
+      plan: s.plan,
+      active: s.active,
+      expiresAt: s.expiresAt ?? null,
+    }));
+  },
+});
 
-    return users.map((u) => {
-      const sub = subMap.get(u._id.toString()) ?? null;
-      const cred = credMap.get(u._id.toString()) ?? null;
-      return {
-        _id: u._id,
-        _creationTime: u._creationTime,
-        email: u.email,
-        name: u.name ?? null,
-        authProvider: u.authProvider ?? null,
-        emailVerified: u.emailVerified ?? false,
-        banned: u.banned ?? false,
-        bannedAt: u.bannedAt ?? null,
-        subscription: sub
-          ? { plan: sub.plan, active: sub.active, expiresAt: sub.expiresAt ?? null }
-          : null,
-        credits: cred
-          ? { credits: cred.credits, purchasedCredits: cred.purchasedCredits ?? 0 }
-          : null,
-        mealCount: mealCount.get(u._id.toString()) ?? 0,
-      };
-    });
+export const adminListCredits = query({
+  args: {},
+  handler: async (ctx) => {
+    const creds = await ctx.db.query("credits").collect();
+    return creds.map((c) => ({
+      userId: c.userId,
+      credits: c.credits,
+      purchasedCredits: c.purchasedCredits ?? 0,
+    }));
   },
 });
 
@@ -387,7 +389,7 @@ export const banUser = mutation({
     await ctx.db.patch(userId, {
       banned,
       bannedAt: banned ? Date.now() : undefined,
-    });
+    } as any);
   },
 });
 
