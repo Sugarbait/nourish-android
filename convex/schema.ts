@@ -16,6 +16,8 @@ export default defineSchema({
     verificationTokenExpiry: v.optional(v.number()),
     createdAt: v.optional(v.number()),
     stripeCustomerId: v.optional(v.string()),
+    banned: v.optional(v.boolean()),
+    bannedAt: v.optional(v.number()),
     // Legacy fields from @convex-dev/auth — kept for backward compatibility with existing data
     image: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
@@ -177,4 +179,20 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_shareId", ["shareId"]),
+
+  // Admin: rate-limit login attempts
+  adminLoginAttempts: defineTable({
+    email: v.string(),
+    at: v.number(),
+  }).index("by_email", ["email"]),
+
+  // Admin: TOTP 2FA config per admin email
+  adminTotpConfig: defineTable({
+    adminEmail: v.string(),
+    secret: v.string(),
+    enabled: v.boolean(),
+    verified: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_email", ["adminEmail"]),
 });

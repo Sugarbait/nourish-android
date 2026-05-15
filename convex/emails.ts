@@ -1,7 +1,8 @@
 "use node";
 
 
-import { internalAction } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import nodemailer from "nodemailer";
 
@@ -433,5 +434,80 @@ export const sendContactEmailInternal = internalAction({
       console.error("[emails] Failed to send contact form email:", error);
       throw new Error(`Failed to send message: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
+  },
+});
+
+export const sendBroadcastEmail = action({
+  args: {
+    subject: v.string(),
+    headline: v.string(),
+    bodyText: v.string(),
+    imageUrl: v.optional(v.string()),
+    ctaText: v.optional(v.string()),
+    ctaUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ sent: number; failed: number }> => {
+    const users = await ctx.runQuery(internal.adminBroadcast._getAllEmails);
+    const host = process.env.SMTP_HOST || "smtp.hostinger.com";
+    const port = parseInt(process.env.SMTP_PORT || "465", 10);
+    const smtpUser = process.env.SMTP_USER || "no-reply@neoncell.ca";
+    const pass = process.env.SMTP_PASS;
+    if (!pass) throw new Error("SMTP_PASS not set");
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user: smtpUser, pass },
+    });
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const { email } of users) {
+      if (!email) continue;
+      try {
+        const paragraphs = args.bodyText
+          .split(/\n\n+/)
+          .map((p) => `<p style="margin:0 0 16px 0;color:#d1d5db;font-size:15px;line-height:1.7;">${p.replace(/\n/g, "<br/>")}</p>`)
+          .join("");
+
+        const imageSection = args.imageUrl
+          ? `<img src="${args.imageUrl}" alt="" style="display:block;width:100%;max-width:520px;border-radius:8px;margin:0 0 24px 0;" />`
+          : "";
+
+        const ctaSection =
+          args.ctaText && args.ctaUrl
+            ? `<div style="text-align:center;margin:28px 0 8px 0;"><a href="${args.ctaUrl}" style="display:inline-block;background:#22c55e;color:#fff;font-weight:600;font-size:15px;padding:14px 32px;border-radius:8px;text-decoration:none;">${args.ctaText}</a></div>`
+            : "";
+
+        const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#141414;border-radius:16px;border:1px solid #1f1f1f;overflow:hidden;">
+        <tr><td style="height:4px;background:linear-gradient(90deg,#22c55e,#16a34a);"></td></tr>
+        <tr><td style="padding:40px 32px 32px;">
+          ${imageSection}
+          <h1 style="margin:0 0 24px 0;font-size:26px;font-weight:700;color:#f9fafb;">${args.headline}</h1>
+          ${paragraphs}
+          ${ctaSection}
+        </td></tr>
+        <tr><td style="padding:20px 32px;background:#0f0f0f;border-top:1px solid #1f1f1f;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#6b7280;">You're receiving this because you have a Nourish account.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+        await transporter.sendMail({ from: `"Nourish" <${smtpUser}>`, to: email, subject: args.subject, html });
+        sent++;
+      } catch {
+        failed++;
+      }
+    }
+
+    return { sent, failed };
   },
 });

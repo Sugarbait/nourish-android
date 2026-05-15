@@ -338,3 +338,89 @@ export const redeemCoupon = mutation({
     return { success: true, reward };
   },
 });
+
+// ── Admin queries ──────────────────────────────────────────────────────────
+
+export const adminListUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.map((u) => ({
+      _id: u._id,
+      _creationTime: u._creationTime,
+      email: u.email,
+      name: u.name ?? null,
+      authProvider: u.authProvider ?? null,
+      emailVerified: u.emailVerified ?? false,
+      banned: u.banned ?? false,
+      bannedAt: u.bannedAt ?? null,
+    }));
+  },
+});
+
+export const adminListSubscriptions = query({
+  args: {},
+  handler: async (ctx) => {
+    const subs = await ctx.db.query("subscriptions").collect();
+    return subs.map((s) => ({
+      userId: s.userId,
+      plan: s.plan,
+      active: s.active,
+      expiresAt: s.expiresAt ?? null,
+    }));
+  },
+});
+
+export const adminListCredits = query({
+  args: {},
+  handler: async (ctx) => {
+    const creds = await ctx.db.query("credits").collect();
+    return creds.map((c) => ({
+      userId: c.userId,
+      credits: c.credits,
+      purchasedCredits: c.purchasedCredits ?? 0,
+    }));
+  },
+});
+
+export const banUser = mutation({
+  args: { userId: v.id("users"), banned: v.boolean() },
+  handler: async (ctx, { userId, banned }) => {
+    await ctx.db.patch(userId, {
+      banned,
+      bannedAt: banned ? Date.now() : undefined,
+    } as any);
+  },
+});
+
+export const deleteUser = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    // Delete related data
+    const meals = await ctx.db.query("meals").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const m of meals) await ctx.db.delete(m._id);
+
+    const profiles = await ctx.db.query("profiles").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const p of profiles) await ctx.db.delete(p._id);
+
+    const creds = await ctx.db.query("credits").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const c of creds) await ctx.db.delete(c._id);
+
+    const subs = await ctx.db.query("subscriptions").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const s of subs) await ctx.db.delete(s._id);
+
+    const water = await ctx.db.query("waterLogs").withIndex("by_userId_date", (q) => q.eq("userId", userId)).collect();
+    for (const w of water) await ctx.db.delete(w._id);
+
+    const msgs = await ctx.db.query("aiMessages").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const m of msgs) await ctx.db.delete(m._id);
+
+    const recipes = await ctx.db.query("savedRecipes").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const r of recipes) await ctx.db.delete(r._id);
+
+    const convos = await ctx.db.query("conversations").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
+    for (const c of convos) await ctx.db.delete(c._id);
+
+    await ctx.db.delete(userId);
+  },
+});

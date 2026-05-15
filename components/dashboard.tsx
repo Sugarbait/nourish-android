@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = "0.2.82";
+const BUILD_VERSION = "0.2.85";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -45,6 +45,12 @@ import {
   TrendingUp,
   History,
   Bell,
+  LayoutDashboard,
+  ScanLine,
+  BarChart2,
+  ChevronUp,
+  Droplets,
+  ArrowLeft,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ReferenceLine } from 'recharts';
 import {
@@ -58,6 +64,7 @@ import {
   defaultCreditData,
 } from '@/lib/credits';
 import { PricingModal } from '@/components/pricing-modal';
+import { HistoryView } from '@/components/history-view';
 import { NoCreditsModal } from '@/components/no-credits-modal';
 import { GuestUpsellModal } from '@/components/guest-upsell-modal';
 import { GoalCelebration } from '@/components/goal-celebration';
@@ -477,6 +484,16 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const celebratedRef = useRef<Set<string>>(new Set());
   const notifiedRef = useRef<Set<string>>(new Set());
 
+  // Bottom nav
+  const [activeNav, setActiveNav] = useState('dashboard' as 'dashboard' | 'coach' | 'history' | 'settings');
+
+  // History analytics
+  const [historyRange, setHistoryRange] = useState(30 as 7 | 15 | 30 | 90);
+  const [historyDrillDate, setHistoryDrillDate] = useState<string | null>(null);
+  const [customRangeStart, setCustomRangeStart] = useState<Date | undefined>(undefined);
+  const [customRangeEnd, setCustomRangeEnd] = useState<Date | undefined>(undefined);
+  const [isCustomRange, setIsCustomRange] = useState(false);
+
   const [editingFoodItem, setEditingFoodItem] = useState<{ mealId: string; itemIndex: number; value: string } | null>(null);
 
   const [isContactSubmitting, setIsContactSubmitting] = useState(false);
@@ -599,6 +616,31 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   
   const convexSetWater = useMutation(api.waterLogs.setWaterGlasses);
   const convexWaterData = useQuery(api.waterLogs.getWaterForDate, !isGuest && userId ? { userId: userId as any, date: dateKey } : 'skip');
+
+  // History range dates
+  const historyStartDate = useMemo(() => {
+    if (isCustomRange && customRangeStart) return format(customRangeStart, 'yyyy-MM-dd');
+    const d = new Date();
+    d.setDate(d.getDate() - historyRange + 1);
+    return format(d, 'yyyy-MM-dd');
+  }, [historyRange, isCustomRange, customRangeStart]);
+  const historyEndDate = useMemo(() => {
+    if (isCustomRange && customRangeEnd) return format(customRangeEnd, 'yyyy-MM-dd');
+    return format(startOfToday(), 'yyyy-MM-dd');
+  }, [isCustomRange, customRangeEnd]);
+
+  const historyMeals = useQuery(
+    api.meals.getMealsForDateRange,
+    !isGuest && userId && activeNav === 'history'
+      ? { userId: userId as any, startDate: historyStartDate, endDate: historyEndDate }
+      : 'skip'
+  );
+  const historyWater = useQuery(
+    api.waterLogs.getWaterForDateRange,
+    !isGuest && userId && activeNav === 'history'
+      ? { userId: userId as any, startDate: historyStartDate, endDate: historyEndDate }
+      : 'skip'
+  );
 
   // Hydrate water from Convex
   useEffect(() => {
@@ -2032,15 +2074,41 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         <p className="text-xs text-muted-foreground mt-0.5">Credits available</p>
                       </div>
                       {credits.subscription?.active ? (
-                        <div className="flex items-center gap-2 text-xs text-green-500 font-medium">
-                          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                          Monthly Pro active
-                          {credits.subscription.expiresAt && (
-                            <span className="text-muted-foreground font-normal ml-auto">
-                              renews {new Date(credits.subscription.expiresAt).toLocaleDateString()}
-                            </span>
+                        <>
+                          <div className="flex items-center gap-2 text-xs text-green-500 font-medium">
+                            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                            Pro active
+                            {credits.subscription.expiresAt && (
+                              <span className="text-muted-foreground font-normal ml-auto">
+                                renews {new Date(credits.subscription.expiresAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          {/* Stripe portal — pause, update payment, or cancel */}
+                          {userId && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={async () => {
+                                if (!stripeCustomerId) {
+                                  toast({ title: 'Could not open billing portal', description: 'No Stripe account linked. Subscribe first.', variant: 'destructive' });
+                                  return;
+                                }
+                                try {
+                                  const result = await getBillingPortalUrl({ stripeCustomerId, returnUrl: window.location.href });
+                                  if (result.url) window.location.href = result.url;
+                                } catch (err: any) {
+                                  toast({ title: 'Could not open billing portal', description: err.message || 'Please try again later.', variant: 'destructive' });
+                                }
+                              }}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                              Manage Subscription
+                            </Button>
                           )}
-                        </div>
+                        </>
                       ) : (
                         <p className="text-xs text-muted-foreground">
                           Free plan &bull; 1 free scan daily &bull; Subscribe to unlock AI coach
@@ -2071,34 +2139,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                             Subscribe — $5.99/mo
                           </Button>
                         </SheetClose>
-                      )}
-                      {userId && credits.subscription?.active && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-muted-foreground hover:text-foreground"
-                          onClick={async () => {
-                            if (!stripeCustomerId) {
-                              toast({ title: 'Could not open billing portal', description: 'No Stripe account linked. Subscribe first.', variant: 'destructive' });
-                              return;
-                            }
-                            try {
-                              const result = await getBillingPortalUrl({
-                                stripeCustomerId,
-                                returnUrl: window.location.href,
-                              });
-                              if (result.url) {
-                                window.location.href = result.url;
-                              }
-                            } catch (err: any) {
-                              toast({ title: 'Could not open billing portal', description: err.message || 'Please try again later.', variant: 'destructive' });
-                            }
-                          }}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                          Manage / Cancel Subscription
-                        </Button>
                       )}
                     </div>
 
@@ -2190,6 +2230,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                         </Button>
                       </SheetClose>
                     )}
+                    {userEmail?.toLowerCase() === 'elitesquadp@protonmail.com' && (
+                      <a
+                        href="/admin"
+                        className="block w-full text-center text-xs text-green-600 dark:text-green-400 hover:underline mt-2 font-medium"
+                      >
+                        Admin Panel
+                      </a>
+                    )}
                     <p className="text-center text-xs text-muted-foreground mt-4">Build {BUILD_VERSION}</p>
                   </form>
                 </Form>
@@ -2199,37 +2247,39 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         </div>
       </header>
 
-      {/* Daily Credits Banner */}
-      <div className="sticky top-14 z-10 border-b border-border/40 bg-background/80 backdrop-blur-lg">
-        <div className="container mx-auto flex h-9 items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3 sm:gap-5">
-            <button
-              onClick={() => { setIsPricingOpen(true); }}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Zap className="h-3 w-3 text-primary" />
-              <span>
-                <span className="font-semibold text-foreground">{availableMealCredits(credits)}</span>
-                {' '}credit{availableMealCredits(credits) !== 1 ? 's' : ''} left
-              </span>
-            </button>
+      {activeNav === 'dashboard' && (
+        <div className="sticky top-14 z-10 border-b border-border/40 bg-background/80 backdrop-blur-lg">
+          <div className="container mx-auto flex h-9 items-center justify-between px-4 sm:px-6">
+            <div className="flex items-center gap-3 sm:gap-5">
+              <button
+                onClick={() => { setIsPricingOpen(true); }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Zap className="h-3 w-3 text-primary" />
+                <span>
+                  <span className="font-semibold text-foreground">{availableMealCredits(credits)}</span>
+                  {' '}credit{availableMealCredits(credits) !== 1 ? 's' : ''} left
+                </span>
+              </button>
+            </div>
+            {!credits.subscription?.active && (
+              <button
+                onClick={() => { setIsPricingOpen(true); }}
+                className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+              >
+                <Zap className="h-3 w-3" />
+                <span>Subscribe</span>
+              </button>
+            )}
           </div>
-          {!credits.subscription?.active && (
-            <button
-              onClick={() => { setIsPricingOpen(true); }}
-              className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
-            >
-              <Zap className="h-3 w-3" />
-              <span>Subscribe</span>
-            </button>
-          )}
         </div>
-      </div>
+      )}
 
-      <main className="container mx-auto p-4 md:px-6 pb-10 pt-6">
+      {activeNav === 'dashboard' && (
+      <main className="container mx-auto p-4 md:px-6 pb-24 pt-6">
         <div className="grid gap-8 md:grid-cols-5 lg:grid-cols-3">
           <div className="md:col-span-3 lg:col-span-2 space-y-6">
-            <Card className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
+            <Card id="scan-section" className="shadow-xl rounded-2xl border-border/50 overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl font-bold"><Camera className="text-primary" /> Snap Your Meal</CardTitle>
                     <CardDescription>Use your camera or upload a photo to instantly identify food for {format(selectedDate, 'PPP')}.</CardDescription>
@@ -2961,20 +3011,23 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           </div>
         </div>
       </main>
+      )}
 
-      {/* Floating Chat Widget — no modal, no overlay, no backdrop */}
-      <Button
-        onClick={handleOpenCoach}
-          className={`fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 transition-all duration-200 z-50 bg-primary text-primary-foreground border-2 border-black ${isChatbotOpen ? 'hidden' : ''}`}
+      {/* Floating Chat Widget — only shown on dashboard tab */}
+      {activeNav === 'dashboard' && (
+        <Button
+          onClick={handleOpenCoach}
+          className={`fixed bottom-20 right-4 rounded-full w-14 h-14 shadow-2xl shadow-primary/40 hover:shadow-primary/60 hover:scale-105 transition-all duration-200 z-40 bg-primary text-primary-foreground border-2 border-black ${isChatbotOpen ? 'hidden' : ''}`}
           size="icon"
         >
           <MessageCircle className="h-6 w-6" />
           <span className="sr-only">Open AI Coach</span>
         </Button>
+      )}
 
-      {/* Chat Widget Panel — fixed bottom-right, no overlay/backdrop */}
-      {isChatbotOpen && (
-        <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 z-50 w-full sm:w-[420px] h-[100dvh] sm:h-[600px] sm:max-h-[80vh] flex flex-col bg-background border sm:rounded-2xl shadow-2xl">
+      {/* Chat Widget Panel — fixed bottom-right, only on dashboard tab */}
+      {activeNav === 'dashboard' && isChatbotOpen && (
+        <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 z-50 w-full sm:w-[420px] h-[calc(100dvh-64px)] sm:h-[600px] sm:max-h-[80vh] flex flex-col bg-background border sm:rounded-2xl shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
             <div className="flex items-center gap-3">
@@ -3229,16 +3282,243 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         userEmail={userEmail}
       />
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 mt-8 py-5 px-4">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} Nourish. All rights reserved.</span>
-          <div className="flex gap-5">
-            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
-            <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
+      {activeNav === 'dashboard' && (
+        <footer className="border-t border-border/40 mt-8 py-5 px-4 pb-20">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>© {new Date().getFullYear()} Nourish. All rights reserved.</span>
+            <div className="flex gap-5">
+              <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+              <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
+            </div>
+          </div>
+        </footer>
+      )}
+
+      {/* ── Coach full-page view ─────────────────────────────────────────── */}
+      {activeNav === 'coach' && (
+        <div className="flex flex-col" style={{ height: 'calc(100dvh - 112px)' }}>
+          {/* Coach header */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0 bg-background">
+            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary/20">
+              <Image src="/ai-coach.png" alt="AI Coach" width={40} height={40} className="object-cover w-full h-full" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm">AI Nutrition Coach</p>
+              <p className="text-xs text-muted-foreground">Powered by Gemini</p>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              {chatMessages.length > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs gap-1.5 h-7 px-2"
+                  onClick={() => setShowChatHistory(!showChatHistory)}>
+                  <History className="h-3.5 w-3.5" />
+                  History
+                </Button>
+              )}
+              {chatMessages.length > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs gap-1.5 h-7 px-2"
+                  onClick={async () => { await saveCurrentConversation(chatMessages); setChatMessages([]); setShowChatHistory(false); }}>
+                  <Plus className="h-3.5 w-3.5" />
+                  New
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Saved conversations panel */}
+          {showChatHistory && (
+            <div className="border-b bg-muted/20 shrink-0 max-h-56 overflow-y-auto">
+              <div className="px-4 py-2 flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Saved Conversations</p>
+                <button onClick={() => setShowChatHistory(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+              </div>
+              {recentConversations && recentConversations.length > 0 ? (
+                <div className="px-3 pb-3 space-y-1">
+                  {(showAllHistory ? recentConversations : recentConversations.slice(0, 5)).map((convo: any) => (
+                    <button key={convo._id} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted transition-colors text-sm"
+                      onClick={() => {
+                        const loaded = convo.messages.map((m: any) => ({ role: m.role as 'user' | 'model', content: m.content }));
+                        setChatMessages(loaded);
+                        setIsLoadedFromHistory(true);
+                        setShowChatHistory(false);
+                      }}>
+                      <p className="font-medium truncate">{convo.title}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(convo.createdAt).toLocaleDateString()}</p>
+                    </button>
+                  ))}
+                  {!showAllHistory && recentConversations.length > 5 && (
+                    <button className="text-xs text-primary hover:underline w-full text-center py-1" onClick={() => setShowAllHistory(true)}>
+                      Show {recentConversations.length - 5} more
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="px-4 pb-3 text-xs text-muted-foreground">No saved conversations yet.</p>
+              )}
+            </div>
+          )}
+
+          {/* Messages */}
+          <div ref={chatScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
+            {chatMessages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+                <div className="w-20 h-20 rounded-full overflow-hidden relative border-2 border-primary/20">
+                  <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Welcome! I'm your AI nutritional coach.</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs">Ask me anything about nutrition, meal planning, or your goals.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-2 w-full max-w-sm">
+                  {COACH_TIPS.slice(0, 3).map((tip, i) => (
+                    <button key={i} className="text-xs text-left px-3 py-2 rounded-lg border border-border/60 hover:bg-muted transition-colors"
+                      onClick={() => setCoachInput(tip)}>
+                      💡 {tip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {chatMessages.map((message, index) => (
+              <div key={index} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {message.role === 'model' && (
+                  <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 relative mt-1 border border-primary/20">
+                    <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
+                  </div>
+                )}
+                <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  message.role === 'user'
+                    ? 'bg-primary text-primary-foreground rounded-br-sm'
+                    : 'bg-muted rounded-bl-sm'
+                }`}>
+                  {message.role === 'model' ? (
+                    <div className="space-y-1">
+                      {message.content.split('\n').map((line, i) => (
+                        <p key={i}>{parseFormattedText(line)}</p>
+                      ))}
+                    </div>
+                  ) : message.content}
+                </div>
+                {message.role === 'user' && (
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
+                    <User className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                )}
+              </div>
+            ))}
+            {isCoachLoading && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 relative mt-1 border border-primary/20">
+                  <Image src="/ai-coach.png" alt="AI Coach" fill className="object-cover" />
+                </div>
+                <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
+                  <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+            <div ref={chatBottomRef} />
+          </div>
+
+          {/* Input */}
+          <div className="border-t px-4 pt-3 pb-3 shrink-0 bg-background">
+            <form onSubmit={handleCoachSubmit} className="flex items-center gap-2">
+              <Input
+                placeholder="Ask your coach anything..."
+                value={coachInput}
+                onChange={(e) => setCoachInput(e.target.value)}
+                disabled={isCoachLoading}
+                className="flex-1 text-sm"
+                autoComplete="off"
+              />
+              <Button type="submit" size="icon" disabled={isCoachLoading || !coachInput.trim()} className="w-9 h-9">
+                {isCoachLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              </Button>
+            </form>
+            <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+              1 credit per question · {availableMealCredits(credits)} remaining
+            </p>
           </div>
         </div>
-      </footer>
+      )}
+
+      {/* ── History / Analytics view ─────────────────────────────────────── */}
+      {activeNav === 'history' && (
+        <HistoryView
+          userId={userId}
+          isGuest={isGuest}
+          historyRange={historyRange}
+          setHistoryRange={(r) => { setHistoryRange(r); setIsCustomRange(false); setHistoryDrillDate(null); }}
+          isCustomRange={isCustomRange}
+          setIsCustomRange={setIsCustomRange}
+          customRangeStart={customRangeStart}
+          setCustomRangeStart={setCustomRangeStart}
+          customRangeEnd={customRangeEnd}
+          setCustomRangeEnd={setCustomRangeEnd}
+          historyStartDate={historyStartDate}
+          historyEndDate={historyEndDate}
+          historyMeals={historyMeals}
+          historyWater={historyWater}
+          localHistory={history}
+          goals={goals}
+          historyDrillDate={historyDrillDate}
+          setHistoryDrillDate={setHistoryDrillDate}
+        />
+      )}
+
+      {/* ── Bottom Navigation Bar ────────────────────────────────────────── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border/50 h-16 safe-area-bottom">
+        <div className="grid grid-cols-5 h-full max-w-lg mx-auto px-2">
+          {/* Dashboard */}
+          <button
+            onClick={() => setActiveNav('dashboard')}
+            className={`flex flex-col items-center justify-center gap-0.5 transition-colors ${activeNav === 'dashboard' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <LayoutDashboard className="h-5 w-5" strokeWidth={activeNav === 'dashboard' ? 2.5 : 1.75} />
+            <span className="text-[10px] font-medium">Dashboard</span>
+          </button>
+
+          {/* Coach */}
+          <button
+            onClick={() => { setActiveNav('coach'); setIsChatbotOpen(false); }}
+            className={`flex flex-col items-center justify-center gap-0.5 transition-colors ${activeNav === 'coach' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <MessageCircle className="h-5 w-5" strokeWidth={activeNav === 'coach' ? 2.5 : 1.75} />
+            <span className="text-[10px] font-medium">Coach</span>
+          </button>
+
+          {/* Scan — elevated center button */}
+          <button
+            onClick={() => { setActiveNav('dashboard'); setTimeout(() => { document.getElementById('scan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); }}
+            className="flex flex-col items-center justify-center relative"
+          >
+            <div className="absolute -top-5 flex flex-col items-center">
+              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-500/40 border-4 border-background ring-2 ring-emerald-500/30">
+                <ScanLine className="h-6 w-6 text-white" strokeWidth={2} />
+              </div>
+              <span className="text-[10px] font-semibold text-emerald-500 mt-1.5">Scan</span>
+            </div>
+          </button>
+
+          {/* History */}
+          <button
+            onClick={() => setActiveNav('history')}
+            className={`flex flex-col items-center justify-center gap-0.5 transition-colors ${activeNav === 'history' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <BarChart2 className="h-5 w-5" strokeWidth={activeNav === 'history' ? 2.5 : 1.75} />
+            <span className="text-[10px] font-medium">History</span>
+          </button>
+
+          {/* Settings */}
+          <button
+            onClick={() => { setIsProfileOpen(true); }}
+            className={`flex flex-col items-center justify-center gap-0.5 transition-colors text-muted-foreground hover:text-foreground`}
+          >
+            <Settings className="h-5 w-5" strokeWidth={1.75} />
+            <span className="text-[10px] font-medium">Settings</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }
@@ -3458,3 +3738,4 @@ function RecipePrintButton({ recipe }: { recipe: Recipe }) {
     </Button>
   );
 }
+
