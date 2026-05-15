@@ -1213,6 +1213,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               const startY = (video.videoHeight - size) / 2;
               context.drawImage(video, startX, startY, size, size, 0, 0, size, size);
               const dataUri = canvas.toDataURL('image/jpeg', 0.9);
+              setAiResults([]);
+              setAiHealthAnalysis(null);
               setImagePreview(dataUri);
               stopCamera();
               runFoodRecognition(dataUri);
