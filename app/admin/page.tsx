@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
-  LogOut, Trash2, AlertTriangle, Users, TrendingUp, Settings,
+  LogOut, Trash2, AlertTriangle, Users, TrendingUp, Settings, BarChart2,
   Ban, ShieldCheck, X, Mail, Search, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -101,6 +101,9 @@ export default function AdminPage() {
             <p className="text-muted-foreground text-sm">Signed in as <span className="font-medium text-foreground">{adminEmail}</span></p>
           </div>
           <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/admin/app-data"><BarChart2 className="w-4 h-4" /><span className="hidden sm:inline">App Data</span></Link>
+            </Button>
             <Button asChild variant="outline" size="sm" className="gap-1.5">
               <Link href="/admin/broadcast"><Mail className="w-4 h-4" /><span className="hidden sm:inline">Broadcast</span></Link>
             </Button>

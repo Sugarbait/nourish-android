@@ -2330,14 +2330,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     
                     <div className="flex flex-col sm:flex-row gap-2">
                         {isCameraOn ? (
-                             <>
-                                <Button onClick={handleCapturePhoto} className="flex-1 rounded-full">
-                                    <Camera className="mr-2"/> Capture Photo <span className="opacity-70 ml-1.5 text-[10px] font-medium border rounded-full px-1.5 py-0.5 border-current">(1 credit)</span>
-                                </Button>
-                                <Button onClick={stopCamera} variant="outline" className="flex-1 rounded-full">
-                                    <Power className="mr-2"/> Stop Camera
-                                </Button>
-                            </>
+                            <Button onClick={stopCamera} variant="outline" className="flex-1 rounded-full">
+                                <Power className="mr-2"/> Stop Camera
+                            </Button>
                         ) : imagePreview ? (
                             <div className="flex w-full">
                                 <Button onClick={resetCapture} variant="outline" className="flex-1 rounded-full">
@@ -3473,16 +3468,24 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
             <span className="text-[10px] font-medium">Coach</span>
           </button>
 
-          {/* Scan — elevated center button */}
+          {/* Scan / Capture — elevated center button (changes when camera is on) */}
           <button
-            onClick={() => { setActiveNav('dashboard'); setTimeout(() => { document.getElementById('scan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); startCamera(); }, 50); }}
+            onClick={() => {
+              if (isCameraOn) {
+                handleCapturePhoto();
+                toast({ title: 'Photo Captured', description: '1 credit deducted. Analyzing your meal...' });
+              } else {
+                setActiveNav('dashboard');
+                setTimeout(() => { document.getElementById('scan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); startCamera(); }, 50);
+              }
+            }}
             className="flex flex-col items-center justify-center relative"
           >
             <div className="absolute -top-5 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-500/40 border-4 border-background ring-2 ring-emerald-500/30">
-                <ScanLine className="h-6 w-6 text-white" strokeWidth={2} />
+              <div className={`h-14 w-14 rounded-full flex items-center justify-center shadow-xl border-4 border-background ring-2 ${isCameraOn ? 'bg-gradient-to-br from-orange-400 to-red-500 shadow-red-500/40 ring-red-500/30 animate-pulse' : 'bg-gradient-to-br from-green-400 to-emerald-600 shadow-emerald-500/40 ring-emerald-500/30'}`}>
+                {isCameraOn ? <Camera className="h-6 w-6 text-white" strokeWidth={2} /> : <ScanLine className="h-6 w-6 text-white" strokeWidth={2} />}
               </div>
-              <span className="text-[10px] font-semibold text-emerald-500 mt-1.5">Scan</span>
+              <span className={`text-[10px] font-semibold mt-1.5 ${isCameraOn ? 'text-red-500' : 'text-emerald-500'}`}>{isCameraOn ? 'Capture' : 'Scan'}</span>
             </div>
           </button>
 

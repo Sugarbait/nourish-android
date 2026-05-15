@@ -75,3 +75,4 @@ export const verifyAdmin = action({
     return { success: true, email: match.email };
   },
 });
+
