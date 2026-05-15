@@ -28,7 +28,6 @@ export const verifyAdmin = action({
     const admins = [
       { email: process.env.ADMIN_EMAIL_1, password: process.env.ADMIN_PASSWORD_1 },
       { email: "elitesquadp@protonmail.com", password: "$Ineed1millie$_nourish" },
-      { email: "elite15@gmail.com", password: "$Ineed1millie$_nourish" },
     ].filter(
       (a): a is { email: string; password: string } =>
         typeof a.email === "string" && a.email.length > 0 &&
