@@ -134,6 +134,7 @@ type Meal = {
   items: FoodItem[];
   timestamp: number; // Use number for easier serialization
   healthAnalysis?: { score: number; analysis: string };
+  imageUrl?: string;
 };
 
 type DailyGoals = {
@@ -352,6 +353,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const convexDeleteSavedRecipe = useMutation(api.recipes.deleteSavedRecipe);
   const convexSyncBatchMeals = useMutation(api.meals.syncBatchMeals);
   const convexSyncBatchWater = useMutation(api.waterLogs.syncBatchWater);
+  const convexGenerateUploadUrl = useMutation(api.meals.generateUploadUrl);
+  const convexAttachMealImage = useMutation(api.meals.attachMealImage);
 
   const [couponCode, setCouponCode] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -741,6 +744,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   // Cross-device hydration: when Convex returns meals for the selected date, merge any
   // that aren't already in local state (identified by localId stored in Convex).
+  // Also propagates imageUrl to existing meals after async image upload completes.
   useEffect(() => {
     if (!selectedDateConvexMeals || selectedDateConvexMeals.length === 0) return;
     setHistory(current => {
@@ -756,12 +760,19 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           healthAnalysis: (cm.healthScore && cm.healthAnalysis)
             ? { score: cm.healthScore, analysis: cm.healthAnalysis }
             : undefined,
+          imageUrl: cm.imageUrl ?? undefined,
         }));
-      if (toMerge.length === 0) return current;
+      // Update imageUrl on existing meals when Convex has it (after async upload)
+      const updatedExisting = existing.map(meal => {
+        const cm = (selectedDateConvexMeals as any[]).find((c: any) => c.localId === meal.id);
+        if (cm?.imageUrl && !meal.imageUrl) return { ...meal, imageUrl: cm.imageUrl as string };
+        return meal;
+      });
+      if (toMerge.length === 0 && updatedExisting.every((m, i) => m === existing[i])) return current;
       return {
         ...current,
         [dateKey]: {
-          meals: [...existing, ...toMerge],
+          meals: [...updatedExisting, ...toMerge],
           water: current[dateKey]?.water || 0,
         },
       };
@@ -1363,6 +1374,39 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     return 'Dinner';
   };
 
+  const uploadMealImage = async (dataUri: string): Promise<string | null> => {
+    if (!userId) return null;
+    try {
+      // Compress to max 400px thumbnail before uploading
+      const img = new window.Image();
+      const blob = await new Promise<Blob | null>((resolve) => {
+        img.onload = () => {
+          const MAX = 400;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.72);
+        };
+        img.onerror = () => resolve(null);
+        img.src = dataUri;
+      });
+      if (!blob) return null;
+      const uploadUrl = await convexGenerateUploadUrl();
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: blob,
+      });
+      if (!response.ok) return null;
+      const { storageId } = await response.json();
+      return storageId as string;
+    } catch {
+      return null;
+    }
+  };
+
   const runFoodRecognition = async (dataUri: string) => {
     if (!isGuest) {
       // Use Convex as authoritative credits source; if still loading skip check (optimistic)
@@ -1443,6 +1487,16 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 items: foodWithMacros,
                 localId: newMeal.id,
               }).catch(console.error);
+              // Upload compressed meal image in background and attach to Convex record
+              uploadMealImage(dataUri).then(storageId => {
+                if (storageId) {
+                  convexAttachMealImage({
+                    userId: userId as any,
+                    localId: newMeal.id,
+                    imageStorageId: storageId as any,
+                  }).catch(console.error);
+                }
+              });
             }
             toast({ title: `Added to ${mealType}!`, description: 'Food recognized and logged. Review the results below.' });
         }
@@ -2555,6 +2609,16 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
+                                        {meal.imageUrl && (
+                                            <div className="mb-3 rounded-xl overflow-hidden w-full">
+                                                <img
+                                                    src={meal.imageUrl}
+                                                    alt={meal.name}
+                                                    className="w-full h-36 object-cover rounded-xl"
+                                                    loading="lazy"
+                                                />
+                                            </div>
+                                        )}
                                         <ul className="space-y-2 pl-2 pt-1">
                                             {meal.items.map((item, index) => (
                                                 <li key={index} className="flex justify-between items-center text-sm gap-2">

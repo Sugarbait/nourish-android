@@ -84,6 +84,7 @@ export default defineSchema({
         confidence: v.optional(v.number()),
       })
     ),
+    imageStorageId: v.optional(v.id("_storage")),
     createdAt: v.number(),
   })
     .index("by_userId_date", ["userId", "date"])

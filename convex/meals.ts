@@ -2,6 +2,13 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { ConvexError } from "convex/values";
 
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 const mealItemSchema = v.object({
   name: v.string(),
   calories: v.number(),
@@ -30,6 +37,7 @@ export const logMeal = mutation({
     healthAnalysis: v.optional(v.string()),
     items: v.array(mealItemSchema),
     localId: v.optional(v.string()), // the Date.now() id from localStorage for dedup
+    imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const { userId, ...rest } = args;
@@ -44,12 +52,38 @@ export const logMeal = mutation({
 export const getMealsForDate = query({
   args: { userId: v.id("users"), date: v.string() },
   handler: async (ctx, { userId, date }) => {
-    return await ctx.db
+    const meals = await ctx.db
       .query("meals")
       .withIndex("by_userId_date", (q) =>
         q.eq("userId", userId).eq("date", date)
       )
       .collect();
+    return await Promise.all(
+      meals.map(async (meal) => ({
+        ...meal,
+        imageUrl: meal.imageStorageId
+          ? await ctx.storage.getUrl(meal.imageStorageId)
+          : null,
+      }))
+    );
+  },
+});
+
+export const attachMealImage = mutation({
+  args: {
+    userId: v.id("users"),
+    localId: v.string(),
+    imageStorageId: v.id("_storage"),
+  },
+  handler: async (ctx, { userId, localId, imageStorageId }) => {
+    const meal = await ctx.db
+      .query("meals")
+      .withIndex("by_userId_localId", (q) =>
+        q.eq("userId", userId).eq("localId", localId)
+      )
+      .first();
+    if (!meal || meal.userId !== userId) return;
+    await ctx.db.patch(meal._id, { imageStorageId });
   },
 });
 
