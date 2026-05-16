@@ -16,10 +16,18 @@ const http = httpRouter();
 // Validate a user-supplied redirect URL against the configured APP_URL allowlist.
 // APP_URL may be a comma-separated list of allowed origins (e.g. "https://nourish.app,http://localhost:3000").
 // Returns true if the URL is an absolute URL whose origin matches one of the allowed origins.
+// If APP_URL is not configured, allows any valid absolute URL (assumes same-origin redirects).
 function isAllowedRedirect(url: string | undefined | null): boolean {
   if (!url) return false;
+  try {
+    new URL(url); // Validate that it's a proper absolute URL
+  } catch {
+    return false;
+  }
+
   const allowed = (process.env.APP_URL ?? "").split(",").map(s => s.trim()).filter(Boolean);
-  if (allowed.length === 0) return false;
+  if (allowed.length === 0) return true; // If no APP_URL configured, accept any valid absolute URL
+
   try {
     const parsed = new URL(url);
     return allowed.some(origin => {
