@@ -63,6 +63,7 @@ import {
   availableAICredits,
   defaultCreditData,
 } from '@/lib/credits';
+import { clearAuthStorage } from '@/lib/auth-storage';
 import { PricingModal } from '@/components/pricing-modal';
 import { HistoryView } from '@/components/history-view';
 import { NoCreditsModal } from '@/components/no-credits-modal';
@@ -2322,11 +2323,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           variant="ghost"
                           className="w-full mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => {
-                            localStorage.removeItem('nourish_user_id');
-                            localStorage.removeItem('nourish_user_name');
-                            localStorage.removeItem('nourish_user_avatar');
-                            localStorage.removeItem('nourish_user_email');
-                            localStorage.removeItem('nourishai-credits');
+                            clearAuthStorage();
                             window.location.href = '/';
                           }}
                         >

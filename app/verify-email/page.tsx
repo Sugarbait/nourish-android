@@ -9,6 +9,7 @@ import { api } from '@/convex/_generated/api';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { saveAuthToStorage } from '@/lib/auth-storage';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -32,13 +33,8 @@ function VerifyEmailContent() {
     verifyEmailToken({ token, email })
       .then((result) => {
         if (cancelled) return;
-        // Save auth to localStorage
-        localStorage.setItem('nourish_user_id', result.userId);
-        if (result.name) localStorage.setItem('nourish_user_name', result.name);
-        else localStorage.removeItem('nourish_user_name');
-        if (result.avatarUrl) localStorage.setItem('nourish_user_avatar', result.avatarUrl);
-        else localStorage.removeItem('nourish_user_avatar');
-        localStorage.setItem('nourish_user_email', email);
+        // Save auth to localStorage (wipes stale user-scoped data when switching users)
+        saveAuthToStorage(result.userId, result.name, result.avatarUrl, email);
 
         setStatus('success');
         // Redirect to dashboard after brief success message

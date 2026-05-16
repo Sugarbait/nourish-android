@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Loader2, X, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
+import { saveAuthToStorage } from '@/lib/auth-storage';
 
 // Brand SVG icons
 const GoogleIcon = () => (
@@ -71,20 +72,6 @@ function getFriendlyError(err: any, context: 'signIn' | 'signUp' | 'reset' | 're
   }
 
   return 'Something went wrong. Please try again in a moment.';
-}
-
-function saveAuthToStorage(userId: string, name: string | null, avatarUrl: string | null, email?: string) {
-  const previousUserId = localStorage.getItem('nourish_user_id');
-  if (previousUserId && previousUserId !== userId) {
-    localStorage.removeItem('nourishai-credits');
-  }
-  localStorage.setItem('nourish_user_id', userId);
-  if (name) localStorage.setItem('nourish_user_name', name);
-  else localStorage.removeItem('nourish_user_name');
-  if (avatarUrl) localStorage.setItem('nourish_user_avatar', avatarUrl);
-  else localStorage.removeItem('nourish_user_avatar');
-  if (email) localStorage.setItem('nourish_user_email', email);
-  else localStorage.removeItem('nourish_user_email');
 }
 
 export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthModalProps) {

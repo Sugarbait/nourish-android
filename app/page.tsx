@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { AuthModal } from '@/components/auth-modal';
+import { saveAuthToStorage } from '@/lib/auth-storage';
 import {
   Leaf, Camera, Brain, BarChart2, Droplets, Star,
   ArrowRight, Check, Zap, Shield, RefreshCcw, Menu, X
@@ -177,15 +178,8 @@ export default function SplashPage() {
           name: msName,
           avatarUrl,
         });
-        const prevUserId = localStorage.getItem('nourish_user_id');
-        if (prevUserId && prevUserId !== (result.userId as string)) {
-          localStorage.removeItem('nourishai-credits');
-        }
-        localStorage.setItem('nourish_user_id', result.userId as string);
-        if (result.name) localStorage.setItem('nourish_user_name', result.name);
         const finalAvatar = avatarUrl || result.avatarUrl;
-        if (finalAvatar) localStorage.setItem('nourish_user_avatar', finalAvatar);
-        if (msEmail) localStorage.setItem('nourish_user_email', msEmail);
+        saveAuthToStorage(result.userId as string, result.name, finalAvatar, msEmail);
         window.location.href = '/dashboard/';
       } catch (err) {
         console.error('[Microsoft OAuth] Failed:', err);
