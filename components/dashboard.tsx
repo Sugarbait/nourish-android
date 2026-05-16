@@ -2650,19 +2650,18 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 </CardHeader>
                 <CardContent>
                     {dailyData.meals.length > 0 ? (
-                        <Accordion type="single" collapsible className="w-full" defaultValue={`meal-${dailyData.meals[0].id}`}>
-                            {dailyData.meals.map(meal => (
-                                <AccordionItem value={`meal-${meal.id}`} key={meal.id}>
-                                    <AccordionTrigger>
-                                        <div className="flex justify-between w-full pr-4">
-                                            <span className='font-semibold'>{meal.name}</span>
-                                            <span className="text-muted-foreground">{meal.items.reduce((acc, i) => acc + i.calories, 0)} kcal</span>
-                                        </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                        <div className="flex gap-3 items-start pt-1">
+                        <div className="space-y-4">
+                            {dailyData.meals.map(meal => {
+                                const totalCals = meal.items.reduce((acc, i) => acc + i.calories, 0);
+                                const totalProtein = meal.items.reduce((acc, i) => acc + (i.protein || 0), 0);
+                                const totalCarbs = meal.items.reduce((acc, i) => acc + (i.carbs || 0), 0);
+                                const totalFat = meal.items.reduce((acc, i) => acc + (i.fat || 0), 0);
+                                return (
+                                    <div key={meal.id} className="rounded-2xl border border-border/50 bg-card p-4 sm:p-5">
+                                        {/* Top section: image + meal info */}
+                                        <div className="flex gap-4 mb-4">
                                             {meal.imageUrl && (
-                                                <div className="rounded-2xl overflow-hidden flex-shrink-0 w-24 aspect-square">
+                                                <div className="rounded-2xl overflow-hidden flex-shrink-0 w-20 sm:w-24 aspect-square">
                                                     <img
                                                         src={meal.imageUrl}
                                                         alt={meal.name}
@@ -2671,11 +2670,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                     />
                                                 </div>
                                             )}
-                                            <div className="flex-1 min-w-0 space-y-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs text-muted-foreground whitespace-nowrap">Meal type:</span>
+                                            <div className="flex-1 min-w-0 flex flex-col">
                                                 <Select value={meal.name} onValueChange={(val) => updateMealType(meal.id, val as MealType)}>
-                                                    <SelectTrigger className="h-7 flex-1 text-xs">
+                                                    <SelectTrigger className="h-auto w-fit border-0 p-0 bg-transparent hover:bg-transparent focus:ring-0 text-lg sm:text-xl font-bold capitalize gap-1.5">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -2685,8 +2682,31 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                         <SelectItem value="Snacks">Snacks</SelectItem>
                                                     </SelectContent>
                                                 </Select>
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    {meal.items.length} item{meal.items.length !== 1 ? 's' : ''}
+                                                </p>
+                                                <p className="text-2xl sm:text-3xl font-black text-orange-400 mt-2 sm:mt-3">{Math.round(totalCals)} kcal</p>
                                             </div>
-                                            <ul className="space-y-2">
+                                        </div>
+
+                                        {/* Macro boxes */}
+                                        <div className="grid grid-cols-3 gap-2 mb-4">
+                                            <div className="bg-blue-500/15 rounded-xl py-2.5 text-center">
+                                                <p className="text-base font-bold text-blue-400">{Math.round(totalProtein)}g</p>
+                                                <p className="text-[10px] text-muted-foreground">Protein</p>
+                                            </div>
+                                            <div className="bg-yellow-500/15 rounded-xl py-2.5 text-center">
+                                                <p className="text-base font-bold text-yellow-400">{Math.round(totalCarbs)}g</p>
+                                                <p className="text-[10px] text-muted-foreground">Carbs</p>
+                                            </div>
+                                            <div className="bg-red-500/15 rounded-xl py-2.5 text-center">
+                                                <p className="text-base font-bold text-red-400">{Math.round(totalFat)}g</p>
+                                                <p className="text-[10px] text-muted-foreground">Fat</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Items list */}
+                                        <ul className="space-y-2 pt-3 border-t border-border/30">
                                             {meal.items.map((item, index) => (
                                                 <li key={index} className="flex justify-between items-center text-sm gap-2">
                                                     {editingFoodItem?.mealId === meal.id && editingFoodItem?.itemIndex === index ? (
@@ -2719,19 +2739,18 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                         </div>
                                                     ) : (
                                                         <button
-                                                            className="flex items-center gap-1.5 text-left flex-1 group hover:text-primary transition-colors"
+                                                            className="flex items-center gap-1.5 text-left flex-1 group hover:text-primary transition-colors min-w-0"
                                                             onClick={() => setEditingFoodItem({ mealId: meal.id, itemIndex: index, value: item.name })}
                                                         >
-                                                            <span>{item.name}</span>
+                                                            <span className="text-muted-foreground truncate">{item.name}</span>
                                                             <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
                                                         </button>
                                                     )}
-                                                    <span className="text-muted-foreground shrink-0">{item.calories} kcal</span>
+                                                    <span className="text-foreground font-medium shrink-0">{item.calories} kcal</span>
                                                 </li>
                                             ))}
-                                            </ul>
-                                            </div>
-                                        </div>
+                                        </ul>
+
                                         {meal.healthAnalysis && (
                                             <details className="mt-3 group">
                                                 <summary className="flex items-center gap-1.5 text-xs font-medium text-primary cursor-pointer select-none list-none">
@@ -2759,7 +2778,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
+                                                    className="mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
                                                 >
                                                     <Trash2 className="mr-2 h-4 w-4" /> Remove Entry
                                                 </Button>
@@ -2773,7 +2792,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction 
+                                                    <AlertDialogAction
                                                         onClick={() => removeMeal(meal.id)}
                                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                     >
@@ -2782,10 +2801,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                        </Accordion>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     ) : (
                         <p className="text-muted-foreground text-center py-8">No meals logged for this day.</p>
                     )}
