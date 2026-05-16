@@ -72,6 +72,8 @@
    which prevents any subsequent interaction. Force it back to auto globally. */
 body, html {
   pointer-events: auto !important;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 /* Calendar Tracked Day Dot */

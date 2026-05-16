@@ -1927,7 +1927,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/50">
         <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
           <img src="/logo.png" alt="Nourish" className="h-8 w-auto" />
@@ -2616,17 +2616,17 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
             <Card className="shadow-xl rounded-2xl border-border/50">
                 <CardHeader>
-                    <CardTitle className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <CardTitle className="flex flex-col sm:flex-row items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-xl font-bold"><Utensils className="text-primary"/> Meal History</div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="icon" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <Button variant="outline" size="icon" className="shrink-0" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {format(selectedDate, 'PPP')}
+                                    <Button variant="outline" className="flex-1 sm:w-[180px] justify-start text-left font-normal min-w-0">
+                                        <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                                        <span className="truncate">{format(selectedDate, 'PPP')}</span>
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0">
@@ -2641,7 +2641,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                     />
                                 </PopoverContent>
                             </Popover>
-                             <Button variant="outline" size="icon" onClick={() => setSelectedDate(addDays(selectedDate, 1))} disabled={selectedDate >= startOfToday()}>
+                             <Button variant="outline" size="icon" className="shrink-0" onClick={() => setSelectedDate(addDays(selectedDate, 1))} disabled={selectedDate >= startOfToday()}>
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>
