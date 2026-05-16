@@ -439,10 +439,10 @@ export function HistoryView({
                   const imageUrl = meal.imageUrl as string | undefined;
                   return (
                     <Card key={idx}>
-                      <CardContent className="pt-4 pb-4">
-                        <div className="flex items-start gap-3">
+                      <CardContent className="pt-5 pb-5">
+                        <div className="flex gap-5 mb-5">
                           {imageUrl && (
-                            <div className="rounded-2xl overflow-hidden flex-shrink-0 w-24 aspect-square">
+                            <div className="rounded-2xl overflow-hidden flex-shrink-0 w-28 aspect-square">
                               <img
                                 src={imageUrl}
                                 alt={name}
@@ -451,43 +451,40 @@ export function HistoryView({
                               />
                             </div>
                           )}
-                          <div className="flex-1 min-w-0 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-semibold capitalize truncate">{name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {items.length} item{items.length !== 1 ? 's' : ''}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <p className="font-bold text-orange-400">{Math.round(calories)} kcal</p>
-                              </div>
+                          <div className="flex-1 min-w-0 flex flex-col justify-between">
+                            <div>
+                              <p className="text-lg font-semibold capitalize mb-1">{name}</p>
+                              <p className="text-xs text-muted-foreground mb-3">
+                                {items.length} item{items.length !== 1 ? 's' : ''}
+                              </p>
                             </div>
-                            <div className="grid grid-cols-3 gap-1.5 text-center">
-                              <div className="bg-blue-500/10 rounded-lg py-1">
-                                <p className="text-sm font-bold text-blue-400">{Math.round(protein)}g</p>
-                                <p className="text-[10px] text-muted-foreground">Protein</p>
-                              </div>
-                              <div className="bg-yellow-500/10 rounded-lg py-1">
-                                <p className="text-sm font-bold text-yellow-400">{Math.round(carbs)}g</p>
-                                <p className="text-[10px] text-muted-foreground">Carbs</p>
-                              </div>
-                              <div className="bg-red-500/10 rounded-lg py-1">
-                                <p className="text-sm font-bold text-red-400">{Math.round(fat)}g</p>
-                                <p className="text-[10px] text-muted-foreground">Fat</p>
-                              </div>
-                            </div>
+                            <p className="text-2xl font-black text-orange-400">{Math.round(calories)} kcal</p>
                           </div>
                         </div>
+
+                        {/* Macro boxes */}
+                        <div className="grid grid-cols-3 gap-2 mb-4">
+                          <div className="bg-blue-500/15 rounded-xl py-2 px-3 text-center">
+                            <p className="text-sm font-bold text-blue-400">{Math.round(protein)}g</p>
+                            <p className="text-[10px] text-muted-foreground">Protein</p>
+                          </div>
+                          <div className="bg-yellow-500/15 rounded-xl py-2 px-3 text-center">
+                            <p className="text-sm font-bold text-yellow-400">{Math.round(carbs)}g</p>
+                            <p className="text-[10px] text-muted-foreground">Carbs</p>
+                          </div>
+                          <div className="bg-red-500/15 rounded-xl py-2 px-3 text-center">
+                            <p className="text-sm font-bold text-red-400">{Math.round(fat)}g</p>
+                            <p className="text-[10px] text-muted-foreground">Fat</p>
+                          </div>
+                        </div>
+
+                        {/* Items list */}
                         {items.length > 0 && (
-                          <div className="mt-3 space-y-1">
+                          <div className="space-y-1.5 pt-3 border-t border-border/30">
                             {items.map((item: any, i: number) => (
-                              <div
-                                key={i}
-                                className="flex items-center justify-between text-xs text-muted-foreground py-0.5 border-t border-border/30"
-                              >
-                                <span className="truncate max-w-[60%]">{item.name}</span>
-                                <span className="font-medium">{item.calories} kcal</span>
+                              <div key={i} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground truncate max-w-[70%]">{item.name}</span>
+                                <span className="text-foreground font-medium shrink-0">{item.calories} kcal</span>
                               </div>
                             ))}
                           </div>
