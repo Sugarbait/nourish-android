@@ -494,7 +494,8 @@ export const sendBroadcastEmail = action({
           ${ctaSection}
         </td></tr>
         <tr><td style="padding:20px 32px;background:#0f0f0f;border-top:1px solid #1f1f1f;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#6b7280;">You're receiving this because you have a Nourish account.</p>
+          <p style="margin:0 0 6px 0;font-size:12px;color:#6b7280;">You're receiving this because you have a Nourish account.</p>
+          <p style="margin:0;font-size:12px;color:#6b7280;">Don't want these? Open the Nourish app and go to <strong style="color:#9ca3af;">Settings &rarr; Notification Preferences</strong> to opt out of product &amp; promotional emails.</p>
         </td></tr>
       </table>
     </td></tr>

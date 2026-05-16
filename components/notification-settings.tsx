@@ -17,9 +17,12 @@ interface NotificationSettingsProps {
 }
 
 export function NotificationSettings({ preferences, onSave }: NotificationSettingsProps) {
-  const [settings, setSettings] = useState<NotificationPreferences>(
-    preferences ?? DEFAULT_NOTIFICATION_PREFS
-  );
+  // Merge defaults with saved prefs so new fields (e.g. broadcastEmails) added
+  // after a user's profile was last written still render as ticked by default.
+  const [settings, setSettings] = useState<NotificationPreferences>({
+    ...DEFAULT_NOTIFICATION_PREFS,
+    ...(preferences ?? {}),
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleToggle = (key: keyof NotificationPreferences) => {
