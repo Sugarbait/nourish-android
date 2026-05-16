@@ -24,7 +24,7 @@ const STRIPE_PRICES: Record<string, string> = {
   subscription_yearly: "price_1TXhR52aieB6RS0mncnvQqEP", // $79.99/year
   starter:             "price_1TRNHJ2aieB6RS0mAbOIFhUu", // $1.99
   value:               "price_1TRNLA2aieB6RS0mNHGMJBQf", // $4.99
-  pro:                 "price_1TRNne2aieB6RS0mnroiTobX", // $12.99
+  pro:                 "price_1TXhUn2aieB6RS0mueBSn08B", // $12.99
 };
 
 /** Create a Stripe Checkout Session using plain fetch (no SDK) */

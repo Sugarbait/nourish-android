@@ -4,7 +4,7 @@ export const STRIPE_PRICES = {
   subscription_yearly: 'price_1TXhR52aieB6RS0mncnvQqEP', // $79.99/year
   starter:             'price_1TRNHJ2aieB6RS0mAbOIFhUu', // $1.99 one-time
   value:               'price_1TRNLA2aieB6RS0mNHGMJBQf', // $4.99 one-time
-  pro:                 'price_1TRNne2aieB6RS0mnroiTobX', // $12.99 one-time
+  pro:                 'price_1TXhUn2aieB6RS0mueBSn08B', // $12.99 one-time
 } as const;
 
 export type StripePriceKey = keyof typeof STRIPE_PRICES;
