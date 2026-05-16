@@ -289,3 +289,17 @@ export const getTrackedDates = query({
     }
   },
 });
+
+/** Admin: total meals logged per user, returned as { userId, count } rows. */
+export const adminListMealCounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const meals = await ctx.db.query("meals").collect();
+    const counts = new Map<string, number>();
+    for (const m of meals) {
+      const key = m.userId as unknown as string;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([userId, count]) => ({ userId, count }));
+  },
+});

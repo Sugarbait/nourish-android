@@ -25,13 +25,15 @@ export default function AdminPage() {
   const rawUsers = useQuery(api.users.adminListUsers);
   const rawSubs = useQuery(api.users.adminListSubscriptions);
   const rawCredits = useQuery(api.users.adminListCredits);
+  const rawMealCounts = useQuery(api.meals.adminListMealCounts);
 
   // Join client-side
-  const allUsers = rawUsers && rawSubs && rawCredits
+  const allUsers = rawUsers && rawSubs && rawCredits && rawMealCounts
     ? rawUsers.map((u) => {
         const sub = rawSubs.find((s) => s.userId === u._id) ?? null;
         const cred = rawCredits.find((c) => c.userId === u._id) ?? null;
-        return { ...u, subscription: sub, credits: cred };
+        const mealCount = rawMealCounts.find((m) => m.userId === u._id)?.count ?? 0;
+        return { ...u, subscription: sub, credits: cred, mealCount };
       })
     : undefined;
 
@@ -276,7 +278,9 @@ export default function AdminPage() {
                           <span>{user.credits.credits} + {user.credits.purchasedCredits} pack</span>
                         ) : '—'}
                       </td>
-                      <td className="py-3 px-2 hidden lg:table-cell text-muted-foreground">—</td>
+                      <td className="py-3 px-2 hidden lg:table-cell text-muted-foreground text-xs">
+                        {user.mealCount > 0 ? user.mealCount.toLocaleString() : '—'}
+                      </td>
                       <td className="py-3 px-2">
                         {user.banned ? (
                           <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded-full font-medium flex items-center gap-1 w-fit">
