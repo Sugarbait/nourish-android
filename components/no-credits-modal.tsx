@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { X, Sparkles, Check, Zap, RefreshCcw } from 'lucide-react';
+import { X, Sparkles, Check, Zap, RefreshCcw, Loader2 } from 'lucide-react';
 import { CreditData } from '@/lib/credits';
 import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -67,6 +67,7 @@ export function NoCreditsModal({
 }: NoCreditsModalProps) {
   const { toast } = useToast();
   const createCheckoutSession = useAction(api.stripeActions.createCheckoutSession);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   // 'closed' | 'opening' | 'open' | 'closing'
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open' | 'closing'>('closed');
 
@@ -95,6 +96,7 @@ export function NoCreditsModal({
       close();
       return;
     }
+    setIsCheckingOut(true);
     try {
       const result = await createCheckoutSession({
         priceKey: 'subscription',
@@ -106,9 +108,11 @@ export function NoCreditsModal({
       if (result.url) {
         window.location.href = result.url;
       } else {
+        setIsCheckingOut(false);
         toast({ title: 'Checkout failed', description: result.error || 'Could not open Stripe.', variant: 'destructive' });
       }
     } catch (err: any) {
+      setIsCheckingOut(false);
       toast({ title: 'Checkout failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
     }
   };
@@ -125,6 +129,17 @@ export function NoCreditsModal({
 
   return (
     <>
+      {isCheckingOut && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/50 bg-card px-10 py-8 shadow-2xl text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div>
+              <p className="font-semibold text-base">Taking you to checkout</p>
+              <p className="text-sm text-muted-foreground mt-1">You'll be redirected to Stripe's secure<br />payment page in just a moment.</p>
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         @keyframes nai-backdrop-in {
           from { opacity: 0; }

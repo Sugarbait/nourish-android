@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Zap, Star, Crown, Sparkles, RefreshCcw } from 'lucide-react';
+import { Check, Zap, Star, Crown, Sparkles, RefreshCcw, Loader2 } from 'lucide-react';
 import { CREDIT_PACKAGES, CreditPackage, CreditData } from '@/lib/credits';
 import { useToast } from '@/hooks/use-toast';
 import { useAction } from 'convex/react';
@@ -49,8 +49,10 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
   const { toast } = useToast();
   const createCheckoutSession = useAction(api.stripeActions.createCheckoutSession);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const checkout = async (priceKey: string) => {
+    setIsCheckingOut(true);
     try {
       const result = await createCheckoutSession({
         priceKey,
@@ -62,9 +64,11 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       if (result.url) {
         window.location.href = result.url;
       } else {
+        setIsCheckingOut(false);
         toast({ title: 'Checkout failed', description: result.error || 'Could not open Stripe. Please try again.', variant: 'destructive' });
       }
     } catch (err: any) {
+      setIsCheckingOut(false);
       toast({ title: 'Checkout failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
     }
   };
@@ -100,6 +104,18 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
   const isSubscribed = credits.subscription?.active === true;
 
   return (
+    <>
+      {isCheckingOut && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/50 bg-card px-10 py-8 shadow-2xl text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div>
+              <p className="font-semibold text-base">Taking you to checkout</p>
+              <p className="text-sm text-muted-foreground mt-1">You'll be redirected to Stripe's secure<br />payment page in just a moment.</p>
+            </div>
+          </div>
+        </div>
+      )}
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="text-center pb-2">
@@ -275,5 +291,6 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
         </p>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
