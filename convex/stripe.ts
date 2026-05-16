@@ -6,7 +6,7 @@ import { Id } from "./_generated/dataModel";
 const AMOUNT_TO_CREDITS: Record<number, number> = {
   199: 50,   // $1.99 Starter
   499: 150,  // $4.99 Value
-  999: 400,  // $9.99 Pro
+  1299: 400,  // $12.99 Pro
 };
 
 const SUBSCRIPTION_CREDITS = 300;

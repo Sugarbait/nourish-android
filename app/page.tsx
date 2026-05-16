@@ -416,7 +416,7 @@ export default function SplashPage() {
             {billingCycle === 'monthly' ? (
               <PricingCard name="Pro Monthly" price="$8.99" period="/ month" features={['300 credits/month','Credits reset monthly','1 free daily scan included','Cancel anytime']} cta="Subscribe" highlight onCta={openSignUp} />
             ) : (
-              <PricingCard name="Pro Yearly" price="$54.99" period="/ year" features={['300 credits/month','Credits reset monthly','1 free daily scan included','~$4.58/mo — Save 24%']} cta="Subscribe" highlight onCta={openSignUp} />
+              <PricingCard name="Pro Yearly" price="$79.99" period="/ year" features={['300 credits/month','Credits reset monthly','1 free daily scan included','~$6.67/mo — Save 26%']} cta="Subscribe" highlight onCta={openSignUp} />
             )}
           </div>
           <p className="text-center text-[11px] md:text-xs text-muted-foreground mt-6">

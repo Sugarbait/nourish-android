@@ -188,9 +188,9 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
               <div className="text-right shrink-0">
                 {billingCycle === 'yearly' ? (
                   <>
-                    <div className="text-2xl font-bold">$54.99</div>
+                    <div className="text-2xl font-bold">$79.99</div>
                     <div className="text-xs text-muted-foreground">billed annually</div>
-                    <div className="text-xs text-emerald-400 mt-0.5">~$4.58/mo</div>
+                    <div className="text-xs text-emerald-400 mt-0.5">~$6.67/mo</div>
                   </>
                 ) : (
                   <>

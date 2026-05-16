@@ -169,7 +169,7 @@ export const CREDIT_PACKAGES: Record<
 > = {
   starter: { label: 'Starter', price: '$1.99', credits: 50 },
   value:   { label: 'Value',   price: '$4.99', credits: 150, badge: 'Popular' },
-  pro:     { label: 'Pro',     price: '$9.99', credits: 400, badge: 'Best Value' },
+  pro:     { label: 'Pro',     price: '$12.99', credits: 400, badge: 'Best Value' },
 };
 
 export function addCreditPackage(data: CreditData, pkg: CreditPackage): CreditData {
