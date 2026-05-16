@@ -3134,7 +3134,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
       {/* Chat Widget Panel — fixed bottom-right, only on dashboard tab */}
       {activeNav === 'dashboard' && isChatbotOpen && (
-        <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 z-50 w-full sm:w-[420px] h-[calc(100dvh-64px)] sm:h-[600px] sm:max-h-[80vh] flex flex-col bg-background border sm:rounded-2xl shadow-2xl">
+        <div className="fixed bottom-16 sm:bottom-4 right-0 sm:right-4 z-50 w-full sm:w-[420px] h-[calc(100dvh-128px)] sm:h-[600px] sm:max-h-[80vh] flex flex-col bg-background border sm:rounded-2xl shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
             <div className="flex items-center gap-3">

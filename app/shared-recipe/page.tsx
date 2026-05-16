@@ -222,7 +222,7 @@ function SharedRecipeContent() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">{recipe.name}</CardTitle>
+            <CardTitle className="text-2xl sm:text-3xl">{recipe.name}</CardTitle>
             <CardDescription>{recipe.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -230,19 +230,19 @@ function SharedRecipeContent() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
               <div className="bg-muted p-3 rounded-lg">
                 <p className="text-xs text-muted-foreground">Calories</p>
-                <p className="text-xl font-bold">{recipe.calories}</p>
+                <p className="text-lg sm:text-xl font-bold">{recipe.calories}</p>
               </div>
               <div className="bg-muted p-3 rounded-lg">
                 <p className="text-xs text-muted-foreground">Protein</p>
-                <p className="text-xl font-bold">{recipe.protein}g</p>
+                <p className="text-lg sm:text-xl font-bold">{recipe.protein}g</p>
               </div>
               <div className="bg-muted p-3 rounded-lg">
                 <p className="text-xs text-muted-foreground">Carbs</p>
-                <p className="text-xl font-bold">{recipe.carbs}g</p>
+                <p className="text-lg sm:text-xl font-bold">{recipe.carbs}g</p>
               </div>
               <div className="bg-muted p-3 rounded-lg">
                 <p className="text-xs text-muted-foreground">Fat</p>
-                <p className="text-xl font-bold">{recipe.fat}g</p>
+                <p className="text-lg sm:text-xl font-bold">{recipe.fat}g</p>
               </div>
             </div>
 

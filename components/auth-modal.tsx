@@ -271,7 +271,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 pointer-events-none">
-        <div className={`pointer-events-auto w-full max-w-sm h-[560px] max-h-[90vh] flex flex-col rounded-2xl border border-border/40 bg-card shadow-2xl ${isOpen ? 'auth-m-in' : 'auth-m-out'}`}>
+        <div className={`pointer-events-auto w-full max-w-sm max-h-[90vh] sm:h-[560px] flex flex-col rounded-2xl border border-border/40 bg-card shadow-2xl ${isOpen ? 'auth-m-in' : 'auth-m-out'}`}>
           {/* Top gradient bar */}
           <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-primary to-teal-400" />
 

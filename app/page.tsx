@@ -254,10 +254,10 @@ export default function SplashPage() {
         <div className="pointer-events-none absolute inset-0 w-full">
           <div className="absolute inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_at_center,white,transparent_80%)] opacity-30" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-primary/10 blur-[120px] rounded-full" />
-          <div className="pulse-glow absolute top-20 left-1/4 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[100px]" style={{animationDelay:'1s'}} />
-          <div className="pulse-glow absolute top-40 right-1/4 w-[400px] h-[400px] bg-teal-500/10 rounded-full blur-[120px]" style={{animationDelay:'2s'}} />
+          <div className="pulse-glow absolute top-20 left-1/4 w-[200px] h-[200px] sm:w-[300px] sm:h-[300px] bg-emerald-500/10 rounded-full blur-[100px]" style={{animationDelay:'1s'}} />
+          <div className="pulse-glow absolute top-40 right-1/4 w-[250px] h-[250px] sm:w-[400px] sm:h-[400px] bg-teal-500/10 rounded-full blur-[120px]" style={{animationDelay:'2s'}} />
           {/* Healthy Food Plate Background Image */}
-          <div className="absolute top-[45%] sm:top-[40%] left-1/2 w-[350px] h-[350px] sm:w-[450px] sm:h-[450px] md:w-[600px] md:h-[600px] opacity-[0.8] mix-blend-screen [mask-image:radial-gradient(circle,black_45%,transparent_50%)] spin-slow">
+          <div className="absolute top-[45%] sm:top-[40%] left-1/2 w-[280px] h-[280px] sm:w-[450px] sm:h-[450px] md:w-[600px] md:h-[600px] opacity-[0.8] mix-blend-screen [mask-image:radial-gradient(circle,black_45%,transparent_50%)] spin-slow">
             <img src="/hero-plate.png" alt="Healthy Plate" className="w-full h-full object-cover scale-[1.1]" />
           </div>
         </div>
@@ -269,7 +269,7 @@ export default function SplashPage() {
           {/* Badge */}
           <div className="relative mb-6 md:mb-8 inline-flex items-center gap-2 rounded-full p-[1px] bg-gradient-to-r from-emerald-500/50 via-teal-500/50 to-primary/50 overflow-hidden group">
             <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-            <div className="relative flex items-center gap-2 rounded-full bg-background/90 backdrop-blur-sm px-4 py-1.5 text-[10px] md:text-xs font-semibold text-primary group-hover:bg-background/80 transition-colors">
+            <div className="relative flex items-center gap-2 rounded-full bg-background/90 backdrop-blur-sm px-4 py-1.5 text-xs md:text-sm font-semibold text-primary group-hover:bg-background/80 transition-colors">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
