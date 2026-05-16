@@ -29,7 +29,7 @@ export async function redirectToStripeCheckout(
 
   const mode = priceKey.startsWith('subscription') ? 'subscription' : 'payment';
   const successUrl = `${window.location.origin}/?checkout=success`;
-  const cancelUrl  = `${window.location.origin}/`;
+  const cancelUrl  = `${window.location.origin}/?checkout=cancelled`;
 
   try {
     const res = await fetch(`${convexUrl}/stripe-checkout`, {

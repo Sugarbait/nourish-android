@@ -69,10 +69,11 @@ export default function SplashPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const createOrUpdateOAuthUser = useAction(api.auth.createOrUpdateOAuthUser);
 
-  // Redirect already-logged-in users
+  // Redirect already-logged-in users — preserve query params so the dashboard
+  // can react to ?checkout=success / ?checkout=cancelled returned from Stripe.
   useEffect(() => {
     const userId = localStorage.getItem('nourish_user_id');
-    if (userId) { window.location.href = '/dashboard/'; return; }
+    if (userId) { window.location.href = `/dashboard/${window.location.search}`; return; }
   }, []);
 
   // Handle Microsoft OAuth redirect — auth code lands in ?code= query param (PKCE flow)
