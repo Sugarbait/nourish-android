@@ -57,7 +57,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       const result = await createCheckoutSession({
         priceKey,
         successUrl: `${window.location.origin}/?checkout=success`,
-        cancelUrl:  `${window.location.origin}/`,
+        cancelUrl:  `${window.location.origin}/?checkout=cancelled`,
         ...(userId        ? { userId }                    : {}),
         ...(userEmail     ? { customerEmail: userEmail }  : {}),
       });

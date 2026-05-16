@@ -101,7 +101,7 @@ export function NoCreditsModal({
       const result = await createCheckoutSession({
         priceKey: 'subscription',
         successUrl: `${window.location.origin}/?checkout=success`,
-        cancelUrl:  `${window.location.origin}/`,
+        cancelUrl:  `${window.location.origin}/?checkout=cancelled`,
         ...(userId    ? { userId }                   : {}),
         ...(userEmail ? { customerEmail: userEmail } : {}),
       });

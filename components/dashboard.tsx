@@ -919,6 +919,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // When Stripe redirects back with ?checkout=cancelled, show a friendly notice
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') !== 'cancelled') return;
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => {
+      toast({
+        title: 'No payment was made',
+        description: "You're back safely — your account hasn't been charged. You can subscribe any time from the menu.",
+        duration: 7000,
+      });
+    }, 400);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Sync OAuth user data (name, avatar) into local profile state from localStorage
   useEffect(() => {
     if (userName || userAvatar) {
