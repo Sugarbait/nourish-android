@@ -2273,7 +2273,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     </div>
 
                     <div className="flex items-center justify-between pt-2 pb-1 border-t mt-2">
-                      <span className="text-sm text-muted-foreground">Notifications</span>
+                      <span className="text-sm text-muted-foreground">Notification & Email Preferences</span>
                       <button
                         onClick={() => setIsNotificationSettingsOpen(true)}
                         className="text-xs text-primary hover:text-primary/80 transition-colors"
@@ -2947,8 +2947,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                   <Sheet open={isNotificationSettingsOpen} onOpenChange={setIsNotificationSettingsOpen}>
                     <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
                       <SheetHeader className="mb-5">
-                        <SheetTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/> Notification Preferences</SheetTitle>
-                        <SheetDescription>Manage which notifications you want to receive in-app.</SheetDescription>
+                        <SheetTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/> Notification & Email Preferences</SheetTitle>
+                        <SheetDescription>Manage which notifications you want to receive in-app and by email.</SheetDescription>
                       </SheetHeader>
                       <NotificationSettings
                         preferences={notificationPrefs}
