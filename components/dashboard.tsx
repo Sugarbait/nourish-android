@@ -2648,7 +2648,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     </CardTitle>
                     <CardDescription>A log of all your meals for the selected day.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 sm:px-6">
                     {dailyData.meals.length > 0 ? (
                         <div className="space-y-4">
                             {dailyData.meals.map(meal => {
@@ -2657,7 +2657,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                 const totalCarbs = meal.items.reduce((acc, i) => acc + (i.carbs || 0), 0);
                                 const totalFat = meal.items.reduce((acc, i) => acc + (i.fat || 0), 0);
                                 return (
-                                    <div key={meal.id} className="rounded-2xl border border-border/50 bg-card p-4 sm:p-5">
+                                    <div key={meal.id} className="rounded-2xl border border-border/50 bg-card p-3 sm:p-5 overflow-hidden">
                                         {/* Top section: image + meal info */}
                                         <div className="flex gap-4 mb-4">
                                             {meal.imageUrl && (
@@ -2708,7 +2708,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                         {/* Items list */}
                                         <ul className="space-y-2 pt-3 border-t border-border/30">
                                             {meal.items.map((item, index) => (
-                                                <li key={index} className="flex justify-between items-center text-sm gap-2">
+                                                <li key={index} className="flex justify-between items-center text-sm gap-2 min-w-0">
                                                     {editingFoodItem?.mealId === meal.id && editingFoodItem?.itemIndex === index ? (
                                                         <div className="flex items-center gap-1 flex-1">
                                                             <input
