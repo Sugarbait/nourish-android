@@ -2229,7 +2229,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                             onClick={() => { setIsPricingOpen(true); }}
                           >
                             <Zap className="h-3.5 w-3.5 mr-2" />
-                            Subscribe — $5.99/mo
+                            Subscribe — $8.99/mo
                           </Button>
                         </SheetClose>
                       )}

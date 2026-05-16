@@ -178,7 +178,7 @@ export function addCreditPackage(data: CreditData, pkg: CreditPackage): CreditDa
 }
 
 /**
- * Activate a monthly subscription ($5.99/mo).
+ * Activate a monthly subscription ($8.99/mo).
  * Adds 300 credits to the unified pool (rollover) and sets expiry 30 days from now.
  */
 export function activateSubscription(data: CreditData): CreditData {

@@ -194,7 +194,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
                   </>
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">$5.99</div>
+                    <div className="text-2xl font-bold">$8.99</div>
                     <div className="text-xs text-muted-foreground">/month</div>
                   </>
                 )}

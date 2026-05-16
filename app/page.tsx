@@ -414,7 +414,7 @@ export default function SplashPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 max-w-xl mx-auto">
             <PricingCard name="Free" price="$0" period="/ forever" features={['1 meal scan/day','1 AI message/day','Basic tracking']} cta="Get Started" onCta={openSignUp} />
             {billingCycle === 'monthly' ? (
-              <PricingCard name="Pro Monthly" price="$5.99" period="/ month" features={['300 credits/month','Credits reset monthly','1 free daily scan included','Cancel anytime']} cta="Subscribe" highlight onCta={openSignUp} />
+              <PricingCard name="Pro Monthly" price="$8.99" period="/ month" features={['300 credits/month','Credits reset monthly','1 free daily scan included','Cancel anytime']} cta="Subscribe" highlight onCta={openSignUp} />
             ) : (
               <PricingCard name="Pro Yearly" price="$54.99" period="/ year" features={['300 credits/month','Credits reset monthly','1 free daily scan included','~$4.58/mo — Save 24%']} cta="Subscribe" highlight onCta={openSignUp} />
             )}
