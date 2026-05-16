@@ -1,6 +1,6 @@
 // Stripe price IDs
 export const STRIPE_PRICES = {
-  subscription:        'price_1TRNFt2aieB6RS0mySbIRdhI', // $8.99/month
+  subscription:        'price_1TXhqS2aieB6RS0mvp8Tfat8', // $8.99/month
   subscription_yearly: 'price_1TXhR52aieB6RS0mncnvQqEP', // $79.99/year
   starter:             'price_1TRNHJ2aieB6RS0mAbOIFhUu', // $1.99 one-time
   value:               'price_1TRNLA2aieB6RS0mNHGMJBQf', // $4.99 one-time

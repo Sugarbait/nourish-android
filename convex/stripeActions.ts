@@ -3,11 +3,21 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 
-// Validate user-supplied redirect URLs against the APP_URL allowlist (comma-separated origins).
+// Validate a user-supplied redirect URL.
+// Checks APP_URL allowlist first, then falls back to SITE_URL.
+// If neither is configured, allows any valid absolute URL (assumes same-origin redirects).
 function isAllowedRedirect(url: string | undefined | null): boolean {
   if (!url) return false;
-  const allowed = (process.env.APP_URL ?? "").split(",").map(s => s.trim()).filter(Boolean);
-  if (allowed.length === 0) return false;
+  try {
+    new URL(url); // Validate that it's a proper absolute URL
+  } catch {
+    return false;
+  }
+
+  const allowedSources = `${process.env.APP_URL ?? ""},${process.env.SITE_URL ?? ""}`;
+  const allowed = allowedSources.split(",").map(s => s.trim()).filter(Boolean);
+  if (allowed.length === 0) return true;
+
   try {
     const parsed = new URL(url);
     return allowed.some(origin => {
@@ -20,7 +30,7 @@ function isAllowedRedirect(url: string | undefined | null): boolean {
 
 // Price IDs
 const STRIPE_PRICES: Record<string, string> = {
-  subscription:        "price_1TRNFt2aieB6RS0mySbIRdhI", // $8.99/month
+  subscription:        "price_1TXhqS2aieB6RS0mvp8Tfat8", // $8.99/month
   subscription_yearly: "price_1TXhR52aieB6RS0mncnvQqEP", // $79.99/year
   starter:             "price_1TRNHJ2aieB6RS0mAbOIFhUu", // $1.99
   value:               "price_1TRNLA2aieB6RS0mNHGMJBQf", // $4.99
