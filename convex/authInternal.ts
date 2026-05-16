@@ -4,9 +4,12 @@ import { v } from "convex/values";
 export const getUserByEmail = internalQuery({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
+    // Emails are stored lowercase; normalize incoming arg so callers that
+    // forget to lowercase still match the indexed row.
+    const normalizedEmail = email.trim().toLowerCase();
     return await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
       .first();
   },
 });

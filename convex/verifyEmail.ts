@@ -10,7 +10,8 @@ export const verifyEmailToken = action({
     email: v.string(),
   },
   handler: async (ctx, { token, email }): Promise<{ success: boolean; userId: string; name: string | null; avatarUrl: string | null }> => {
-    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
     if (!user) throw new Error("Invalid verification link.");
 
     if (!user.verificationToken || user.verificationToken !== token) {

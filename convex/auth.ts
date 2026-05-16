@@ -14,11 +14,8 @@ export const loginUser: ReturnType<typeof action> = action({
     password: v.string(),
   },
   handler: async (ctx, { email, password }): Promise<AuthResult> => {
-    const trimmedEmail = email.trim();
-    let user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail });
-    if (!user) {
-      user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
-    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
     if (!user) throw new ConvexError("Invalid email or password.");
     if (!user.passwordHash) throw new ConvexError("This account uses social login. Please sign in with Google or Microsoft.");
 
@@ -116,9 +113,8 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
       };
     }
 
-    let byEmail = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: email.trim() });
-    if (!byEmail) byEmail = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
-    
+    const byEmail = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
+
     if (byEmail) {
       await ctx.runMutation(internal.authInternal.updateOAuthUser, {
         userId: byEmail._id,
@@ -148,11 +144,8 @@ export const createOrUpdateOAuthUser: ReturnType<typeof action> = action({
 export const requestPasswordReset: ReturnType<typeof action> = action({
   args: { email: v.string() },
   handler: async (ctx, { email }): Promise<{ sent: boolean }> => {
-    const trimmedEmail = email.trim();
-    let user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail });
-    if (!user) {
-      user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
-    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
     if (!user) throw new ConvexError("No email exists in the system. Please check the spelling or try a different email address.");
     if (!user.passwordHash) throw new ConvexError("This account uses social login (Google or Microsoft) and does not have a password.");
 
@@ -166,8 +159,8 @@ export const requestPasswordReset: ReturnType<typeof action> = action({
     });
 
     await ctx.runAction(internal.emails.sendPasswordResetEmail, {
-      email,
-      name: user.name ?? email,
+      email: normalizedEmail,
+      name: user.name ?? normalizedEmail,
       code,
     });
 
@@ -183,11 +176,8 @@ export const resetPassword: ReturnType<typeof action> = action({
     newPassword: v.string(),
   },
   handler: async (ctx, { email, code, newPassword }): Promise<{ success: boolean }> => {
-    const trimmedEmail = email.trim();
-    let user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail });
-    if (!user) {
-      user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: trimmedEmail.toLowerCase() });
-    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await ctx.runQuery(internal.authInternal.getUserByEmail, { email: normalizedEmail });
     if (!user) throw new ConvexError("No email exists in the system. Please check the spelling or try a different email address.");
     if (!user.resetCode || user.resetCode !== code.trim()) throw new ConvexError("Invalid or expired reset code.");
     if (user.resetCodeExpiry && user.resetCodeExpiry < Date.now()) throw new ConvexError("Reset code has expired. Please request a new one.");
