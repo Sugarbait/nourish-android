@@ -476,6 +476,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const [credits, setCredits] = useState<CreditData>(defaultCreditData());
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [checkoutCancelledOpen, setCheckoutCancelledOpen] = useState(false);
   const [noCreditsOpen, setNoCreditsOpen] = useState(false);
   const [noCreditsType, setNoCreditsType] = useState<'meal' | 'ai' | 'recipe'>('meal');
   const [guestUpsellOpen, setGuestUpsellOpen] = useState(false);
@@ -919,19 +920,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When Stripe redirects back with ?checkout=cancelled, show a friendly notice
+  // When Stripe redirects back with ?checkout=cancelled, show a friendly modal
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('checkout') !== 'cancelled') return;
     window.history.replaceState({}, '', window.location.pathname);
-    setTimeout(() => {
-      toast({
-        title: 'No payment was made',
-        description: "You're back safely — your account hasn't been charged. You can subscribe any time from the menu.",
-        duration: 7000,
-      });
-    }, 400);
+    setTimeout(() => setCheckoutCancelledOpen(true), 300);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -3381,6 +3376,29 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         userId={userId}
         userEmail={userEmail}
       />
+
+      {/* Checkout cancelled notice — shown when user returns from Stripe without paying */}
+      <Dialog open={checkoutCancelledOpen} onOpenChange={setCheckoutCancelledOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15">
+              <CreditCard className="h-6 w-6 text-amber-500" />
+            </div>
+            <DialogTitle className="text-center">No payment was made</DialogTitle>
+            <DialogDescription className="text-center pt-1">
+              You came back without completing checkout — your card hasn't been charged and nothing was processed. You can subscribe any time from the menu when you're ready.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 mt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setCheckoutCancelledOpen(false)}>
+              Close
+            </Button>
+            <Button className="flex-1" onClick={() => { setCheckoutCancelledOpen(false); setIsPricingOpen(true); }}>
+              View plans
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Goal Celebration */}
       <GoalCelebration
