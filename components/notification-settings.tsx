@@ -8,6 +8,7 @@ interface NotificationPreferences {
   goalNudges: boolean;
   creditResetAlert: boolean;
   coachInsights: boolean;
+  broadcastEmails: boolean;
 }
 
 interface NotificationSettingsProps {
@@ -54,6 +55,11 @@ export function NotificationSettings({ preferences, onSave }: NotificationSettin
       key: 'coachInsights' as const,
       label: 'AI Coach Insights',
       description: 'Preview of your coach\'s response after each message',
+    },
+    {
+      key: 'broadcastEmails' as const,
+      label: 'Product & Promotional Emails',
+      description: 'Occasional announcements, tips, and offers from the Nourish team',
     },
   ];
 

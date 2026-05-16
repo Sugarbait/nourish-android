@@ -2964,6 +2964,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                               goalNudges: prefs.goalNudges,
                               creditResetAlert: prefs.creditResetAlert,
                               coachInsights: prefs.coachInsights,
+                              broadcastEmails: prefs.broadcastEmails,
                             });
                             if (result?.success) {
                               addNotification('Notification preferences saved', 'success');

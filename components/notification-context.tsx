@@ -13,6 +13,7 @@ export const DEFAULT_NOTIFICATION_PREFS = {
   goalNudges: true,
   creditResetAlert: true,
   coachInsights: true,
+  broadcastEmails: true,
 };
 
 interface NotificationContextType {

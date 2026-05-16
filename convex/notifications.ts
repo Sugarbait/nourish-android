@@ -8,9 +8,10 @@ export const updateNotificationPreferences = mutation({
     goalNudges: v.boolean(),
     creditResetAlert: v.boolean(),
     coachInsights: v.boolean(),
+    broadcastEmails: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { userId, mealReminders, goalNudges, creditResetAlert, coachInsights } = args;
+    const { userId, mealReminders, goalNudges, creditResetAlert, coachInsights, broadcastEmails } = args;
 
     const profile = await ctx.db
       .query('profiles')
@@ -27,6 +28,7 @@ export const updateNotificationPreferences = mutation({
         goalNudges,
         creditResetAlert,
         coachInsights,
+        broadcastEmails,
       },
     });
 

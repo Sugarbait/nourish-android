@@ -53,6 +53,10 @@ export default defineSchema({
       goalNudges: v.boolean(),
       creditResetAlert: v.boolean(),
       coachInsights: v.boolean(),
+      // Opt-in to product announcement / promo broadcast emails. Optional
+      // so existing rows (written before this field existed) remain valid;
+      // treat `undefined` as opt-in for backwards compatibility.
+      broadcastEmails: v.optional(v.boolean()),
     })),
   }).index("by_userId", ["userId"]),
 
