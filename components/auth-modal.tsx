@@ -11,6 +11,10 @@ import { Eye, EyeOff, Loader2, X, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
 import { saveAuthToStorage } from '@/lib/auth-storage';
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Browser } from '@capacitor/browser';
+import { App as CapApp } from '@capacitor/app';
 
 // Brand SVG icons
 const GoogleIcon = () => (
@@ -80,6 +84,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   const loginUser = useAction(api.auth.loginUser);
   const createAccount = useAction(api.auth.createAccount);
   const createOrUpdateOAuthUser = useAction(api.auth.createOrUpdateOAuthUser);
+  const microsoftOAuthExchange = useAction(api.auth.microsoftOAuthExchange);
   const requestPasswordReset = useAction(api.auth.requestPasswordReset);
   const resetPassword = useAction(api.auth.resetPassword);
 
@@ -115,7 +120,109 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
     setConfirmPassword('');
   }, [defaultTab]);
 
+  // Initialize native Google Auth plugin on mount (Android/iOS only)
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      GoogleAuth.initialize({
+        clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      }).catch((err) => console.error('GoogleAuth init failed:', err));
+    }
+  }, []);
+
   const hasGoogleClientId = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+  // Native Google sign-in (Android/iOS via Capacitor plugin)
+  const handleNativeGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const user = await GoogleAuth.signIn();
+      const result = await createOrUpdateOAuthUser({
+        provider: 'google',
+        providerId: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.imageUrl || undefined,
+      });
+      saveAuthToStorage(result.userId as string, result.name, result.avatarUrl, user.email);
+      window.location.href = window.location.origin + '/dashboard/index.html';
+    } catch (err: any) {
+      console.error('Native Google sign-in error:', err);
+      const msg = err?.message || err?.code || 'Could not sign in with Google.';
+      if (!String(msg).toLowerCase().includes('cancel')) {
+        toast({ title: 'Google sign-in failed', description: String(msg), variant: 'destructive' });
+      }
+      setLoading(false);
+    }
+  };
+
+  // Native Microsoft sign-in — opens in-app browser, listens for deep link callback
+  const handleNativeMicrosoftSignIn = async () => {
+    const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || '857339e2-a51c-454a-bf30-3f095aec1654';
+    const redirectUri = 'com.neoncell.nourish://auth';
+
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    const codeVerifier = btoa(String.fromCharCode(...Array.from(array)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier));
+    const codeChallenge = btoa(String.fromCharCode(...Array.from(new Uint8Array(digest))))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    sessionStorage.setItem('ms_pkce_verifier', codeVerifier);
+    sessionStorage.setItem('ms_redirect_uri', redirectUri);
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope: 'openid profile email User.Read',
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+      response_mode: 'query',
+    });
+
+    // Listener fires when Microsoft redirects to com.neoncell.nourish://oauth-microsoft
+    const handle = await CapApp.addListener('appUrlOpen', async (event) => {
+      if (!event.url.startsWith(redirectUri)) return;
+      handle.remove();
+      await Browser.close();
+
+      const url = new URL(event.url);
+      const code = url.searchParams.get('code');
+      if (!code) {
+        toast({ title: 'Microsoft sign-in failed', description: 'No authorization code returned.', variant: 'destructive' });
+        return;
+      }
+      const verifier = sessionStorage.getItem('ms_pkce_verifier');
+      if (!verifier) {
+        toast({ title: 'Microsoft sign-in failed', description: 'Session expired. Please try again.', variant: 'destructive' });
+        return;
+      }
+      sessionStorage.removeItem('ms_pkce_verifier');
+      setLoading(true);
+      try {
+        // Exchange the code via Convex backend to avoid Capacitor WebView CORS / cross-origin token redemption errors.
+        const result = await microsoftOAuthExchange({
+          code,
+          codeVerifier: verifier,
+          redirectUri,
+          clientId,
+        });
+        saveAuthToStorage(result.userId as string, result.name, result.avatarUrl, result.email);
+        window.location.href = window.location.origin + '/dashboard/index.html';
+      } catch (err: any) {
+        toast({ title: 'Microsoft sign-in failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
+        setLoading(false);
+      }
+    });
+
+    await Browser.open({
+      url: `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params}`,
+      presentationStyle: 'popover',
+    });
+  };
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -135,7 +242,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
           avatarUrl: profile.picture || undefined,
         });
         saveAuthToStorage(result.userId as string, result.name, result.avatarUrl, profile.email);
-        window.location.href = '/dashboard/';
+        window.location.href = window.location.origin + '/dashboard/index.html';
       } catch (err: any) {
         toast({ title: 'Google sign-in failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
         setLoading(false);
@@ -191,7 +298,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
         saveAuthToStorage(result.userId as string, result.name, result.avatarUrl, email);
         toast({ title: 'Welcome back!', description: 'Signed in successfully.' });
         onOpenChange(false);
-        window.location.href = '/dashboard/';
+        window.location.href = window.location.origin + '/dashboard/index.html';
       }
     } catch (err: any) {
       toast({
@@ -428,7 +535,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               <button
                 type="button"
                 disabled={loading || !hasGoogleClientId}
-                onClick={() => googleLogin()}
+                onClick={() => Capacitor.isNativePlatform() ? handleNativeGoogleSignIn() : googleLogin()}
                 title={!hasGoogleClientId ? 'Google sign-in not configured' : undefined}
                 className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium disabled:opacity-50"
               >
@@ -437,7 +544,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
               <button
                 type="button"
                 disabled={loading}
-                onClick={handleMicrosoftSignIn}
+                onClick={Capacitor.isNativePlatform() ? handleNativeMicrosoftSignIn : handleMicrosoftSignIn}
                 className="w-full flex items-center justify-center gap-3 h-10 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all text-sm font-medium disabled:opacity-50"
               >
                 <MicrosoftIcon /> Continue with Microsoft

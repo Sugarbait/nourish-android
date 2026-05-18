@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">nourish</string>
+    <string name="title_activity_main">nourish</string>
+    <string name="package_name">com.neoncell.nourish</string>
+    <string name="custom_url_scheme">com.neoncell.nourish</string>
+    <string name="server_client_id">825260820543-t9fn4ouf12kp3l19f5j6q39oidi7c4eo.apps.googleusercontent.com</string>
+</resources>

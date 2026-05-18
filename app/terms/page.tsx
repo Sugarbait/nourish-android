@@ -1,18 +1,20 @@
+'use client';
+
 import { Leaf, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 
 export default function TermsPage() {
+  const goHome = (e: React.MouseEvent) => { e.preventDefault(); window.location.href = window.location.origin + '/index.html'; };
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
       <nav className="border-b border-white/5 bg-background/80 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center">
+          <a href="/index.html" onClick={goHome} className="flex items-center">
             <img src="/logo.png" alt="Nourish" className="h-8 w-auto" />
-          </Link>
-          <Link href="/" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+          </a>
+          <a href="/index.html" onClick={goHome} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-3.5 w-3.5" /> Back
-          </Link>
+          </a>
         </div>
       </nav>
 
@@ -202,8 +204,8 @@ export default function TermsPage() {
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} Nourish. All rights reserved.</span>
           <div className="flex gap-4">
-            <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
-            <Link href="/terms" className="hover:text-foreground">Terms</Link>
+            <a href="/privacy/index.html" onClick={(e) => { e.preventDefault(); window.location.href = window.location.origin + '/privacy/index.html'; }} className="hover:text-foreground">Privacy</a>
+            <a href="/terms/index.html" onClick={(e) => { e.preventDefault(); window.location.href = window.location.origin + '/terms/index.html'; }} className="hover:text-foreground">Terms</a>
           </div>
         </div>
       </footer>

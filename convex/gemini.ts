@@ -4,7 +4,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { UserRefreshClient } from "google-auth-library";
 
-const MODEL = "gemini-3.1-flash-lite";
+const MODEL = "gemini-3.1-flash-lite-preview";
 
 function getMostFrequentMealTypes(meals: any[]): string {
   const mealTypeCounts: Record<string, number> = {};
@@ -206,6 +206,56 @@ export const suggestRecipes = action({
     const response = await callVertexGemini(contents, systemInstruction);
     const cleanResponse = response.replace(/```json\s*|\s*```/g, "").trim();
     return JSON.parse(cleanResponse);
+  },
+});
+
+/**
+ * Re-analyze the healthiness of a meal based on its current list of food items
+ * (text-only, no image). Used to keep the health score in sync after the user
+ * edits items, adds new ones, or removes them.
+ */
+export const analyzeMealHealth = action({
+  args: {
+    items: v.array(
+      v.object({
+        name: v.string(),
+        calories: v.number(),
+        protein: v.optional(v.number()),
+        carbs: v.optional(v.number()),
+        fat: v.optional(v.number()),
+      }),
+    ),
+  },
+  handler: async (_ctx, { items }): Promise<{ healthScore: number; healthAnalysis: string }> => {
+    if (items.length === 0) {
+      return { healthScore: 0, healthAnalysis: "No food items to analyze." };
+    }
+
+    const itemsText = items
+      .map((i) => `${i.name} (${i.calories} kcal, P: ${i.protein ?? 0}g, C: ${i.carbs ?? 0}g, F: ${i.fat ?? 0}g)`)
+      .join("; ");
+
+    const contents = [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `Score this meal's healthiness on a 1-100 scale and write a short analysis (1-3 sentences). Meal items: ${itemsText}. Respond with valid JSON only, no markdown: {"score": number, "analysis": string}`,
+          },
+        ],
+      },
+    ];
+
+    const systemInstruction =
+      "You are a nutrition expert. Given a list of food items with their calories and macros, return a healthiness score (1-100) and a brief, candid analysis. Always respond with valid JSON only, no markdown code blocks.";
+
+    const response = await callVertexGemini(contents, systemInstruction);
+    const cleanResponse = response.replace(/```json\s*|\s*```/g, "").trim();
+    const parsed = JSON.parse(cleanResponse);
+    return {
+      healthScore: Number(parsed.score) || 0,
+      healthAnalysis: String(parsed.analysis || ""),
+    };
   },
 });
 

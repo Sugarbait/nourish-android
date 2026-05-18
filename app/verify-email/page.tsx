@@ -39,7 +39,7 @@ function VerifyEmailContent() {
         setStatus('success');
         // Redirect to dashboard after brief success message
         setTimeout(() => {
-          window.location.href = '/dashboard/';
+          window.location.href = window.location.origin + '/dashboard/index.html';
         }, 1800);
       })
       .catch((err: any) => {
@@ -106,7 +106,7 @@ function VerifyEmailContent() {
                 <h1 className="text-xl font-bold mb-2">Verification failed</h1>
                 <p className="text-sm text-muted-foreground mb-6">{errorMessage}</p>
                 <Button
-                  onClick={() => { window.location.href = '/'; }}
+                  onClick={() => { window.location.href = window.location.origin + '/index.html'; }}
                   className="w-full h-10 font-semibold bg-primary hover:bg-primary/90"
                 >
                   Back to Sign In

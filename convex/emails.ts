@@ -31,7 +31,7 @@ export const sendVerificationEmail = internalAction({
       auth: { user, pass },
     });
 
-    const verifyUrl = `${SITE_URL}/verify-email/?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
+    const verifyUrl = `com.neoncell.nourish://verify?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
     const firstName = name.split(" ")[0] || name;
 
     const html = `

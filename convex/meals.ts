@@ -181,6 +181,24 @@ export const updateMealItem = mutation({
   },
 });
 
+/** Update healthScore + healthAnalysis after the user edits a meal's items. */
+export const updateMealHealthAnalysis = mutation({
+  args: {
+    userId: v.id("users"),
+    localId: v.string(),
+    healthScore: v.number(),
+    healthAnalysis: v.string(),
+  },
+  handler: async (ctx, { userId, localId, healthScore, healthAnalysis }) => {
+    const meal = await ctx.db
+      .query("meals")
+      .withIndex("by_userId_localId", (q) => q.eq("userId", userId).eq("localId", localId))
+      .first();
+    if (!meal) return; // not yet synced
+    await ctx.db.patch(meal._id, { healthScore, healthAnalysis });
+  },
+});
+
 /** Update the meal type (Breakfast/Lunch/Dinner/Snack) for a stored meal */
 export const updateMealType = mutation({
   args: {

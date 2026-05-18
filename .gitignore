@@ -39,3 +39,17 @@ yarn-error.log*
 # Turbopack
 .turbo
 .claude/worktrees/
+
+# Android signing keys - NEVER commit these
+*.jks
+*.keystore
+android/app/release-key.jks
+android/keystore.properties
+
+# Android build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+android/app/src/main/assets/public/

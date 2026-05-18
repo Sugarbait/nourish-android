@@ -2,7 +2,7 @@
 
 import { action } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 import bcrypt from "bcryptjs";
 
 type AuthResult = { userId: string; name: string | null; avatarUrl: string | null };
@@ -242,5 +242,57 @@ export const resendVerificationEmail: ReturnType<typeof action> = action({
     }
 
     return { sent: true };
+  },
+});
+
+/**
+ * Exchange a Microsoft OAuth authorization code for an ID token (server-side).
+ * Used by the native Android flow to avoid CORS / cross-origin token redemption
+ * errors that occur when the Capacitor WebView calls Microsoft's token endpoint
+ * directly. Returns { userId, name, avatarUrl } ready for client storage.
+ */
+export const microsoftOAuthExchange: ReturnType<typeof action> = action({
+  args: {
+    code: v.string(),
+    codeVerifier: v.string(),
+    redirectUri: v.string(),
+    clientId: v.string(),
+  },
+  handler: async (ctx, { code, codeVerifier, redirectUri, clientId }): Promise<AuthResult & { email: string }> => {
+    const tokenRes = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        code_verifier: codeVerifier,
+      }),
+    });
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      console.error("[auth] Microsoft token exchange failed:", errText);
+      throw new ConvexError("Microsoft sign-in failed. Please try again.");
+    }
+    const tokens: any = await tokenRes.json();
+    if (!tokens.id_token) throw new ConvexError("No id_token returned from Microsoft.");
+
+    const base64Url = (tokens.id_token as string).split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
+    const msEmail = decoded.preferred_username || decoded.email || decoded.upn || "";
+    const msName = decoded.name || "";
+    const msId = decoded.oid || decoded.sub || "";
+
+    if (!msEmail || !msId) throw new ConvexError("Microsoft account missing email or identifier.");
+
+    const result: AuthResult = await ctx.runAction(api.auth.createOrUpdateOAuthUser, {
+      provider: "microsoft",
+      providerId: msId,
+      email: msEmail,
+      name: msName || undefined,
+    });
+    return { ...result, email: msEmail };
   },
 });

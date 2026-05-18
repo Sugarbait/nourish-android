@@ -292,10 +292,13 @@ export function HistoryView({
 
   const drillMeals = useMemo(() => {
     if (!historyDrillDate) return [];
-    if (!isGuest && historyMeals) {
-      return historyMeals.filter((m: any) => m.date === historyDrillDate);
-    }
-    return localHistory[historyDrillDate]?.meals || [];
+    const meals = !isGuest && historyMeals
+      ? historyMeals.filter((m: any) => m.date === historyDrillDate)
+      : (localHistory[historyDrillDate]?.meals || []);
+    // Newest meal first. Convex rows expose `_creationTime`; local meals use `timestamp`.
+    return [...meals].sort((a: any, b: any) =>
+      (b.timestamp ?? b._creationTime ?? 0) - (a.timestamp ?? a._creationTime ?? 0),
+    );
   }, [historyDrillDate, isGuest, historyMeals, localHistory]);
 
   const isLoading = !isGuest && userId && (historyMeals === undefined || historyWater === undefined);

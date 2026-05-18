@@ -323,10 +323,13 @@ export const redeemCoupon = mutation({
       return { success: true, reward };
     }
 
-    // Enforce one-coupon rule (except for allowed users)
     const usedCoupons = row.usedCoupons ?? [];
-    const isAllowedUser = user.email === "elitesquadp@protonmail.com";
-    if (usedCoupons.length > 0 && !isAllowedUser) {
+
+    // Hard rule, no exceptions: one coupon redemption per account, ever.
+    // Covers both same-code re-redemption and code swapping (e.g. NOURISH20
+    // then NOURISH100). No developer bypass — dev testing has to use fresh
+    // accounts.
+    if (usedCoupons.length > 0) {
       throw new ConvexError("You have already redeemed a coupon code. Only one coupon is allowed per account.");
     }
 

@@ -7,6 +7,8 @@ import { ConvexClientProvider } from '@/components/convex-client-provider';
 import { GoogleOAuthWrapper } from '@/components/google-oauth-wrapper';
 import { NotificationProvider } from '@/components/notification-context';
 import { NotificationDisplay } from '@/components/notification-display';
+import { AppUpdateChecker } from '@/components/app-update-checker';
+import { SplashHider } from '@/components/splash-hider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -56,6 +58,8 @@ export default function RootLayout({
               {children}
               <Toaster />
               <NotificationDisplay />
+              <AppUpdateChecker />
+              <SplashHider />
             </NotificationProvider>
           </ThemeProvider>
           </GoogleOAuthWrapper>

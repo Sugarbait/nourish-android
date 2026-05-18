@@ -9,9 +9,15 @@ export const updateNotificationPreferences = mutation({
     creditResetAlert: v.boolean(),
     coachInsights: v.boolean(),
     broadcastEmails: v.boolean(),
+    calorieGoalReached: v.optional(v.boolean()),
+    mealReminderTimes: v.optional(v.object({
+      breakfast: v.string(),
+      lunch: v.string(),
+      dinner: v.string(),
+    })),
   },
   handler: async (ctx, args) => {
-    const { userId, mealReminders, goalNudges, creditResetAlert, coachInsights, broadcastEmails } = args;
+    const { userId, mealReminders, goalNudges, creditResetAlert, coachInsights, broadcastEmails, calorieGoalReached, mealReminderTimes } = args;
 
     const profile = await ctx.db
       .query('profiles')
@@ -29,6 +35,8 @@ export const updateNotificationPreferences = mutation({
         creditResetAlert,
         coachInsights,
         broadcastEmails,
+        ...(typeof calorieGoalReached === 'boolean' ? { calorieGoalReached } : {}),
+        ...(mealReminderTimes ? { mealReminderTimes } : {}),
       },
     });
 

@@ -14,6 +14,7 @@ export const DEFAULT_NOTIFICATION_PREFS = {
   creditResetAlert: true,
   coachInsights: true,
   broadcastEmails: true,
+  calorieGoalReached: true,
 };
 
 interface NotificationContextType {

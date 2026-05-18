@@ -87,7 +87,7 @@ Convex Backend: api.gemini.recognizeFoodFromImage()
     ↓
 getAccessToken() → Google OAuth refresh
     ↓
-callVertexGemini() → Analyze image with Gemini 3.1 Flash Lite
+callVertexGemini() → Analyze image with Gemini 3.1 Flash Lite (preview)
     ↓
 Return: { foodItems, healthScore, healthAnalysis }
 ```
@@ -130,10 +130,15 @@ Before deploying:
 
 ## Supported Models
 
-Current: `gemini-3.1-flash-lite`  
+Current: `gemini-3.1-flash-lite-preview`
 - Fast response time
 - Optimized for food recognition
 - Supports image and text analysis
+
+**Note:** The GA name `gemini-3.1-flash-lite` (without `-preview`) was tried in
+commit v0.2.82 and broke food recognition — Vertex AI returned an error for
+that model id. Stay on the preview name until Google confirms the GA name on
+Vertex (it's not always the preview name minus the suffix).
 
 ## Response Format
 

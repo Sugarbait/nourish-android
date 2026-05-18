@@ -15,6 +15,7 @@ import { CREDIT_PACKAGES, CreditPackage, CreditData } from '@/lib/credits';
 import { useToast } from '@/hooks/use-toast';
 import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { SUBSCRIPTION_PRODUCT_ID, SUBSCRIPTION_BASE_PLAN_IDS, getSkuForUiKey } from '@/lib/billingConfig';
 
 interface PricingModalProps {
   open: boolean;
@@ -47,29 +48,25 @@ const PACK_ICON_COLORS: Record<CreditPackage, string> = {
 
 export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isGuest, onRequestSignIn, userId, userEmail }: PricingModalProps) {
   const { toast } = useToast();
-  const createCheckoutSession = useAction(api.stripeActions.createCheckoutSession);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const checkout = async (priceKey: string) => {
+  const launchPurchase = async (_productId: string, _basePlanId?: string) => {
     setIsCheckingOut(true);
     try {
-      const result = await createCheckoutSession({
-        priceKey,
-        successUrl: `${window.location.origin}/?checkout=success`,
-        cancelUrl:  `${window.location.origin}/?checkout=cancelled`,
-        ...(userId        ? { userId }                    : {}),
-        ...(userEmail     ? { customerEmail: userEmail }  : {}),
+      // Phase 2 will wire this to cordova-plugin-purchase: registered products
+      // load on app mount; this handler will call store.order(productId, { offerId: basePlanId })
+      // and the approved callback will validate the token with Convex and then
+      // call product.finish() (which becomes consume() for credit packs on Android).
+      toast({
+        title: 'Purchase Flow',
+        description: 'Google Play Billing launch requires native Android integration. Contact support.',
+        variant: 'default'
       });
-      if (result.url) {
-        window.location.href = result.url;
-      } else {
-        setIsCheckingOut(false);
-        toast({ title: 'Checkout failed', description: result.error || 'Could not open Stripe. Please try again.', variant: 'destructive' });
-      }
+      setIsCheckingOut(false);
     } catch (err: any) {
       setIsCheckingOut(false);
-      toast({ title: 'Checkout failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
+      toast({ title: 'Purchase failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
     }
   };
 
@@ -84,7 +81,8 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       toast({ title: 'Subscription required', description: 'You must be a subscriber to purchase credit top-ups.', variant: 'destructive' });
       return;
     }
-    await checkout(pkg);
+    const productId = getSkuForUiKey(pkg);
+    await launchPurchase(productId);
   };
 
   const handleSubscribe = async () => {
@@ -98,7 +96,10 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
       toast({ title: 'Already subscribed', description: 'Your plan is already active.' });
       return;
     }
-    await checkout(billingCycle === 'yearly' ? 'subscription_yearly' : 'subscription');
+    const basePlanId = billingCycle === 'yearly'
+      ? SUBSCRIPTION_BASE_PLAN_IDS.yearly
+      : SUBSCRIPTION_BASE_PLAN_IDS.monthly;
+    await launchPurchase(SUBSCRIPTION_PRODUCT_ID, basePlanId);
   };
 
   const isSubscribed = credits.subscription?.active === true;
@@ -110,8 +111,8 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/50 bg-card px-10 py-8 shadow-2xl text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <div>
-              <p className="font-semibold text-base">Taking you to checkout</p>
-              <p className="text-sm text-muted-foreground mt-1">You'll be redirected to Stripe's secure<br />payment page in just a moment.</p>
+              <p className="font-semibold text-base">Initiating purchase</p>
+              <p className="text-sm text-muted-foreground mt-1">You'll be taken to Google Play to<br />complete your purchase securely.</p>
             </div>
           </div>
         </div>
@@ -287,7 +288,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
 
         {/* Cost transparency note */}
         <p className="text-center text-xs text-muted-foreground mt-2 pb-1">
-          Secure checkout via Stripe &bull; Instant delivery
+          Secure checkout via Google Play &bull; Instant delivery
         </p>
       </DialogContent>
     </Dialog>

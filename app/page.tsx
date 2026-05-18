@@ -73,7 +73,7 @@ export default function SplashPage() {
   // can react to ?checkout=success / ?checkout=cancelled returned from Stripe.
   useEffect(() => {
     const userId = localStorage.getItem('nourish_user_id');
-    if (userId) { window.location.href = `/dashboard/${window.location.search}`; return; }
+    if (userId) { window.location.href = window.location.origin + '/dashboard/index.html' + window.location.search; return; }
   }, []);
 
   // Handle Microsoft OAuth redirect — auth code lands in ?code= query param (PKCE flow)
@@ -181,7 +181,7 @@ export default function SplashPage() {
         });
         const finalAvatar = avatarUrl || result.avatarUrl;
         saveAuthToStorage(result.userId as string, result.name, finalAvatar, msEmail);
-        window.location.href = '/dashboard/';
+        window.location.href = window.location.origin + '/dashboard/index.html';
       } catch (err) {
         console.error('[Microsoft OAuth] Failed:', err);
       }
@@ -220,7 +220,7 @@ export default function SplashPage() {
           <div className="hidden md:flex items-center gap-6 text-sm">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
             <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-            <a href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</a>
+            <a href="/privacy/index.html" onClick={(e) => { e.preventDefault(); window.location.href = window.location.origin + '/privacy/index.html'; }} className="text-muted-foreground hover:text-foreground transition-colors">Privacy</a>
           </div>
           <div className="hidden md:flex items-center gap-2">
             <button onClick={openSignIn} className="text-sm px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors">Sign In</button>
@@ -234,7 +234,7 @@ export default function SplashPage() {
           <div className="md:hidden border-t border-white/5 bg-background/95 px-4 py-4 space-y-3">
             <a href="#features" onClick={() => setMobileMenu(false)} className="block text-sm text-muted-foreground py-1">Features</a>
             <a href="#pricing" onClick={() => setMobileMenu(false)} className="block text-sm text-muted-foreground py-1">Pricing</a>
-            <a href="/privacy" className="block text-sm text-muted-foreground py-1">Privacy</a>
+            <a href="/privacy/index.html" onClick={(e) => { e.preventDefault(); setMobileMenu(false); window.location.href = window.location.origin + '/privacy/index.html'; }} className="block text-sm text-muted-foreground py-1">Privacy</a>
             <div className="pt-2 flex flex-col gap-2">
               <button onClick={() => { openSignIn(); setMobileMenu(false); }} className="w-full text-sm py-2.5 rounded-xl border border-white/10">Sign In</button>
               <button onClick={() => { openSignUp(); setMobileMenu(false); }} className="w-full text-sm py-2.5 rounded-xl bg-primary text-primary-foreground font-medium">Get Started Free</button>
@@ -290,10 +290,10 @@ export default function SplashPage() {
 
           {/* CTA Buttons */}
           <div className="relative mt-8 md:mt-10 flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto z-10">
-            <button onClick={() => window.location.href = '/dashboard/'} className="w-full sm:w-auto group relative flex items-center justify-center gap-2 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl lg:rounded-2xl bg-primary text-primary-foreground font-bold text-sm md:text-base transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(20,184,166,0.5)] hover:shadow-[0_0_60px_-15px_rgba(20,184,166,0.7)] overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
-              Start for Free <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform duration-300" />
-            </button>
+            <a href="/dashboard/index.html" onClick={(e) => { e.preventDefault(); window.location.href = window.location.origin + '/dashboard/index.html'; }} className="w-full sm:w-auto group relative flex items-center justify-center gap-2 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl lg:rounded-2xl bg-primary text-primary-foreground font-bold text-sm md:text-base transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(20,184,166,0.5)] hover:shadow-[0_0_60px_-15px_rgba(20,184,166,0.7)] overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+              Start for Free <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform duration-300 pointer-events-none" />
+            </a>
             <button onClick={openSignIn} className="w-full sm:w-auto group flex items-center justify-center gap-2 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl lg:rounded-2xl bg-white/[0.03] border border-white/10 text-sm md:text-base font-semibold hover:bg-white/[0.08] hover:border-white/20 transition-all hover:scale-105 active:scale-95 backdrop-blur-md">
               Sign In
             </button>
@@ -464,8 +464,8 @@ export default function SplashPage() {
             <span className="opacity-50">· © {new Date().getFullYear()} Nourish. All rights reserved.</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
-            <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
+            <a href="/privacy/index.html" onClick={(e) => { e.preventDefault(); window.location.href = window.location.origin + '/privacy/index.html'; }} className="hover:text-foreground transition-colors">Privacy Policy</a>
+            <a href="/terms/index.html" onClick={(e) => { e.preventDefault(); window.location.href = window.location.origin + '/terms/index.html'; }} className="hover:text-foreground transition-colors">Terms of Service</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
           </div>
         </div>

@@ -70,10 +70,58 @@
 
 /* Radix UI sometimes sets pointer-events:none on body after a modal/dialog unmounts,
    which prevents any subsequent interaction. Force it back to auto globally. */
-body, html {
+html, body {
   pointer-events: auto !important;
   overflow-x: hidden;
-  max-width: 100vw;
+  /* Use 100% rather than 100vw so we never include the scrollbar gutter (which
+     can push content beyond the viewport on certain Android WebViews). */
+  max-width: 100%;
+  width: 100%;
+  /* Defensive: stop any descendant from forcing the page wider than the screen. */
+  overscroll-behavior-x: none;
+}
+
+/* Make every element honor its declared width — keeps padding/borders from
+   bleeding past the screen edge on mobile. Tailwind sets this on `*` already,
+   but we re-assert it for any reset that might be overriding it. */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/*
+ * Hard guarantee against horizontal overflow on Samsung / older Android WebViews.
+ * `#__next` is the Next.js mount node; any descendant of <body> is capped so
+ * nothing — long unbreakable strings, oversized images, fixed-width cards —
+ * can push the page past the viewport edge.
+ */
+body > * {
+  max-width: 100%;
+}
+
+/* Break unwrappable strings (long food names, URLs, base64 prefixes) instead of
+   forcing the row wider than the viewport. */
+p, span, h1, h2, h3, h4, h5, h6, li, td, label, button {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Cap raw <img> elements without an explicit width so a stray large image
+   can't push the parent wider than the screen. */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Safe-area utilities used by sticky/fixed UI elements (bottom nav, header).
+   ADDS to existing padding rather than replacing it, so they compose cleanly
+   with Tailwind utilities like `pb-32`. */
+.safe-area-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + var(--safe-area-bottom-base, 0px)); }
+.safe-area-top    { padding-top:    calc(env(safe-area-inset-top) + var(--safe-area-top-base, 0px)); }
+.safe-area-left   { padding-left:   calc(env(safe-area-inset-left) + var(--safe-area-left-base, 0px)); }
+.safe-area-right  { padding-right:  calc(env(safe-area-inset-right) + var(--safe-area-right-base, 0px)); }
+.safe-area-x      {
+  padding-left:  calc(env(safe-area-inset-left)  + var(--safe-area-left-base, 0px));
+  padding-right: calc(env(safe-area-inset-right) + var(--safe-area-right-base, 0px));
 }
 
 /* Calendar Tracked Day Dot */
