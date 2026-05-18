@@ -3384,9 +3384,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     )}
                   </div>
                   {message.role === 'user' && (
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <User className="h-3 w-3 text-primary" />
-                    </div>
+                    <Avatar className="h-6 w-6 flex-shrink-0">
+                      {!isGuest && (profile.avatar || userAvatar) && (
+                        <AvatarImage src={profile.avatar || userAvatar || ''} alt="You" className="object-cover" />
+                      )}
+                      <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+                        {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-3 w-3 text-primary" />}
+                      </AvatarFallback>
+                    </Avatar>
                   )}
                 </div>
               ))}
@@ -3625,9 +3630,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                   ) : message.content}
                 </div>
                 {message.role === 'user' && (
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                    <User className="h-3.5 w-3.5 text-primary" />
-                  </div>
+                  <Avatar className="h-7 w-7 flex-shrink-0 mt-1">
+                    {!isGuest && (profile.avatar || userAvatar) && (
+                      <AvatarImage src={profile.avatar || userAvatar || ''} alt="You" className="object-cover" />
+                    )}
+                    <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
+                      {isGuest ? 'G' : profile.name ? profile.name.charAt(0).toUpperCase() : <User className="h-3.5 w-3.5 text-primary" />}
+                    </AvatarFallback>
+                  </Avatar>
                 )}
               </div>
             ))}
