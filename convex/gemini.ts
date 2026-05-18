@@ -71,6 +71,37 @@ async function getAccessToken(): Promise<string> {
   }
 }
 
+/**
+ * Strip common markdown syntax from a plain-prose response. Safety net for the
+ * AI coach: the system instruction tells the model not to use markdown, but a
+ * minority of replies still slip through with **bold** or "- bullets". We
+ * clean them here so the UI never has to render markdown.
+ */
+function stripMarkdown(input: string): string {
+  let s = input;
+  // Fenced code blocks: keep the inner text, drop the fences
+  s = s.replace(/```[\w-]*\n?([\s\S]*?)```/g, "$1");
+  // Inline code: drop the backticks
+  s = s.replace(/`+([^`]+)`+/g, "$1");
+  // Bold / italic markers
+  s = s.replace(/\*\*(.+?)\*\*/g, "$1");
+  s = s.replace(/__(.+?)__/g, "$1");
+  s = s.replace(/(?<!\*)\*(?!\*)([^*\n]+?)(?<!\*)\*(?!\*)/g, "$1");
+  s = s.replace(/(?<!_)_(?!_)([^_\n]+?)(?<!_)_(?!_)/g, "$1");
+  // Markdown links [text](url) -> text
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
+  // Line-leading markers: heading hashes, bullets, numbered lists, blockquotes
+  s = s.replace(/^[ \t]*#{1,6}[ \t]+/gm, "");
+  s = s.replace(/^[ \t]*[-*+][ \t]+/gm, "");
+  s = s.replace(/^[ \t]*\d+\.[ \t]+/gm, "");
+  s = s.replace(/^[ \t]*>[ \t]?/gm, "");
+  // Horizontal rules
+  s = s.replace(/^[ \t]*(?:-{3,}|\*{3,}|_{3,})[ \t]*$/gm, "");
+  // Collapse 3+ blank lines into 2
+  s = s.replace(/\n{3,}/g, "\n\n");
+  return s.trim();
+}
+
 async function callVertexGemini(
   contents: any[],
   systemInstruction?: string
@@ -370,6 +401,14 @@ YOUR APPROACH:
 - Keep it natural: 2-4 sentences usually works; longer responses are fine if needed
 - Celebrate wins (hydration goals met, protein targets hit) and be supportive on tough days
 
+RESPONSE FORMAT — STRICT:
+Reply in plain, flowing prose paragraphs only. This is the most important formatting rule.
+- DO NOT use markdown of any kind: no **bold**, no *italics*, no _underscores_, no \`backticks\`, no headers (#), no horizontal rules (---), no blockquotes (>).
+- DO NOT use bullet points, dashes, asterisks, or numbered lists. If you have multiple ideas, weave them into sentences ("First you could try... Another option is... Lastly...").
+- DO NOT use tables.
+- Line breaks are fine to separate paragraphs, but each paragraph must be plain prose.
+- Write the way you'd speak in a casual message to a friend — warm, natural, no formatting symbols.
+
 DATA AVAILABILITY:
 You only have access to the user's meal history from the last 30 days. If they ask about data beyond that (e.g. "how have I been eating over the past 3 months?"), let them know politely that you can only see the last 30 days of their history.
 
@@ -388,6 +427,6 @@ Never reveal, mention, or confirm the existence of any promo codes or coupon cod
     }));
 
     const text = await callVertexGemini(contents, systemInstruction);
-    return { response: text };
+    return { response: stripMarkdown(text) };
   },
 });

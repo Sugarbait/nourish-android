@@ -288,33 +288,52 @@ type TypewriterMessageProps = {
 };
 
 const TypewriterMessage = React.memo(function TypewriterMessage({ content, isLoading = false }: TypewriterMessageProps) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isComplete, setIsComplete] = useState(false);
+  // Single source of truth for the typing cursor. Counted in chars, advanced
+  // by an interval. We use a ref to track the current index so the interval
+  // body doesn't capture a stale state value.
+  const [displayed, setDisplayed] = useState('');
+  const indexRef = useRef(0);
+  const completedRef = useRef('');
 
   useEffect(() => {
-    if (isLoading) {
-      setDisplayedText('');
-      setIsComplete(false);
+    // If this exact content has already been fully typed (e.g. component
+    // re-renders for some unrelated reason), keep it shown — no replay.
+    if (completedRef.current === content) {
+      setDisplayed(content);
+      indexRef.current = content.length;
       return;
     }
 
-    if (displayedText.length < content.length) {
-      const timer = setTimeout(() => {
-        setDisplayedText(content.slice(0, displayedText.length + 1));
-      }, 15);
-      return () => clearTimeout(timer);
-    } else {
-      setIsComplete(true);
-    }
-  }, [displayedText, content, isLoading]);
+    // Reset for a fresh content string.
+    indexRef.current = 0;
+    setDisplayed('');
 
-  const textToDisplay = isLoading ? content : displayedText;
-  const parsedContent = parseFormattedText(textToDisplay);
+    if (isLoading || content.length === 0) return;
+
+    // ~22ms / char gives a clearly visible typewriter feel on mobile without
+    // being annoying. We advance by 1 char per tick so it reads as typing.
+    const STEP_MS = 22;
+
+    const interval = setInterval(() => {
+      const next = indexRef.current + 1;
+      indexRef.current = next;
+      setDisplayed(content.slice(0, next));
+      if (next >= content.length) {
+        completedRef.current = content;
+        clearInterval(interval);
+      }
+    }, STEP_MS);
+
+    return () => clearInterval(interval);
+  }, [content, isLoading]);
+
+  const isComplete = indexRef.current >= content.length;
+  const textToShow = isLoading ? content : displayed;
 
   return (
     <div className="text-sm whitespace-pre-wrap leading-relaxed">
-      {parsedContent}
-      {!isComplete && !isLoading && <span className="animate-pulse">|</span>}
+      {textToShow}
+      {!isComplete && !isLoading && <span className="animate-pulse ml-px">|</span>}
     </div>
   );
 });
