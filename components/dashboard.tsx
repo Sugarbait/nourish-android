@@ -1152,22 +1152,66 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     syncHistory();
   }, [isMounted, isGuest, userId, history, convexSyncBatchMeals, convexSyncBatchWater]);
 
+  // Auto-scroll the chat to the bottom as content grows — covers BOTH chat
+  // surfaces (inline panel on the dashboard + full-screen coach page) since
+  // they share `chatScrollRef`. Re-runs whenever the active surface changes.
+  //
+  // Mechanics:
+  //  - ResizeObserver watches every direct child of the scroll container.
+  //    The latest message bubble grows char-by-char during the typewriter
+  //    animation; its resize triggers a scroll-to-bottom.
+  //  - MutationObserver watches for new message children being added or
+  //    removed, and re-attaches the ResizeObserver to the current set.
+  //  - We only auto-scroll when the user is already near the bottom (within
+  //    150px). If they've scrolled up to read earlier messages, we leave
+  //    them alone — standard chat UX.
   useEffect(() => {
     const el = chatScrollRef.current;
     if (!el) return;
-    const scrollToBottom = () => { el.scrollTop = el.scrollHeight; };
-    scrollToBottom();
-    const inner = el.firstElementChild;
-    if (!inner || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(scrollToBottom);
-    ro.observe(inner);
-    return () => ro.disconnect();
-  }, [isChatbotOpen]);
 
+    const isNearBottom = () =>
+      el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    const scrollToBottom = () => { el.scrollTop = el.scrollHeight; };
+    const scrollToBottomIfNear = () => { if (isNearBottom()) scrollToBottom(); };
+
+    // Initial scroll when the surface mounts.
+    scrollToBottom();
+
+    if (typeof ResizeObserver === 'undefined' || typeof MutationObserver === 'undefined') return;
+
+    const ro = new ResizeObserver(scrollToBottomIfNear);
+    const observeAllChildren = () => {
+      ro.disconnect();
+      for (const child of Array.from(el.children)) {
+        ro.observe(child);
+      }
+    };
+    observeAllChildren();
+
+    const mo = new MutationObserver(() => {
+      observeAllChildren();
+      // A new bubble was just added; if the user was already at the bottom
+      // we want them to stay there.
+      scrollToBottomIfNear();
+    });
+    mo.observe(el, { childList: true });
+
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [isChatbotOpen, activeNav]);
+
+  // When a new message is sent or the coach starts/finishes a turn, force a
+  // scroll to the bottom — this is the user's own action, so we don't gate
+  // on isNearBottom here.
   useEffect(() => {
     const el = chatScrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [chatMessages, isCoachLoading]);
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [chatMessages.length, isCoachLoading]);
 
   const progressData = useMemo(() => {
     if (!recentMeals) return [];
