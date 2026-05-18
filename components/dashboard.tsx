@@ -3577,11 +3577,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     : 'bg-muted rounded-bl-sm'
                 }`}>
                   {message.role === 'model' ? (
-                    <div className="space-y-1">
-                      {message.content.split('\n').map((line, i) => (
-                        <p key={i}>{parseFormattedText(line)}</p>
-                      ))}
-                    </div>
+                    <TypewriterMessage content={message.content} isLoading={false} />
                   ) : message.content}
                 </div>
                 {message.role === 'user' && (
