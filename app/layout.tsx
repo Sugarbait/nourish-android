@@ -39,13 +39,31 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning style={{ backgroundColor: '#0A1410' }}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
+      {/*
+        Inline styles below paint the brand background + centered logo
+        immediately as the HTML is parsed — before CSS or JS load — so
+        navigating between pages (each page is a separate HTML file in
+        the static export) never shows a white flash. The logo appears
+        for the brief moment between HTML parse and first content paint;
+        once a page's content renders, its own background covers the body.
+      */}
+      <body
+        className={`${inter.variable} font-sans antialiased`}
+        suppressHydrationWarning
+        style={{
+          backgroundColor: '#0A1410',
+          backgroundImage: 'url(/logo-icon.png)',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center center',
+          backgroundSize: '96px 96px',
+        }}
+      >
         <ConvexClientProvider>
           <GoogleOAuthWrapper>
           <ThemeProvider
