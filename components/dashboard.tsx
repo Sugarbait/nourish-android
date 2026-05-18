@@ -288,52 +288,49 @@ type TypewriterMessageProps = {
 };
 
 const TypewriterMessage = React.memo(function TypewriterMessage({ content, isLoading = false }: TypewriterMessageProps) {
-  // Single source of truth for the typing cursor. Counted in chars, advanced
-  // by an interval. We use a ref to track the current index so the interval
-  // body doesn't capture a stale state value.
-  const [displayed, setDisplayed] = useState('');
-  const indexRef = useRef(0);
-  const completedRef = useRef('');
+  // `revealed` is the number of characters of `content` to show right now.
+  // We advance it via a recursive setTimeout chain so each tick produces a
+  // separate render cycle (avoids any chance of React 18 auto-batching
+  // squashing the animation into a single paint, which is the most plausible
+  // cause of "appears all at once" on some WebViews).
+  const [revealed, setRevealed] = useState(0);
 
   useEffect(() => {
-    // If this exact content has already been fully typed (e.g. component
-    // re-renders for some unrelated reason), keep it shown — no replay.
-    if (completedRef.current === content) {
-      setDisplayed(content);
-      indexRef.current = content.length;
-      return;
-    }
-
-    // Reset for a fresh content string.
-    indexRef.current = 0;
-    setDisplayed('');
+    // Restart from zero whenever the content (or loading state) changes.
+    setRevealed(0);
 
     if (isLoading || content.length === 0) return;
 
-    // ~22ms / char gives a clearly visible typewriter feel on mobile without
-    // being annoying. We advance by 1 char per tick so it reads as typing.
-    const STEP_MS = 22;
+    let cancelled = false;
+    let current = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const interval = setInterval(() => {
-      const next = indexRef.current + 1;
-      indexRef.current = next;
-      setDisplayed(content.slice(0, next));
-      if (next >= content.length) {
-        completedRef.current = content;
-        clearInterval(interval);
+    const STEP_MS = 28; // human-readable typewriter pace on mobile
+
+    const step = () => {
+      if (cancelled) return;
+      current += 1;
+      setRevealed(current);
+      if (current < content.length) {
+        timer = setTimeout(step, STEP_MS);
       }
-    }, STEP_MS);
+    };
 
-    return () => clearInterval(interval);
+    timer = setTimeout(step, STEP_MS);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [content, isLoading]);
 
-  const isComplete = indexRef.current >= content.length;
-  const textToShow = isLoading ? content : displayed;
+  const textToShow = isLoading ? content : content.slice(0, revealed);
+  const showCursor = !isLoading && revealed < content.length;
 
   return (
     <div className="text-sm whitespace-pre-wrap leading-relaxed">
       {textToShow}
-      {!isComplete && !isLoading && <span className="animate-pulse ml-px">|</span>}
+      {showCursor && <span className="animate-pulse ml-px">|</span>}
     </div>
   );
 });
