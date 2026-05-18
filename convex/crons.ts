@@ -11,4 +11,32 @@ crons.daily(
   internal.stripe.refreshYearlySubscribers,
 );
 
+// ---------------------------------------------------------------------------
+// Data-retention jobs. Aim: store only what the app actually needs.
+// All staggered slightly to avoid running in the same tick.
+// ---------------------------------------------------------------------------
+crons.daily(
+  "prune old admin login attempts",
+  { hourUTC: 3, minuteUTC: 0 },
+  internal.retention.pruneOldAdminLoginAttempts,
+);
+
+crons.daily(
+  "prune old AI chat messages",
+  { hourUTC: 3, minuteUTC: 10 },
+  internal.retention.pruneOldAiMessages,
+);
+
+crons.daily(
+  "prune old contact messages",
+  { hourUTC: 3, minuteUTC: 20 },
+  internal.retention.pruneOldContactMessages,
+);
+
+crons.daily(
+  "clear expired auth tokens",
+  { hourUTC: 3, minuteUTC: 30 },
+  internal.retention.pruneExpiredAuthTokens,
+);
+
 export default crons;

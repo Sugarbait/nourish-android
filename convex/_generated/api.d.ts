@@ -29,6 +29,7 @@ import type * as http from "../http.js";
 import type * as meals from "../meals.js";
 import type * as notifications from "../notifications.js";
 import type * as recipes from "../recipes.js";
+import type * as retention from "../retention.js";
 import type * as stripe from "../stripe.js";
 import type * as stripeActions from "../stripeActions.js";
 import type * as users from "../users.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   meals: typeof meals;
   notifications: typeof notifications;
   recipes: typeof recipes;
+  retention: typeof retention;
   stripe: typeof stripe;
   stripeActions: typeof stripeActions;
   users: typeof users;
