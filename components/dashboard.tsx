@@ -3035,45 +3035,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     </SheetContent>
                   </Sheet>
 
-                  <Sheet open={isNotificationSettingsOpen} onOpenChange={setIsNotificationSettingsOpen}>
-                    <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-                      <SheetHeader className="mb-5">
-                        <SheetTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/> Notification & Email Preferences</SheetTitle>
-                        <SheetDescription>Manage which notifications you want to receive in-app and by email.</SheetDescription>
-                      </SheetHeader>
-                      <NotificationSettings
-                        preferences={notificationPrefs}
-                        onSave={async (prefs) => {
-                          if (!userId) {
-                            addNotification('Please sign in to save preferences', 'warning');
-                            return;
-                          }
-                          try {
-                            const times = prefs.mealReminderTimes ?? DEFAULT_MEAL_TIMES;
-                            const result = await updateNotificationPreferencesMut({
-                              userId: userId as any,
-                              mealReminders: prefs.mealReminders,
-                              goalNudges: prefs.goalNudges,
-                              creditResetAlert: prefs.creditResetAlert,
-                              coachInsights: prefs.coachInsights,
-                              broadcastEmails: prefs.broadcastEmails,
-                              calorieGoalReached: prefs.calorieGoalReached,
-                              mealReminderTimes: times,
-                            });
-                            if (result?.success) {
-                              void syncMealReminders(prefs.mealReminders, times);
-                              addNotification('Notification preferences saved', 'success');
-                              setIsNotificationSettingsOpen(false);
-                            } else {
-                              addNotification('Could not save — profile not found', 'warning');
-                            }
-                          } catch {
-                            addNotification('Failed to save preferences', 'warning');
-                          }
-                        }}
-                      />
-                    </SheetContent>
-                  </Sheet>
                 </CardTitle>
                 <CardDescription>Your daily nutrition targets at a glance.</CardDescription>
               </CardHeader>
@@ -3235,6 +3196,46 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
       </main>
       )}
 
+      {/* Notification Settings Sheet — available from any tab */}
+      <Sheet open={isNotificationSettingsOpen} onOpenChange={setIsNotificationSettingsOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader className="mb-5">
+            <SheetTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/> Notification & Email Preferences</SheetTitle>
+            <SheetDescription>Manage which notifications you want to receive in-app and by email.</SheetDescription>
+          </SheetHeader>
+          <NotificationSettings
+            preferences={notificationPrefs}
+            onSave={async (prefs) => {
+              if (!userId) {
+                addNotification('Please sign in to save preferences', 'warning');
+                return;
+              }
+              try {
+                const times = prefs.mealReminderTimes ?? DEFAULT_MEAL_TIMES;
+                const result = await updateNotificationPreferencesMut({
+                  userId: userId as any,
+                  mealReminders: prefs.mealReminders,
+                  goalNudges: prefs.goalNudges,
+                  creditResetAlert: prefs.creditResetAlert,
+                  coachInsights: prefs.coachInsights,
+                  broadcastEmails: prefs.broadcastEmails,
+                  calorieGoalReached: prefs.calorieGoalReached,
+                  mealReminderTimes: times,
+                });
+                if (result?.success) {
+                  void syncMealReminders(prefs.mealReminders, times);
+                  addNotification('Notification preferences saved', 'success');
+                  setIsNotificationSettingsOpen(false);
+                } else {
+                  addNotification('Could not save — profile not found', 'warning');
+                }
+              } catch {
+                addNotification('Failed to save preferences', 'warning');
+              }
+            }}
+          />
+        </SheetContent>
+      </Sheet>
 
       {/* Chat Widget Panel — fixed bottom-right, only on dashboard tab */}
       {activeNav === 'dashboard' && isChatbotOpen && (
