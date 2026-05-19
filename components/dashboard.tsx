@@ -3056,12 +3056,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={() => setGoalsOpen(true)}
-                  className="mt-3 w-full rounded-xl border border-dashed border-border/60 py-2 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                >
-                  + Tap to adjust goals
-                </button>
               </CardContent>
             </Card>
 
