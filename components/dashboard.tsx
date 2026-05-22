@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.8";
+const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.76";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -127,6 +127,7 @@ type FoodItem = {
   protein: number;
   carbs: number;
   fat: number;
+  portion?: string;
   confidence?: number;
 };
 
@@ -173,12 +174,15 @@ type ChatMessage = {
 
 const augmentWithMacros = (items: RecognizeFoodOutput['foodItems']): FoodItem[] => {
   return items.map(item => {
-    // This is a very rough estimation. A proper implementation would use a food database.
     const { calories } = item;
-    const protein = Math.round((calories * 0.25) / 4);
-    const carbs = Math.round((calories * 0.45) / 4);
-    const fat = Math.round((calories * 0.30) / 9);
-    return { ...item, protein, carbs, fat };
+    const anyItem = item as any;
+    const hasNum = (v: any) => typeof v === 'number' && !Number.isNaN(v);
+    // Prefer the AI's real per-portion macros; fall back to a rough ratio only
+    // when the value is missing (e.g. older cached results).
+    const protein = hasNum(anyItem.protein) ? Math.round(anyItem.protein) : Math.round((calories * 0.25) / 4);
+    const carbs   = hasNum(anyItem.carbs)   ? Math.round(anyItem.carbs)   : Math.round((calories * 0.45) / 4);
+    const fat     = hasNum(anyItem.fat)     ? Math.round(anyItem.fat)     : Math.round((calories * 0.30) / 9);
+    return { ...item, protein, carbs, fat, portion: typeof anyItem.portion === 'string' ? anyItem.portion : undefined };
   });
 };
 
@@ -834,12 +838,26 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   useEffect(() => {
     if (!convexCredits) return;
     setCredits(prev => {
+      // Map the server subscription (expiresAt in ms) to local CreditData (ISO string).
+      const serverSub = (convexCredits as any).subscription as
+        | { active: boolean; plan: 'monthly' | 'yearly' | null; expiresAt: number | null }
+        | null
+        | undefined;
+      const subscription = serverSub
+        ? {
+            active: serverSub.active,
+            plan: serverSub.plan,
+            expiresAt: serverSub.expiresAt ? new Date(serverSub.expiresAt).toISOString() : null,
+          }
+        : prev.subscription;
+
       const merged = {
         ...prev,
         credits: convexCredits.credits ?? prev.credits,
         lastFreeDate: convexCredits.lastFreeDate ?? prev.lastFreeDate,
         dailyFreeMealUsed: convexCredits.dailyFreeMealUsed ?? prev.dailyFreeMealUsed,
         dailyFreeAIUsed: convexCredits.dailyFreeAIUsed ?? prev.dailyFreeAIUsed,
+        subscription,
       };
       saveCredits(merged);
       return merged;
@@ -2424,7 +2442,8 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     )}
                     {userEmail?.toLowerCase() === 'elitesquadp@protonmail.com' && (
                       <a
-                        href="/admin"
+                        href="/admin/signin/index.html"
+                        onClick={(e) => { e.preventDefault(); window.location.href = window.location.origin + '/admin/signin/index.html'; }}
                         className="block w-full text-center text-xs text-green-600 dark:text-green-400 hover:underline mt-2 font-medium"
                       >
                         Admin Panel
@@ -2592,8 +2611,14 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                                         {aiResults.map((item, index) => (
                                             <div key={index} className="flex items-center justify-between rounded-lg border p-3">
                                                 <div>
-                                                    <p className="font-medium">{item.name}</p>
+                                                    <p className="font-medium">
+                                                        {item.name}
+                                                        {item.portion ? <span className="text-xs font-normal text-muted-foreground"> · {item.portion}</span> : null}
+                                                    </p>
                                                     <p className="text-sm text-muted-foreground">{item.calories} kcal</p>
+                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                        P {item.protein}g · C {item.carbs}g · F {item.fat}g
+                                                    </p>
                                                 </div>
                                                 <Badge variant="secondary" className="hidden sm:inline-flex">
                                                     {item.confidence ? `~${Math.round(item.confidence * 100)}% Conf.` : 'Manual'}

@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { goTo } from '@/lib/staticNav';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -41,16 +40,15 @@ function formatNumber(n: number) {
 }
 
 export default function AppDataPage() {
-  const router = useRouter();
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [tab, setTab] = useState<'overview' | 'users' | 'engagement'>('overview');
   const stats = useQuery(api.adminStats.getAppStats);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
-    if (!token) router.push('/admin/signin');
+    if (!token) goTo('/admin/signin');
     else setAuthed(true);
-  }, [router]);
+  }, []);
 
   if (authed === null) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
@@ -60,8 +58,8 @@ export default function AppDataPage() {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="max-w-5xl mx-auto">
-          <Button asChild variant="ghost" className="gap-1 mb-4">
-            <Link href="/admin"><ArrowLeft className="w-4 h-4" /> Back</Link>
+          <Button onClick={() => goTo('/admin')} variant="ghost" className="gap-1 mb-4">
+            <ArrowLeft className="w-4 h-4" /> Back
           </Button>
           <p className="text-muted-foreground">Loading app stats…</p>
         </div>
@@ -85,8 +83,8 @@ export default function AppDataPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <Button asChild variant="ghost" size="sm" className="gap-1 -ml-2 mb-2">
-              <Link href="/admin"><ArrowLeft className="w-4 h-4" /> Back to Admin</Link>
+            <Button onClick={() => goTo('/admin')} variant="ghost" size="sm" className="gap-1 -ml-2 mb-2">
+              <ArrowLeft className="w-4 h-4" /> Back to Admin
             </Button>
             <h1 className="text-2xl md:text-3xl font-bold">
               App{' '}
@@ -99,16 +97,16 @@ export default function AppDataPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-muted/40 p-1 rounded-full w-fit">
+        <div className="flex gap-1 bg-muted/40 p-1 rounded-full w-full md:w-fit overflow-x-auto">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 md:px-4 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-all whitespace-nowrap min-w-0 ${
                 tab === t.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <t.icon className="w-4 h-4" /> {t.label}
+              <t.icon className="w-3.5 h-3.5 flex-shrink-0" /> <span>{t.label}</span>
             </button>
           ))}
         </div>

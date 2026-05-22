@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -13,12 +12,11 @@ import {
   LogOut, Trash2, AlertTriangle, Users, TrendingUp, Settings, BarChart2,
   Ban, ShieldCheck, X, Mail, Search, ChevronLeft, ChevronRight, UserCheck,
 } from 'lucide-react';
-import Link from 'next/link';
+import { goTo } from '@/lib/staticNav';
 
 const PAGE_SIZE = 25;
 
 export default function AdminPage() {
-  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [adminEmail, setAdminEmail] = useState('');
 
@@ -49,17 +47,17 @@ export default function AdminPage() {
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) {
-      router.push('/admin/signin');
+      goTo('/admin/signin');
     } else {
       setIsAuthenticated(true);
       setAdminEmail(token);
     }
-  }, [router]);
+  }, []);
 
   const handleSignOut = async () => {
     await fetch('/api/admin/session', { method: 'DELETE' });
     localStorage.removeItem('admin_token');
-    router.push('/');
+    goTo('/');
   };
 
   if (isAuthenticated === null) {
@@ -104,14 +102,14 @@ export default function AdminPage() {
             <p className="text-muted-foreground text-xs md:text-sm truncate">Signed in as <span className="font-medium text-foreground">{adminEmail}</span></p>
           </div>
           <div className="grid grid-cols-4 sm:flex sm:items-center gap-2">
-            <Button asChild variant="outline" size="sm" className="gap-1.5">
-              <Link href="/admin/app-data"><BarChart2 className="w-4 h-4" /><span className="hidden sm:inline">App Data</span></Link>
+            <Button onClick={() => goTo('/admin/app-data')} variant="outline" size="sm" className="gap-1.5">
+              <BarChart2 className="w-4 h-4" /><span className="hidden sm:inline">App Data</span>
             </Button>
-            <Button asChild variant="outline" size="sm" className="gap-1.5">
-              <Link href="/admin/broadcast"><Mail className="w-4 h-4" /><span className="hidden sm:inline">Broadcast</span></Link>
+            <Button onClick={() => goTo('/admin/broadcast')} variant="outline" size="sm" className="gap-1.5">
+              <Mail className="w-4 h-4" /><span className="hidden sm:inline">Broadcast</span>
             </Button>
-            <Button asChild variant="outline" size="sm" className="gap-1.5">
-              <Link href="/admin/settings"><Settings className="w-4 h-4" /><span className="hidden sm:inline">Settings</span></Link>
+            <Button onClick={() => goTo('/admin/settings')} variant="outline" size="sm" className="gap-1.5">
+              <Settings className="w-4 h-4" /><span className="hidden sm:inline">Settings</span>
             </Button>
             <Button onClick={handleSignOut} variant="outline" size="sm" className="gap-1.5">
               <LogOut className="w-4 h-4" /><span className="hidden sm:inline">Sign Out</span>

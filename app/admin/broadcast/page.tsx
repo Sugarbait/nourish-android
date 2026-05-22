@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -9,10 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Send, CheckCircle2, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { goTo } from '@/lib/staticNav';
 
 export default function BroadcastEmailPage() {
-  const router = useRouter();
   const sendBroadcastEmail = useAction(api.emails.sendBroadcastEmail);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -27,8 +25,8 @@ export default function BroadcastEmailPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
-    if (!token) router.push('/admin/signin');
-  }, [router]);
+    if (!token) goTo('/admin/signin');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,8 +66,8 @@ export default function BroadcastEmailPage() {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" className="-ml-2">
-            <Link href="/admin"><ArrowLeft className="w-5 h-5" /></Link>
+          <Button onClick={() => goTo('/admin')} variant="ghost" size="icon" className="-ml-2">
+            <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
             <h2 className="text-2xl md:text-3xl font-bold">Broadcast Email</h2>
@@ -136,8 +134,8 @@ export default function BroadcastEmailPage() {
           </div>
 
           <div className="pt-4 flex justify-between">
-            <Button type="button" variant="outline" asChild>
-              <Link href="/admin">Cancel</Link>
+            <Button type="button" variant="outline" onClick={() => goTo('/admin')}>
+              Cancel
             </Button>
             <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700 px-8">
               {isLoading ? (

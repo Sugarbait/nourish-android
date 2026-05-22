@@ -29,7 +29,7 @@ function setCookie(name: string, value: string): void {
   } catch { /* ignore */ }
 }
 
-export type SubscriptionPlan = 'monthly' | null;
+export type SubscriptionPlan = 'monthly' | 'yearly' | null;
 
 export interface CreditData {
   // Unified credit pool (meal scans + AI coach messages draw from the same pool)

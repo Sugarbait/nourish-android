@@ -160,7 +160,7 @@ export const recognizeFoodFromImage = action({
         role: "user",
         parts: [
           {
-            text: 'Analyze this food image. Identify all food items and estimate calories. Provide a health score 1-100 and brief analysis. Respond with valid JSON only, no markdown: {"isFood": boolean, "foodItems": [{"name": string, "calories": number}], "healthiness": {"score": number, "analysis": string}}',
+            text: 'Analyze this food image. Carefully estimate the PORTION SIZE of each item based on visual cues (plate size, utensils, packaging, how full the container is). Scale the calories AND macronutrients to match the actual amount of food visible — a large serving must report proportionally higher numbers than a small one. For each item provide: name, estimated portion (e.g. "1 cup", "approx 150g", "1 medium apple"), calories, and grams of protein, carbs, and fat for that specific portion. Also provide a health score 1-100 and a brief analysis. Respond with valid JSON only, no markdown: {"isFood": boolean, "foodItems": [{"name": string, "portion": string, "calories": number, "protein": number, "carbs": number, "fat": number}], "healthiness": {"score": number, "analysis": string}}',
           },
           { inlineData: { mimeType, data: base64Data } },
         ],
@@ -168,7 +168,7 @@ export const recognizeFoodFromImage = action({
     ];
 
     const systemInstruction =
-      "You are an expert at identifying food in images and analyzing nutritional value. Always respond with valid JSON only, no markdown code blocks.";
+      "You are an expert nutritionist who specializes in estimating food portion sizes from images and calculating accurate per-portion nutrition. Pay close attention to how much food is actually shown and scale all numbers (calories, protein, carbs, fat) to the visible portion. Always respond with valid JSON only, no markdown code blocks.";
 
     try {
       const response = await callVertexGemini(contents, systemInstruction);
@@ -180,13 +180,21 @@ export const recognizeFoodFromImage = action({
       }
 
       return {
-        foodItems: parsed.foodItems.map((food: any) => ({
-          ...food,
-          confidence: 0.9,
-          protein: Math.round((food.calories * 0.25) / 4),
-          carbs:   Math.round((food.calories * 0.45) / 4),
-          fat:     Math.round((food.calories * 0.30) / 9),
-        })),
+        foodItems: parsed.foodItems.map((food: any) => {
+          const cals = Number(food.calories) || 0;
+          // Prefer the AI's per-portion macros; fall back to a rough ratio only
+          // if the model omitted a value (keeps older behavior as a safety net).
+          const hasNum = (v: any) => typeof v === "number" && !Number.isNaN(v);
+          return {
+            name: food.name,
+            calories: cals,
+            portion: typeof food.portion === "string" ? food.portion : undefined,
+            confidence: 0.9,
+            protein: hasNum(food.protein) ? Math.round(food.protein) : Math.round((cals * 0.25) / 4),
+            carbs:   hasNum(food.carbs)   ? Math.round(food.carbs)   : Math.round((cals * 0.45) / 4),
+            fat:     hasNum(food.fat)     ? Math.round(food.fat)     : Math.round((cals * 0.30) / 9),
+          };
+        }),
         healthScore:    parsed.healthiness.score,
         healthAnalysis: parsed.healthiness.analysis,
       };

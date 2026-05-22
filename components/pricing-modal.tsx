@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { SUBSCRIPTION_PRODUCT_ID, SUBSCRIPTION_BASE_PLAN_IDS, getSkuForUiKey } from '@/lib/billingConfig';
+import { launchPurchaseFlow } from '@/lib/googlePlayBilling';
 
 interface PricingModalProps {
   open: boolean;
@@ -48,25 +49,46 @@ const PACK_ICON_COLORS: Record<CreditPackage, string> = {
 
 export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isGuest, onRequestSignIn, userId, userEmail }: PricingModalProps) {
   const { toast } = useToast();
+  const validateAndGrant = useAction(api.googlePlayBilling.validateAndGrant);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const launchPurchase = async (_productId: string, _basePlanId?: string) => {
+  const launchPurchase = async (productId: string, basePlanId?: string) => {
+    if (!userId) {
+      toast({ title: 'Sign in required', description: 'Please sign in to make a purchase.' });
+      return;
+    }
+    if (isCheckingOut) return; // guard against double-taps
     setIsCheckingOut(true);
     try {
-      // Phase 2 will wire this to cordova-plugin-purchase: registered products
-      // load on app mount; this handler will call store.order(productId, { offerId: basePlanId })
-      // and the approved callback will validate the token with Convex and then
-      // call product.finish() (which becomes consume() for credit packs on Android).
-      toast({
-        title: 'Purchase Flow',
-        description: 'Google Play Billing launch requires native Android integration. Contact support.',
-        variant: 'default'
+      const outcome = await launchPurchaseFlow({
+        productId,
+        basePlanId,
+        userId,
+        customerEmail: userEmail ?? '',
+        granter: validateAndGrant,
       });
-      setIsCheckingOut(false);
+
+      if (outcome.status === 'completed') {
+        toast({
+          title: outcome.kind === 'subscription' ? 'Welcome to Pro!' : 'Credits added',
+          description: outcome.kind === 'subscription'
+            ? 'Your subscription is now active. Enjoy unlimited access!'
+            : 'Your credit pack has been added to your account.',
+        });
+        onOpenChange(false);
+      } else if (outcome.status === 'already_owned') {
+        toast({ title: 'Already subscribed', description: 'Your Pro plan is already active.' });
+        onOpenChange(false);
+      } else if (outcome.status === 'cancelled') {
+        // User backed out of the Google Play sheet — no toast needed.
+      } else {
+        toast({ title: 'Purchase failed', description: outcome.error, variant: 'destructive' });
+      }
     } catch (err: any) {
+      toast({ title: 'Purchase failed', description: err?.message || 'Something went wrong.', variant: 'destructive' });
+    } finally {
       setIsCheckingOut(false);
-      toast({ title: 'Purchase failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
     }
   };
 
@@ -215,8 +237,8 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
                     <div className="text-xs text-muted-foreground">/month</div>
                   </>
                 )}
-                <Button size="sm" className="mt-3 w-full" onClick={handleSubscribe}>
-                  Subscribe
+                <Button size="sm" className="mt-3 w-full" onClick={handleSubscribe} disabled={isCheckingOut}>
+                  {isCheckingOut ? 'Processing…' : 'Subscribe'}
                 </Button>
               </div>
             </div>
@@ -278,8 +300,8 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
                     Never expires
                   </li>
                 </ul>
-                <Button size="sm" className="w-full" onClick={() => handleBuyPack(pkg)} disabled={!isGuest && !isSubscribed}>
-                  {!isGuest && !isSubscribed ? 'Subscribers Only' : 'Buy Now'}
+                <Button size="sm" className="w-full" onClick={() => handleBuyPack(pkg)} disabled={(!isGuest && !isSubscribed) || isCheckingOut}>
+                  {!isGuest && !isSubscribed ? 'Subscribers Only' : isCheckingOut ? 'Processing…' : 'Buy Now'}
                 </Button>
               </div>
             );

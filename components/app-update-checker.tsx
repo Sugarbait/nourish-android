@@ -1,35 +1,35 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import {
   AppUpdate,
   AppUpdateAvailability,
+  AppUpdateResultCode,
   FlexibleUpdateInstallStatus,
 } from '@capawesome/capacitor-app-update';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Download, RotateCw } from 'lucide-react';
 
 const RETRY_DELAYS_MS = [0, 3000, 10000]; // initial, +3s, +10s — gives Play Store cache time to warm up
 
 /**
- * Checks Google Play for app updates on launch, on resume, and via several
- * retries with delays (Play Store update metadata is cached up to 24h and
- * sometimes takes a few seconds to refresh after the app opens).
+ * Checks Google Play for app updates on launch and on resume, then drives
+ * Google's **flexible** in-app update flow directly. The flexible flow shows
+ * Google's own lightweight consent prompt (a bottom sheet) rather than the
+ * full-screen takeover of the immediate flow — less intrusive, and the download
+ * happens in the background. There is no custom dialog: Google Play shows its
+ * own UI, so the user sees exactly one prompt (Google's). When the download
+ * finishes we call `completeFlexibleUpdate()`, which lets Google install and
+ * restart the app.
  *
- * Persistent modal so users can't miss it; no-op on web / iOS.
+ * No-op on web / iOS. Renders nothing — all UI is Google's.
  */
 export function AppUpdateChecker() {
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
-
-  const listenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
-  const appStateListenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
+  const triggeringRef = useRef(false);
   const dismissedRef = useRef(false);
+  const completingRef = useRef(false);
+  const appStateListenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
+  const flexStateListenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
   const retryTimersRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -40,29 +40,63 @@ export function AppUpdateChecker() {
       retryTimersRef.current = [];
     };
 
+    // Install + restart once the flexible update has finished downloading.
+    const completeUpdate = async () => {
+      if (completingRef.current) return;
+      completingRef.current = true;
+      try {
+        await AppUpdate.completeFlexibleUpdate();
+      } catch (err) {
+        console.warn('[AppUpdate] completeFlexibleUpdate failed:', err);
+        completingRef.current = false;
+      }
+    };
+
+    const triggerFlexibleUpdate = async () => {
+      if (triggeringRef.current) return;
+      triggeringRef.current = true;
+      clearRetries();
+      try {
+        // Launches Google's flexible update consent (bottom sheet) and begins a
+        // background download. Progress/completion arrives via the state listener.
+        const result = await AppUpdate.startFlexibleUpdate();
+        if (result.code === AppUpdateResultCode.CANCELED) {
+          // User backed out — don't loop; we'll re-offer next time they foreground.
+          dismissedRef.current = true;
+        }
+      } catch (err) {
+        console.warn('[AppUpdate] startFlexibleUpdate failed:', err);
+        dismissedRef.current = true;
+      } finally {
+        triggeringRef.current = false;
+      }
+    };
+
     const singleCheck = async () => {
-      if (dismissedRef.current || downloaded || updateAvailable) return;
+      if (dismissedRef.current || triggeringRef.current || completingRef.current) return;
       try {
         const info = await AppUpdate.getAppUpdateInfo();
         console.log('[AppUpdate] getAppUpdateInfo:', JSON.stringify(info));
 
-        // Handle a previously-started update that's resumed mid-flow.
-        if (info.updateAvailability === AppUpdateAvailability.UPDATE_IN_PROGRESS) {
-          setUpdateAvailable(true);
-          clearRetries();
+        // A flexible update already finished downloading (e.g. during a previous
+        // session) — just install it.
+        if (info.installStatus === FlexibleUpdateInstallStatus.DOWNLOADED) {
+          await completeUpdate();
           return;
         }
 
-        if (info.updateAvailability === AppUpdateAvailability.UPDATE_AVAILABLE && info.flexibleUpdateAllowed !== false) {
-          setUpdateAvailable(true);
-          clearRetries();
+        if (
+          info.updateAvailability === AppUpdateAvailability.UPDATE_AVAILABLE &&
+          info.flexibleUpdateAllowed !== false
+        ) {
+          await triggerFlexibleUpdate();
         }
       } catch (err) {
         console.warn('[AppUpdate] check failed:', err);
       }
     };
 
-    // Run several staggered checks so Play Store has time to refresh its metadata.
+    // Staggered checks so Play Store has time to refresh its cached metadata.
     const runChecks = () => {
       clearRetries();
       RETRY_DELAYS_MS.forEach((delay) => {
@@ -71,28 +105,22 @@ export function AppUpdateChecker() {
       });
     };
 
-    // Listen for download progress + completion.
+    // Install the moment the background download completes.
     (async () => {
-      listenerRef.current = await AppUpdate.addListener('onFlexibleUpdateStateChange', (state) => {
-        console.log('[AppUpdate] state change:', JSON.stringify(state));
-        if (state.installStatus === FlexibleUpdateInstallStatus.DOWNLOADING) {
-          setDownloading(true);
-          const total = (state as any).bytesToDownload || 0;
-          const got = (state as any).bytesDownloaded || 0;
-          setDownloadProgress(total > 0 ? Math.round((got / total) * 100) : null);
-        } else if (state.installStatus === FlexibleUpdateInstallStatus.DOWNLOADED) {
-          setDownloading(false);
-          setDownloaded(true);
-        } else if (state.installStatus === FlexibleUpdateInstallStatus.FAILED) {
-          setDownloading(false);
-        }
-      });
+      flexStateListenerRef.current = await AppUpdate.addListener(
+        'onFlexibleUpdateStateChange',
+        (state) => {
+          if (state.installStatus === FlexibleUpdateInstallStatus.DOWNLOADED) {
+            void completeUpdate();
+          }
+        },
+      );
     })();
 
-    // Initial round of checks on launch.
+    // Initial round on launch.
     runChecks();
 
-    // Re-run checks every time the app returns to the foreground.
+    // Re-check whenever the app returns to the foreground.
     (async () => {
       appStateListenerRef.current = await CapApp.addListener('appStateChange', ({ isActive }) => {
         if (isActive) {
@@ -104,82 +132,11 @@ export function AppUpdateChecker() {
 
     return () => {
       clearRetries();
-      listenerRef.current?.remove().catch(() => {});
       appStateListenerRef.current?.remove().catch(() => {});
+      flexStateListenerRef.current?.remove().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const startUpdate = async () => {
-    try {
-      await AppUpdate.startFlexibleUpdate();
-    } catch (err) {
-      console.error('startFlexibleUpdate failed:', err);
-    }
-  };
-
-  const completeUpdate = async () => {
-    try {
-      await AppUpdate.completeFlexibleUpdate();
-    } catch (err) {
-      console.error('completeFlexibleUpdate failed:', err);
-    }
-  };
-
-  if (downloaded) {
-    return (
-      <Dialog open onOpenChange={() => {}}>
-        <DialogContent className="max-w-sm" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><RotateCw className="h-5 w-5 text-primary" /> Update ready</DialogTitle>
-            <DialogDescription>
-              The new version of Nourish has been downloaded. Restart to finish installing.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={completeUpdate} className="w-full">Restart now</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  if (updateAvailable) {
-    return (
-      <Dialog
-        open
-        onOpenChange={(o) => {
-          if (!o && !downloading) {
-            dismissedRef.current = true;
-            setUpdateAvailable(false);
-          }
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Download className="h-5 w-5 text-primary" /> Update available</DialogTitle>
-            <DialogDescription>
-              A new version of Nourish is ready to download. You can keep using the app while it downloads in the background.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              disabled={downloading}
-              onClick={() => { dismissedRef.current = true; setUpdateAvailable(false); }}
-            >
-              Later
-            </Button>
-            <Button onClick={startUpdate} disabled={downloading}>
-              {downloading
-                ? (downloadProgress !== null ? `Downloading ${downloadProgress}%` : 'Downloading…')
-                : 'Update now'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return null;
 }

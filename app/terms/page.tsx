@@ -22,7 +22,7 @@ export default function TermsPage() {
       <main className="max-w-3xl mx-auto px-4 py-8 md:py-12">
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-black mb-2">Terms of Service</h1>
-          <p className="text-sm text-muted-foreground">Last updated: May 7, 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: May 21, 2026</p>
         </div>
 
         <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
@@ -113,7 +113,23 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">7. AI Coach — Disclaimer & Limitation of Liability</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">7. Food Scanning & Portion Estimates</h2>
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-300/80">
+              <p className="font-semibold text-amber-300 mb-1">AI Estimates — For General Guidance Only</p>
+              <p>
+                The food recognition and nutrition figures produced from photos (including identified items,
+                portion sizes, calories, and macronutrients such as protein, carbs, and fat) are
+                <strong> AI-generated approximations</strong> based on visual analysis. Actual values vary
+                depending on ingredients, preparation methods, hidden components, and portion sizes that may not
+                be visible in an image. These estimates are provided for general guidance only and should not be
+                relied upon for medical, clinical, or precise dietary needs. For accurate nutritional values,
+                consult product labels or a qualified professional.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-base font-bold text-foreground mb-2">8. AI Coach — Disclaimer & Limitation of Liability</h2>
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-red-300/80 mb-4">
               <p className="font-semibold text-red-300 mb-1">AI-Generated Content — Use at Your Own Risk</p>
               <p>
@@ -135,7 +151,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">8. Intellectual Property</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">9. Intellectual Property</h2>
             <p>
               The Service and its original content, features, and functionality are owned by Nourish and are
               protected by international copyright, trademark, and other intellectual property laws.
@@ -148,7 +164,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">9. Limitation of Liability</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">10. Limitation of Liability</h2>
             <p>
               To the maximum extent permitted by applicable law, Nourish shall not be liable for any indirect,
               incidental, special, consequential, or punitive damages, including loss of profits, data, or goodwill,
@@ -161,7 +177,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">10. Termination</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">11. Termination</h2>
             <p>
               We reserve the right to suspend or terminate your account at our sole discretion, without notice,
               if you breach these Terms or engage in behaviour that is harmful to other users, us, or third parties.
@@ -173,7 +189,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">11. Changes to Terms</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">12. Changes to Terms</h2>
             <p>
               We reserve the right to modify these Terms at any time. Material changes will be communicated by
               updating the date at the top of this page and, where appropriate, by email notification. Your
@@ -182,7 +198,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">12. Governing Law</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">13. Governing Law</h2>
             <p>
               These Terms shall be governed by and construed in accordance with applicable laws, without regard
               to conflict of law principles.
@@ -190,7 +206,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-base font-bold text-foreground mb-2">13. Contact</h2>
+            <h2 className="text-base font-bold text-foreground mb-2">14. Contact</h2>
             <p>For questions about these Terms, contact us at:</p>
             <div className="mt-2 rounded-xl border border-white/5 bg-white/[0.03] p-4">
               <p><strong className="text-foreground">Nourish</strong></p>

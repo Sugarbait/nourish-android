@@ -122,12 +122,24 @@ export const getCredits = query({
 
     const today = todayKey();
 
+    // Subscription state — surfaced here so the client reflects Pro status from
+    // the single getCredits query (it drives the credits-sync effect on the dashboard).
+    const sub = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+    const subActive = !!sub?.active && (!sub?.expiresAt || sub.expiresAt > Date.now());
+    const subscription = sub
+      ? { active: subActive, plan: sub.plan, expiresAt: sub.expiresAt ?? null }
+      : null;
+
     if (!row) {
       return {
         credits: 0,
         lastFreeDate: today,
         dailyFreeMealUsed: false,
         dailyFreeAIUsed: false,
+        subscription,
       };
     }
 
@@ -136,10 +148,10 @@ export const getCredits = query({
     const total = subCredits + packCredits;
 
     if (row.lastFreeDate !== today) {
-      return { ...row, credits: total, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false };
+      return { ...row, credits: total, lastFreeDate: today, dailyFreeMealUsed: false, dailyFreeAIUsed: false, subscription };
     }
 
-    return { ...row, credits: total };
+    return { ...row, credits: total, subscription };
   },
 });
 

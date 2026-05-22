@@ -9,6 +9,7 @@ import { NotificationProvider } from '@/components/notification-context';
 import { NotificationDisplay } from '@/components/notification-display';
 import { AppUpdateChecker } from '@/components/app-update-checker';
 import { SplashHider } from '@/components/splash-hider';
+import { BillingInitializer } from '@/components/billing-initializer';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -78,6 +79,7 @@ export default function RootLayout({
               <NotificationDisplay />
               <AppUpdateChecker />
               <SplashHider />
+              <BillingInitializer />
             </NotificationProvider>
           </ThemeProvider>
           </GoogleOAuthWrapper>

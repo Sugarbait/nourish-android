@@ -1,6 +1,6 @@
 {
   "name": "nourishai",
-  "version": "0.3.65",
+  "version": "0.3.76",
   "private": true,
   "scripts": {
     "dev": "next dev",

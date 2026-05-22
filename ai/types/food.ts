@@ -11,7 +11,14 @@ export type RecognizeFoodInput = z.infer<typeof RecognizeFoodInputSchema>;
 
 const FoodItemSchema = z.object({
   name: z.string().describe('The name of the food item.'),
-  calories: z.number().describe('The estimated calorie content of the food item.'),
+  calories: z.number().describe('The estimated calorie content of the food item for the portion shown.'),
+  protein: z.number().optional().describe('Estimated protein in grams for the portion shown.'),
+  carbs: z.number().optional().describe('Estimated carbohydrates in grams for the portion shown.'),
+  fat: z.number().optional().describe('Estimated fat in grams for the portion shown.'),
+  portion: z
+      .string()
+      .optional()
+      .describe('The estimated portion size, e.g. "1 cup", "approx 150g", "1 medium apple".'),
   confidence: z
       .number()
       .describe('The confidence level of the food recognition between 0 and 1.'),

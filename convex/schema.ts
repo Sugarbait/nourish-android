@@ -126,6 +126,7 @@ export default defineSchema({
     active: v.boolean(),
     expiresAt: v.optional(v.number()), // Unix timestamp ms
     lastCreditRefresh: v.optional(v.number()), // ms — when subscription credits were last refreshed (used by yearly cron)
+    lastPurchaseToken: v.optional(v.string()), // Play purchase token last granted — guards against double credit grants from duplicate purchase events
   })
     .index("by_userId", ["userId"])
     .index("by_active_plan", ["active", "plan"]),

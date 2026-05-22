@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAction, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, ShieldCheck, Lock } from 'lucide-react';
+import { goTo } from '@/lib/staticNav';
 
 function AdminSignInForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const verifyAdmin = useAction(api.admin.verifyAdmin);
   const verifyTotpCode = useAction(api.adminTotp.verifyCode);
@@ -36,9 +36,9 @@ function AdminSignInForm() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('admin_token');
-      if (token) router.push('/admin');
+      if (token) goTo('/admin');
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     const err = searchParams.get('error');
@@ -74,10 +74,10 @@ function AdminSignInForm() {
         body: JSON.stringify({ adminEmail: verifiedEmail }),
       }).then(() => {
         localStorage.setItem('admin_token', verifiedEmail);
-        router.push('/admin');
+        goTo('/admin');
       });
     }
-  }, [verifiedEmail, totpStatus, router]);
+  }, [verifiedEmail, totpStatus]);
 
   const handleCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,7 +134,7 @@ function AdminSignInForm() {
         body: JSON.stringify({ adminEmail: verifiedEmail }),
       });
       localStorage.setItem('admin_token', verifiedEmail);
-      router.push('/admin');
+      goTo('/admin');
     } catch {
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
@@ -290,7 +290,7 @@ export default function AdminSignInPage() {
         </Card>
 
         <div className="text-center">
-          <a href="/" className="text-sm text-green-500 hover:underline font-medium">← Back to App</a>
+          <a href="/index.html" onClick={(e) => { e.preventDefault(); goTo('/'); }} className="text-sm text-green-500 hover:underline font-medium">← Back to App</a>
         </div>
       </div>
     </div>
