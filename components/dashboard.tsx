@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.76";
+const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.77";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -1233,7 +1233,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
   const progressData = useMemo(() => {
     if (!recentMeals) return [];
-    
+
     const last7DaysDates = Array.from({ length: 7 }, (_, i) => {
       const d = subDays(new Date(), 6 - i);
       return format(d, 'yyyy-MM-dd');
@@ -1241,7 +1241,17 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
 
     return last7DaysDates.map(date => {
       const dayMeals = recentMeals.filter(m => m.date === date);
-      const totalCalories = dayMeals.reduce((acc, m) => acc + (m.calories || 0), 0);
+      // Include locally-logged meals not yet reflected in the Convex query (e.g. a
+      // meal just scanned today). Dedupe against Convex rows by localId.
+      const convexLocalIds = new Set(dayMeals.map((m: any) => m.localId).filter(Boolean));
+      let totalCalories = dayMeals.reduce((acc, m) => acc + (m.calories || 0), 0);
+      const localDay = history[date];
+      if (localDay) {
+        for (const meal of localDay.meals) {
+          if (convexLocalIds.has(meal.id)) continue;
+          totalCalories += meal.items.reduce((s, it) => s + (it.calories || 0), 0);
+        }
+      }
       const goal = displayGoals.calories || 2000;
       
       let dayName = 'Day';
@@ -1256,7 +1266,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         isToday: date === format(new Date(), 'yyyy-MM-dd')
       };
     });
-  }, [recentMeals, displayGoals.calories]);
+  }, [recentMeals, history, displayGoals.calories]);
 
   const startCamera = async () => {
     if (isCameraOn) return;

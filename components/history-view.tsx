@@ -244,28 +244,34 @@ export function HistoryView({
   const dailyData: HistoryDayData[] = useMemo(() => {
     return datesInRange.map((date) => {
       let calories = 0, protein = 0, carbs = 0, fat = 0, water = 0, mealCount = 0;
+      const seenLocalIds = new Set<string>();
       if (!isGuest && historyMeals) {
         const dayMeals = historyMeals.filter((m: any) => m.date === date);
-        calories = dayMeals.reduce((s: number, m: any) => s + (m.calories || 0), 0);
-        protein = dayMeals.reduce((s: number, m: any) => s + (m.protein || 0), 0);
-        carbs = dayMeals.reduce((s: number, m: any) => s + (m.carbs || 0), 0);
-        fat = dayMeals.reduce((s: number, m: any) => s + (m.fat || 0), 0);
-        mealCount = dayMeals.length;
+        dayMeals.forEach((m: any) => {
+          calories += m.calories || 0;
+          protein += m.protein || 0;
+          carbs += m.carbs || 0;
+          fat += m.fat || 0;
+          mealCount++;
+          if (m.localId) seenLocalIds.add(m.localId);
+        });
         water = historyWater?.find((w: any) => w.date === date)?.glasses ?? 0;
-      } else {
-        const day = localHistory[date];
-        if (day) {
-          day.meals.forEach((meal) => {
-            meal.items.forEach((item) => {
-              calories += item.calories || 0;
-              protein += item.protein || 0;
-              carbs += item.carbs || 0;
-              fat += item.fat || 0;
-            });
-            mealCount++;
+      }
+      // Merge locally-logged meals not yet reflected in Convex (e.g. a meal just
+      // scanned today before the live query catches up). Guests rely on this entirely.
+      const day = localHistory[date];
+      if (day) {
+        day.meals.forEach((meal) => {
+          if (seenLocalIds.has(meal.id)) return;
+          meal.items.forEach((item) => {
+            calories += item.calories || 0;
+            protein += item.protein || 0;
+            carbs += item.carbs || 0;
+            fat += item.fat || 0;
           });
-          water = day.water || 0;
-        }
+          mealCount++;
+        });
+        if (water === 0) water = day.water || 0;
       }
       const dateObj = new Date(date + 'T00:00:00');
       return {
@@ -292,9 +298,15 @@ export function HistoryView({
 
   const drillMeals = useMemo(() => {
     if (!historyDrillDate) return [];
-    const meals = !isGuest && historyMeals
+    const convexMeals = !isGuest && historyMeals
       ? historyMeals.filter((m: any) => m.date === historyDrillDate)
-      : (localHistory[historyDrillDate]?.meals || []);
+      : [];
+    const seenLocalIds = new Set(convexMeals.map((m: any) => m.localId).filter(Boolean));
+    // Merge in locally-logged meals not yet reflected in Convex (deduped by localId).
+    const localMeals = (localHistory[historyDrillDate]?.meals || []).filter(
+      (m: any) => !seenLocalIds.has(m.id),
+    );
+    const meals = [...convexMeals, ...localMeals];
     // Newest meal first. Convex rows expose `_creationTime`; local meals use `timestamp`.
     return [...meals].sort((a: any, b: any) =>
       (b.timestamp ?? b._creationTime ?? 0) - (a.timestamp ?? a._creationTime ?? 0),
