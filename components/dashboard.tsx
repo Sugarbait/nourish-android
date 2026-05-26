@@ -1,6 +1,18 @@
 'use client';
 
-const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.77";
+const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.79";
+
+async function saveWithRetry(fn: () => Promise<unknown>, maxAttempts = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await fn();
+      return;
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      await new Promise(r => setTimeout(r, 600 * attempt));
+    }
+  }
+}
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -65,6 +77,8 @@ import {
   defaultCreditData,
 } from '@/lib/credits';
 import { clearAuthStorage } from '@/lib/auth-storage';
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { PricingModal } from '@/components/pricing-modal';
 import { HistoryView } from '@/components/history-view';
 import { NoCreditsModal } from '@/components/no-credits-modal';
@@ -591,7 +605,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
           { calories: 0, protein: 0, carbs: 0, fat: 0 }
         );
-        await convexLogMeal({
+        await saveWithRetry(() => convexLogMeal({
           userId: userId as any,
           date: dateKey,
           mealType: normalizeMealType(newMeal.name),
@@ -601,11 +615,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           healthAnalysis: newMeal.healthAnalysis?.analysis,
           items: foodWithMacros,
           localId: newMeal.id,
-        });
+        }));
         uploadAndAttachMealImage(newMeal.id, dataUri);
         toast({ title: `Replaced in ${newMeal.name}!`, description: 'Older entry was replaced. Review the results below.' });
       } catch (error) {
-        console.error("Failed to replace meal:", error);
+        console.error("Failed to replace meal after retries:", error);
         toast({ title: "Failed to replace meal", description: "Please try again.", variant: "destructive" });
       }
     } else {
@@ -631,7 +645,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
           { calories: 0, protein: 0, carbs: 0, fat: 0 }
         );
-        await convexLogMeal({
+        await saveWithRetry(() => convexLogMeal({
           userId: userId as any,
           date: dateKey,
           mealType: normalizeMealType(newMeal.name),
@@ -641,11 +655,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           healthAnalysis: newMeal.healthAnalysis?.analysis,
           items: foodWithMacros,
           localId: newMeal.id,
-        });
+        }));
         uploadAndAttachMealImage(newMeal.id, dataUri);
         toast({ title: `Added to ${newMeal.name}!`, description: 'Food logged as a duplicate. Review the results below.' });
       } catch (error) {
-        console.error("Failed to log duplicate meal:", error);
+        console.error("Failed to log duplicate meal after retries:", error);
         toast({ title: "Failed to log meal", description: "Please try again.", variant: "destructive" });
       }
     } else {
@@ -1659,7 +1673,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               );
               (async () => {
                 try {
-                  await convexLogMeal({
+                  await saveWithRetry(() => convexLogMeal({
                     userId: userId as any,
                     date: dateKey,
                     mealType: normalizeMealType(mealType),
@@ -1669,10 +1683,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     healthAnalysis: result.healthAnalysis,
                     items: foodWithMacros,
                     localId: newMeal.id,
-                  });
+                  }));
                   await uploadAndAttachMealImage(newMeal.id, dataUri);
                 } catch (err) {
-                  console.error('Failed to sync meal to Convex:', err);
+                  console.error('Failed to sync meal to Convex after retries:', err);
+                  toast({ title: 'Save failed', description: 'Meal logged locally but could not reach the server. Check your connection — it will sync on next open.', variant: 'destructive' });
                 }
               })();
             }
@@ -1707,15 +1722,22 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
         { calories: 0, protein: 0, carbs: 0, fat: 0 }
       );
-      convexLogMeal({
-        userId: userId as any,
-        date: dateKey,
-        mealType: normalizeMealType(mealName),
-        name: mealName,
-        ...totals,
-        items,
-        localId: newMeal.id,
-      }).catch(console.error);
+      (async () => {
+        try {
+          await saveWithRetry(() => convexLogMeal({
+            userId: userId as any,
+            date: dateKey,
+            mealType: normalizeMealType(mealName),
+            name: mealName,
+            ...totals,
+            items,
+            localId: newMeal.id,
+          }));
+        } catch (err) {
+          console.error('Failed to sync meal to Convex after retries:', err);
+          toast({ title: 'Save failed', description: 'Meal logged locally but could not reach the server. Check your connection — it will sync on next open.', variant: 'destructive' });
+        }
+      })();
     }
     // Generate an initial health analysis for the manually-logged meal.
     void reanalyzeMealHealth(newMeal.id, items);
@@ -2432,7 +2454,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           type="button"
                           variant="ghost"
                           className="w-full mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => {
+                          onClick={async () => {
+                            if (Capacitor.isNativePlatform()) {
+                              try { await GoogleAuth.signOut(); } catch {}
+                            }
                             clearAuthStorage();
                             window.location.href = window.location.origin + '/index.html';
                           }}
