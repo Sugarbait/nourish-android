@@ -313,7 +313,15 @@ export function HistoryView({
     );
   }, [historyDrillDate, isGuest, historyMeals, localHistory]);
 
-  const isLoading = !isGuest && userId && (historyMeals === undefined || historyWater === undefined);
+  // Show the skeleton only while Convex is still loading AND we have no local
+  // data to display yet. Otherwise (e.g. a meal was just scanned and lives in
+  // localHistory), render the merged view immediately so the new entry shows
+  // up in the Daily Breakdown without waiting on the network.
+  const hasLocalDataInRange = useMemo(
+    () => datesInRange.some((d) => (localHistory[d]?.meals?.length || 0) > 0),
+    [datesInRange, localHistory],
+  );
+  const isLoading = !isGuest && userId && (historyMeals === undefined || historyWater === undefined) && !hasLocalDataInRange;
 
   const RANGES: { label: string; value: 7 | 15 | 30 | 90 }[] = [
     { label: '7D', value: 7 },

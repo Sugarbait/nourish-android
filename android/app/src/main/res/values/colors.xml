@@ -2,4 +2,7 @@
 <resources>
     <!-- Splash background — matches the dark site background. -->
     <color name="splashScreenBackground">#0A1410</color>
+    <!-- Status bar colors matching the app CSS background variable. -->
+    <color name="backgroundLight">#F6F7F9</color>
+    <color name="backgroundDark">#0D1016</color>
 </resources>

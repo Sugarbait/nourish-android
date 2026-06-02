@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.79";
+const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.83";
 
 async function saveWithRetry(fn: () => Promise<unknown>, maxAttempts = 3): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -9,7 +9,7 @@ async function saveWithRetry(fn: () => Promise<unknown>, maxAttempts = 3): Promi
       return;
     } catch (err) {
       if (attempt === maxAttempts) throw err;
-      await new Promise(r => setTimeout(r, 600 * attempt));
+      await new Promise((r) => setTimeout(r, 600 * attempt));
     }
   }
 }
@@ -77,8 +77,6 @@ import {
   defaultCreditData,
 } from '@/lib/credits';
 import { clearAuthStorage } from '@/lib/auth-storage';
-import { Capacitor } from '@capacitor/core';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { PricingModal } from '@/components/pricing-modal';
 import { HistoryView } from '@/components/history-view';
 import { NoCreditsModal } from '@/components/no-credits-modal';
@@ -439,13 +437,6 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   const historicalMeals = useQuery(api.meals.getMealsForDateRange, userId ? { userId: userId as any, startDate: _histStart, endDate: _histEnd } : 'skip') ?? [];
   const trackedDates = useQuery(api.meals.getTrackedDates, userId ? { userId: userId as any } : 'skip');
 
-  const trackedDateObjects = useMemo(() => {
-    if (!trackedDates) return [];
-    return trackedDates
-      .map(d => new Date(d + 'T12:00:00'))
-      .filter(d => !isNaN(d.getTime()));
-  }, [trackedDates]);
-
   // Read user display info from localStorage
   const userName = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_name') : null;
   const userAvatar = typeof window !== 'undefined' ? localStorage.getItem('nourish_user_avatar') : null;
@@ -470,6 +461,21 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     ? { calories: convexProfile.calorieGoal, protein: convexProfile.proteinGoal, carbs: convexProfile.carbsGoal, fat: convexProfile.fatGoal, water: convexProfile.waterGoal }
     : goals;
   const [history, setHistory] = useState<Record<string, DailyData>>({});
+
+  // Calendar green dots: union of Convex tracked dates (authoritative source, covers
+  // cross-device and historical data) with locally-known meal days from `history`.
+  // The local source makes a dot appear the instant a meal is scanned — before the
+  // Convex save lands. Without it, dots silently vanish whenever a sync is slow or
+  // fails, which is exactly what regressed. Declared after `history` to stay in scope.
+  const trackedDateObjects = useMemo(() => {
+    const dateStrings = new Set<string>(trackedDates ?? []);
+    for (const [day, data] of Object.entries(history)) {
+      if (data?.meals?.length) dateStrings.add(day);
+    }
+    return Array.from(dateStrings)
+      .map(d => new Date(d + 'T12:00:00'))
+      .filter(d => !isNaN(d.getTime()));
+  }, [trackedDates, history]);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
@@ -605,7 +611,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
           { calories: 0, protein: 0, carbs: 0, fat: 0 }
         );
-        await saveWithRetry(() => convexLogMeal({
+        await convexLogMeal({
           userId: userId as any,
           date: dateKey,
           mealType: normalizeMealType(newMeal.name),
@@ -615,11 +621,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           healthAnalysis: newMeal.healthAnalysis?.analysis,
           items: foodWithMacros,
           localId: newMeal.id,
-        }));
+        });
         uploadAndAttachMealImage(newMeal.id, dataUri);
         toast({ title: `Replaced in ${newMeal.name}!`, description: 'Older entry was replaced. Review the results below.' });
       } catch (error) {
-        console.error("Failed to replace meal after retries:", error);
+        console.error("Failed to replace meal:", error);
         toast({ title: "Failed to replace meal", description: "Please try again.", variant: "destructive" });
       }
     } else {
@@ -645,7 +651,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
           { calories: 0, protein: 0, carbs: 0, fat: 0 }
         );
-        await saveWithRetry(() => convexLogMeal({
+        await convexLogMeal({
           userId: userId as any,
           date: dateKey,
           mealType: normalizeMealType(newMeal.name),
@@ -655,11 +661,11 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
           healthAnalysis: newMeal.healthAnalysis?.analysis,
           items: foodWithMacros,
           localId: newMeal.id,
-        }));
+        });
         uploadAndAttachMealImage(newMeal.id, dataUri);
         toast({ title: `Added to ${newMeal.name}!`, description: 'Food logged as a duplicate. Review the results below.' });
       } catch (error) {
-        console.error("Failed to log duplicate meal after retries:", error);
+        console.error("Failed to log duplicate meal:", error);
         toast({ title: "Failed to log meal", description: "Please try again.", variant: "destructive" });
       }
     } else {
@@ -742,16 +748,26 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   useEffect(() => {
     try {
         const isAuth = !!localStorage.getItem('nourish_user_id');
-        if (!isAuth) {
-            // Guest: load history, goals, and profile from localStorage
-            const savedData = localStorage.getItem(APP_STORAGE_KEY);
-            if (savedData) {
+        // Always load history from localStorage — for auth users it acts as a
+        // write-ahead cache so meals scanned before the Convex save completed
+        // aren't lost when the app restarts/updates. The Convex hydration
+        // effect below additively merges in server-side data.
+        const savedData = localStorage.getItem(APP_STORAGE_KEY);
+        if (savedData) {
+            try {
                 const parsedData: AppData = JSON.parse(savedData);
-                const loadedGoals: DailyGoals = { ...parsedData.goals, water: parsedData.goals.water ?? 8 };
-                setGoals(loadedGoals);
-                setHistory(parsedData.history);
-                goalsForm.reset(loadedGoals);
+                if (parsedData.history) setHistory(parsedData.history);
+                // Goals/profile only loaded for guests — auth users get them from Convex.
+                if (!isAuth && parsedData.goals) {
+                    const loadedGoals: DailyGoals = { ...parsedData.goals, water: parsedData.goals.water ?? 8 };
+                    setGoals(loadedGoals);
+                    goalsForm.reset(loadedGoals);
+                }
+            } catch (e) {
+                console.error('Failed to parse saved history', e);
             }
+        }
+        if (!isAuth) {
             const savedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
             if (savedProfile) {
                 const parsedProfile: UserProfile = JSON.parse(savedProfile);
@@ -759,8 +775,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                 profileForm.reset(parsedProfile);
             }
         } else {
-            // Authenticated: wipe any stale guest data so Convex is the clean source of truth
-            localStorage.removeItem(APP_STORAGE_KEY);
+            // Profile still owned by Convex; clear any stale guest profile cache.
             localStorage.removeItem(PROFILE_STORAGE_KEY);
         }
         // Credits: keep local cache for fast initial render; Convex overrides shortly after
@@ -847,6 +862,52 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDateConvexMeals, dateKey]);
 
+  // Recovery sweep: re-upload any local meal for the selected date that has
+  // no matching localId in Convex. Catches meals that were scanned but whose
+  // convexLogMeal mutation never completed (offline, app killed mid-flight,
+  // app update before sync). Without this, those meals are lost on restart.
+  const recoverySweptRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (isGuest || !userId) return;
+    if (selectedDateConvexMeals === undefined) return; // wait for Convex to respond
+    const localMeals = history[dateKey]?.meals || [];
+    if (localMeals.length === 0) return;
+    const convexLocalIds = new Set(
+      (selectedDateConvexMeals as any[]).map((cm: any) => cm.localId).filter(Boolean),
+    );
+    const orphans = localMeals.filter(
+      (m) => !convexLocalIds.has(m.id) && !recoverySweptRef.current.has(m.id),
+    );
+    if (orphans.length === 0) return;
+    orphans.forEach((m) => recoverySweptRef.current.add(m.id));
+    orphans.forEach((meal) => {
+      const totals = meal.items.reduce(
+        (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 },
+      );
+      (async () => {
+        try {
+          await saveWithRetry(() => convexLogMeal({
+            userId: userId as any,
+            date: dateKey,
+            mealType: normalizeMealType(meal.name),
+            name: meal.name,
+            ...totals,
+            healthScore: meal.healthAnalysis?.score,
+            healthAnalysis: meal.healthAnalysis?.analysis,
+            items: meal.items,
+            localId: meal.id,
+          }));
+          console.log(`[recovery] re-uploaded orphan meal ${meal.id}`);
+        } catch (err) {
+          console.error('[recovery] failed to re-upload orphan meal', meal.id, err);
+          recoverySweptRef.current.delete(meal.id); // allow retry next time
+        }
+      })();
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDateConvexMeals, dateKey, history, isGuest, userId]);
+
   // Sync credits from Convex — authoritative source of truth.
   // Runs whenever convexCredits changes (e.g. after a purchase webhook fires).
   useEffect(() => {
@@ -899,10 +960,13 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
   }, [userName, userAvatar]);
 
-  // Save data to localStorage whenever it changes
+  // Save data to localStorage whenever it changes.
+  // For auth users this acts as a write-ahead cache: meals are persisted
+  // locally the moment they're scanned, so an app update/restart before the
+  // Convex save completes doesn't lose them. The mount-time recovery sweep
+  // below re-uploads any orphaned local meals.
   useEffect(() => {
     if (!isMounted) return; // Don't save initial default state
-    if (!isGuest) return; // CLOUD SYNC: Don't save to localStorage if authenticated
     try {
         const dataToSave: AppData = { goals, history };
         localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(dataToSave));
@@ -1673,7 +1737,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
               );
               (async () => {
                 try {
-                  await saveWithRetry(() => convexLogMeal({
+                  await convexLogMeal({
                     userId: userId as any,
                     date: dateKey,
                     mealType: normalizeMealType(mealType),
@@ -1683,11 +1747,10 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                     healthAnalysis: result.healthAnalysis,
                     items: foodWithMacros,
                     localId: newMeal.id,
-                  }));
+                  });
                   await uploadAndAttachMealImage(newMeal.id, dataUri);
                 } catch (err) {
-                  console.error('Failed to sync meal to Convex after retries:', err);
-                  toast({ title: 'Save failed', description: 'Meal logged locally but could not reach the server. Check your connection — it will sync on next open.', variant: 'destructive' });
+                  console.error('Failed to sync meal to Convex:', err);
                 }
               })();
             }
@@ -1722,22 +1785,15 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
         (acc, i) => ({ calories: acc.calories + i.calories, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fat: acc.fat + i.fat }),
         { calories: 0, protein: 0, carbs: 0, fat: 0 }
       );
-      (async () => {
-        try {
-          await saveWithRetry(() => convexLogMeal({
-            userId: userId as any,
-            date: dateKey,
-            mealType: normalizeMealType(mealName),
-            name: mealName,
-            ...totals,
-            items,
-            localId: newMeal.id,
-          }));
-        } catch (err) {
-          console.error('Failed to sync meal to Convex after retries:', err);
-          toast({ title: 'Save failed', description: 'Meal logged locally but could not reach the server. Check your connection — it will sync on next open.', variant: 'destructive' });
-        }
-      })();
+      convexLogMeal({
+        userId: userId as any,
+        date: dateKey,
+        mealType: normalizeMealType(mealName),
+        name: mealName,
+        ...totals,
+        items,
+        localId: newMeal.id,
+      }).catch(console.error);
     }
     // Generate an initial health analysis for the manually-logged meal.
     void reanalyzeMealHealth(newMeal.id, items);
@@ -2454,10 +2510,7 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
                           type="button"
                           variant="ghost"
                           className="w-full mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={async () => {
-                            if (Capacitor.isNativePlatform()) {
-                              try { await GoogleAuth.signOut(); } catch {}
-                            }
+                          onClick={() => {
                             clearAuthStorage();
                             window.location.href = window.location.origin + '/index.html';
                           }}
