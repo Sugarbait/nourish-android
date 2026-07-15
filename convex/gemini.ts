@@ -4,7 +4,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { UserRefreshClient } from "google-auth-library";
 
-const MODEL = "gemini-3.1-flash-lite-preview";
+const MODEL = "gemini-3.1-flash-lite";
 
 function getMostFrequentMealTypes(meals: any[]): string {
   const mealTypeCounts: Record<string, number> = {};
