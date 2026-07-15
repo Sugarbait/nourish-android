@@ -403,11 +403,11 @@ export default function SplashPage() {
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${billingCycle === 'yearly' ? 'bg-white/10 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Yearly
-              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">Save 25%</span>
+              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">Save 26%</span>
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 max-w-xl mx-auto">
-            <PricingCard name="Free" price="$0" period="/ forever" features={['1 meal scan/day','1 AI message/day','Basic tracking']} cta="Get Started" onCta={openSignUp} />
+            <PricingCard name="Free" price="$0" period="/ forever" features={['1 free meal scan/day','Meal & water tracking','AI coach included with Pro']} cta="Get Started" onCta={openSignUp} />
             {billingCycle === 'monthly' ? (
               <PricingCard name="Pro Monthly" price="$8.99" period="/ month" features={['300 credits/month','Credits reset monthly','1 free daily scan included','Cancel anytime']} cta="Subscribe" highlight onCta={openSignUp} />
             ) : (

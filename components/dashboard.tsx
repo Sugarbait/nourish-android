@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.84";
+const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.85";
 
 async function saveWithRetry(fn: () => Promise<unknown>, maxAttempts = 3): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

@@ -190,7 +190,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${billingCycle === 'yearly' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Yearly
-              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">Save 24%</span>
+              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">Save 26%</span>
             </button>
           </div>
         )}
@@ -216,7 +216,7 @@ export function PricingModal({ open, onOpenChange, credits, onCreditsUpdate, isG
                     'Use credits however you need them',
                     'Credits reset fresh each month',
                     'Priority support',
-                    ...(billingCycle === 'yearly' ? ['2 months free vs monthly'] : []),
+                    ...(billingCycle === 'yearly' ? ['3 months free vs monthly'] : []),
                   ].map(f => (
                     <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Check className="h-3.5 w-3.5 text-primary shrink-0" /> {f}
