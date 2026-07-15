@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, internalMutation, query, action } from "./_generated/server";
+import { internalMutation, internalQuery, query, action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import {
@@ -49,16 +49,20 @@ export const activateSubscription = internalMutation({
     tier: v.union(v.literal("monthly"), v.literal("yearly")),
     /** Play purchase token — used to make the credit grant idempotent. */
     purchaseToken: v.optional(v.string()),
+    /** Google's authoritative expiryTime (ms). Falls back to now + period. */
+    expiresAtMs: v.optional(v.number()),
   },
-  handler: async (ctx, { userId, customerEmail, tier, purchaseToken }) => {
+  handler: async (ctx, { userId, customerEmail, tier, purchaseToken, expiresAtMs }) => {
     const uid = await resolveUserId(ctx, userId, customerEmail);
     if (!uid) {
       console.error("[googlePlayBilling] User not found:", { userId, customerEmail });
       return;
     }
 
-    const expiry = Date.now() + SUBSCRIPTION_BASE_PLANS[tier as SubscriptionTier].periodMs;
     const now = Date.now();
+    const expiry = expiresAtMs && expiresAtMs > now
+      ? expiresAtMs
+      : now + SUBSCRIPTION_BASE_PLANS[tier as SubscriptionTier].periodMs;
 
     const existing = await ctx.db
       .query("subscriptions")
@@ -72,13 +76,17 @@ export const activateSubscription = internalMutation({
     const alreadyGranted = !!purchaseToken && existing?.lastPurchaseToken === purchaseToken;
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
+      const patch: Record<string, unknown> = {
         active: true,
         plan: tier,
         expiresAt: expiry,
-        lastCreditRefresh: now,
         lastPurchaseToken: purchaseToken ?? existing.lastPurchaseToken,
-      });
+      };
+      // Only bump the credit-refresh clock when credits are actually granted —
+      // otherwise duplicate purchase events would keep pushing the yearly
+      // cron's 30-day refresh window into the future without ever granting.
+      if (!alreadyGranted) patch.lastCreditRefresh = now;
+      await ctx.db.patch(existing._id, patch);
     } else {
       await ctx.db.insert("subscriptions", {
         userId: uid,
@@ -371,6 +379,7 @@ export const validateAndGrant = action({
         customerEmail: args.customerEmail,
         tier: result.tier,
         purchaseToken: args.purchaseToken,
+        expiresAtMs: result.expiresAtMs || undefined,
       });
       return { success: true, kind: "subscription" };
     } else {
@@ -419,5 +428,228 @@ export const getCreditsForSync = query({
     } catch {
       return null;
     }
+  },
+});
+
+// ===========================================================================
+// Subscription reconciliation
+//
+// Google Play does NOT notify this backend when a subscription renews, lapses,
+// or is cancelled (we have no RTDN endpoint). Renewals keep the SAME purchase
+// token, so the client never re-triggers a grant either. Without this job a
+// monthly subscriber would lose Pro 30 days after purchase while Google keeps
+// charging them, and would never receive their monthly 300 credits.
+//
+// A cron therefore re-validates the stored purchase token of every
+// subscription that is near/past its recorded expiry:
+//   - still entitled  → extend expiresAt to Google's authoritative expiryTime,
+//                       and when a new billing period started, reset
+//                       subscription credits to 300 (pack credits untouched)
+//   - no longer entitled (expired / on hold / paused / refunded) → deactivate
+// ===========================================================================
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Re-check active subs this close to (or past) their recorded expiry. */
+const RECONCILE_HORIZON_MS = 12 * 60 * 60 * 1000;
+/** Keep re-checking lapsed subs this long — covers Play's 30-day account hold. */
+const REACTIVATION_WINDOW_MS = 35 * DAY_MS;
+/** A renewal must advance expiry by more than this (real periods are ≥28 days). */
+const MIN_RENEWAL_ADVANCE_MS = 7 * DAY_MS;
+/** Never grant renewal credits twice within this window (idempotency belt). */
+const MIN_MS_BETWEEN_CREDIT_GRANTS = 20 * DAY_MS;
+
+export const listPlaySubsForReconcile = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const subs = await ctx.db.query("subscriptions").collect();
+    return subs
+      .filter((s) => !!s.lastPurchaseToken)
+      .filter((s) => {
+        const exp = s.expiresAt ?? 0;
+        // Active: only bother Google when the recorded window is about to end.
+        if (s.active) return exp < now + RECONCILE_HORIZON_MS;
+        // Inactive: keep checking for a while — the user may fix their payment
+        // method (grace/hold) and Google will resume the subscription.
+        return exp > now - REACTIVATION_WINDOW_MS;
+      })
+      .map((s) => ({
+        subId: s._id,
+        userId: s.userId,
+        purchaseToken: s.lastPurchaseToken as string,
+        expiresAt: s.expiresAt ?? 0,
+        lastCreditRefresh: s.lastCreditRefresh ?? 0,
+        active: s.active,
+      }));
+  },
+});
+
+export const applyPlayReconcile = internalMutation({
+  args: {
+    subId: v.id("subscriptions"),
+    userId: v.id("users"),
+    entitled: v.boolean(),
+    plan: v.optional(v.union(v.literal("monthly"), v.literal("yearly"))),
+    expiresAt: v.optional(v.number()),
+    grantRenewalCredits: v.boolean(),
+  },
+  handler: async (ctx, { subId, userId, entitled, plan, expiresAt, grantRenewalCredits }) => {
+    const sub = await ctx.db.get(subId);
+    if (!sub) return;
+
+    if (!entitled) {
+      if (sub.active) await ctx.db.patch(subId, { active: false });
+      return;
+    }
+
+    const patch: Record<string, unknown> = { active: true };
+    if (plan) patch.plan = plan;
+    if (expiresAt) patch.expiresAt = expiresAt;
+    if (grantRenewalCredits) patch.lastCreditRefresh = Date.now();
+    await ctx.db.patch(subId, patch);
+
+    if (grantRenewalCredits) {
+      // Renewal semantics match stripe.renewSubscription / the yearly cron:
+      // subscription credits RESET to the monthly allotment; purchased pack
+      // credits are never touched.
+      const credits = await ctx.db
+        .query("credits")
+        .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+        .first();
+      if (credits) {
+        await ctx.db.patch(credits._id, {
+          credits: SUBSCRIPTION_MONTHLY_CREDITS,
+          mealCredits: undefined,
+          aiCredits: undefined,
+        });
+      } else {
+        await ctx.db.insert("credits", {
+          userId,
+          credits: SUBSCRIPTION_MONTHLY_CREDITS,
+          lastFreeDate: new Date().toISOString().slice(0, 10),
+          dailyFreeMealUsed: false,
+          dailyFreeAIUsed: false,
+        });
+      }
+    }
+  },
+});
+
+/** Fetch the live state of a Play subscription token from Google. */
+async function fetchPlaySubscriptionState(purchaseToken: string): Promise<
+  | { ok: true; state: string; expiryMs: number; basePlanId: string | null }
+  | { ok: false; gone: boolean; error: string }
+> {
+  const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME;
+  if (!packageName) return { ok: false, gone: false, error: "GOOGLE_PLAY_PACKAGE_NAME not configured" };
+
+  let accessToken: string;
+  try {
+    accessToken = await getPlayAccessToken();
+  } catch (e: any) {
+    return { ok: false, gone: false, error: e?.message ?? "auth failed" };
+  }
+
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptionsv2/tokens/${purchaseToken}`;
+  const res = await fetch(url, { headers: playApiHeaders(accessToken) });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[googlePlayBilling] reconcile fetch failed:", res.status, body.slice(0, 200));
+    // 400/404/410 mean Google no longer recognizes the token (expired long ago,
+    // refunded, or revoked). Anything else (401/403/5xx) is transient — retry
+    // on the next run rather than touching the subscription.
+    return { ok: false, gone: res.status === 400 || res.status === 404 || res.status === 410, error: `HTTP ${res.status}` };
+  }
+
+  const data = await res.json();
+  const lineItem = data.lineItems?.[0];
+  return {
+    ok: true,
+    state: data.subscriptionState ?? "UNKNOWN",
+    expiryMs: lineItem?.expiryTime ? new Date(lineItem.expiryTime).getTime() : 0,
+    basePlanId: lineItem?.offerDetails?.basePlanId ?? null,
+  };
+}
+
+export const reconcilePlaySubscriptions = internalAction({
+  args: {},
+  handler: async (
+    ctx,
+  ): Promise<{ checked: number; renewed: number; deactivated: number; reactivated: number; errors: number }> => {
+    const subs: Array<{
+      subId: Id<"subscriptions">;
+      userId: Id<"users">;
+      purchaseToken: string;
+      expiresAt: number;
+      lastCreditRefresh: number;
+      active: boolean;
+    }> = await ctx.runQuery(internal.googlePlayBilling.listPlaySubsForReconcile, {});
+
+    // Fetch all states first so a systemic failure (bad config, Play outage)
+    // can be detected before we deactivate anyone.
+    const results = await Promise.all(
+      subs.map(async (sub) => ({ sub, res: await fetchPlaySubscriptionState(sub.purchaseToken) })),
+    );
+
+    // Circuit breaker: if EVERY checked token comes back "gone", something is
+    // wrong with our config (e.g. package name) — don't mass-deactivate.
+    const goneCount = results.filter(({ res }) => !res.ok && res.gone).length;
+    if (subs.length >= 3 && goneCount === subs.length) {
+      console.error("[googlePlayBilling] reconcile aborted: all", subs.length, "tokens reported gone — suspected config error.");
+      return { checked: subs.length, renewed: 0, deactivated: 0, reactivated: 0, errors: subs.length };
+    }
+
+    let renewed = 0, deactivated = 0, reactivated = 0, errors = 0;
+    const now = Date.now();
+
+    for (const { sub, res } of results) {
+      if (!res.ok) {
+        if (res.gone) {
+          await ctx.runMutation(internal.googlePlayBilling.applyPlayReconcile, {
+            subId: sub.subId, userId: sub.userId, entitled: false, grantRenewalCredits: false,
+          });
+          if (sub.active) deactivated++;
+        } else {
+          errors++;
+        }
+        continue;
+      }
+
+      // CANCELED keeps entitlement until the period the user already paid for
+      // runs out; ON_HOLD / PAUSED / EXPIRED do not.
+      const entitled =
+        res.state === "SUBSCRIPTION_STATE_ACTIVE" ||
+        res.state === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD" ||
+        (res.state === "SUBSCRIPTION_STATE_CANCELED" && res.expiryMs > now);
+
+      if (!entitled) {
+        await ctx.runMutation(internal.googlePlayBilling.applyPlayReconcile, {
+          subId: sub.subId, userId: sub.userId, entitled: false, grantRenewalCredits: false,
+        });
+        if (sub.active) deactivated++;
+        continue;
+      }
+
+      const tier = res.basePlanId ? getSubscriptionTierFromBasePlanId(res.basePlanId) : null;
+      // A renewal moved Google's expiry a full period past what we recorded.
+      const renewalHappened = res.expiryMs > sub.expiresAt + MIN_RENEWAL_ADVANCE_MS;
+      const grantDue = renewalHappened && now - sub.lastCreditRefresh > MIN_MS_BETWEEN_CREDIT_GRANTS;
+
+      await ctx.runMutation(internal.googlePlayBilling.applyPlayReconcile, {
+        subId: sub.subId,
+        userId: sub.userId,
+        entitled: true,
+        plan: tier ?? undefined,
+        expiresAt: res.expiryMs || undefined,
+        grantRenewalCredits: grantDue,
+      });
+      if (!sub.active) reactivated++;
+      if (grantDue) renewed++;
+    }
+
+    console.log(
+      `[googlePlayBilling] reconcile: checked=${subs.length} renewed=${renewed} deactivated=${deactivated} reactivated=${reactivated} errors=${errors}`,
+    );
+    return { checked: subs.length, renewed, deactivated, reactivated, errors };
   },
 });

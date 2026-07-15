@@ -8,6 +8,8 @@ import { CreditData } from '@/lib/credits';
 import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useToast } from '@/hooks/use-toast';
+import { SUBSCRIPTION_PRODUCT_ID, SUBSCRIPTION_BASE_PLAN_IDS } from '@/lib/billingConfig';
+import { launchPurchaseFlow } from '@/lib/googlePlayBilling';
 
 interface NoCreditsModalProps {
   open: boolean;
@@ -66,7 +68,7 @@ export function NoCreditsModal({
   userEmail,
 }: NoCreditsModalProps) {
   const { toast } = useToast();
-  const createCheckoutSession = useAction(api.stripeActions.createCheckoutSession);
+  const validateAndGrant = useAction(api.googlePlayBilling.validateAndGrant);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   // 'closed' | 'opening' | 'open' | 'closing'
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open' | 'closing'>('closed');
@@ -96,24 +98,32 @@ export function NoCreditsModal({
       close();
       return;
     }
+    if (!userId) {
+      toast({ title: 'Sign in required', description: 'Please sign in to subscribe.' });
+      return;
+    }
     setIsCheckingOut(true);
     try {
-      const result = await createCheckoutSession({
-        priceKey: 'subscription',
-        successUrl: `${window.location.origin}/?checkout=success`,
-        cancelUrl:  `${window.location.origin}/?checkout=cancelled`,
-        ...(userId    ? { userId }                   : {}),
-        ...(userEmail ? { customerEmail: userEmail } : {}),
+      const outcome = await launchPurchaseFlow({
+        productId: SUBSCRIPTION_PRODUCT_ID,
+        basePlanId: SUBSCRIPTION_BASE_PLAN_IDS.monthly,
+        userId,
+        customerEmail: userEmail ?? '',
+        granter: validateAndGrant,
       });
-      if (result.url) {
-        window.location.href = result.url;
+
+      if (outcome.status === 'completed' || outcome.status === 'already_owned') {
+        toast({ title: 'Welcome to Pro!', description: 'Your subscription is now active. Enjoy!' });
+        close();
+      } else if (outcome.status === 'cancelled') {
+        // User backed out of the Google Play sheet — no toast needed.
       } else {
-        setIsCheckingOut(false);
-        toast({ title: 'Checkout failed', description: result.error || 'Could not open Stripe.', variant: 'destructive' });
+        toast({ title: 'Purchase failed', description: outcome.error, variant: 'destructive' });
       }
     } catch (err: any) {
+      toast({ title: 'Purchase failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
+    } finally {
       setIsCheckingOut(false);
-      toast({ title: 'Checkout failed', description: err.message || 'Something went wrong.', variant: 'destructive' });
     }
   };
 
@@ -134,8 +144,8 @@ export function NoCreditsModal({
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/50 bg-card px-10 py-8 shadow-2xl text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <div>
-              <p className="font-semibold text-base">Taking you to checkout</p>
-              <p className="text-sm text-muted-foreground mt-1">You'll be redirected to Stripe's secure<br />payment page in just a moment.</p>
+              <p className="font-semibold text-base">Initiating purchase</p>
+              <p className="text-sm text-muted-foreground mt-1">You'll be taken to Google Play to<br />complete your purchase securely.</p>
             </div>
           </div>
         </div>

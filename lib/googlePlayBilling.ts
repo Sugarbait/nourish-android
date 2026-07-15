@@ -137,6 +137,23 @@ function isNative(): boolean {
 }
 
 /**
+ * Provide the grant context BEFORE any purchase flow runs — call this at app
+ * boot for the signed-in user. Google Play re-emits `approved` on startup for
+ * any transaction that was paid but never finished (e.g. the app crashed or
+ * lost network between charge and grant). Without a granter bound at boot,
+ * those recovered transactions can't be validated + granted, stay unfinished,
+ * and Google auto-refunds them after 3 days — the user paid and got nothing.
+ * `launchPurchaseFlow` refreshes this context on every explicit purchase.
+ */
+export function setBillingContext(
+  granter: ValidateAndGrant,
+  user: { userId: string; customerEmail: string } | null,
+): void {
+  _granter = granter;
+  if (user?.userId) _user = user;
+}
+
+/**
  * Wait for the `window.CdvPurchase` global to appear. cordova-plugin-purchase is
  * a Cordova plugin; under Capacitor its JS is injected into the WebView via
  * `cap sync` and registers the global shortly after boot — so we poll briefly
@@ -292,6 +309,43 @@ async function handleApproved(tx: any): Promise<void> {
 }
 
 /**
+ * Re-sync an owned subscription with the backend. The Play store on-device
+ * knows the user's active subscription (and its purchase token) even when our
+ * server row lapsed or never stored the token — e.g. after a reinstall, a new
+ * device, or a subscription activated before tokens were persisted. Server-side
+ * validation is idempotent (same token never double-grants), so replaying the
+ * owned subscription on boot safely self-heals the account: it reactivates the
+ * row, stores the token, and syncs expiry to Google's authoritative value.
+ */
+async function restoreOwnedSubscription(): Promise<void> {
+  const CdvPurchase = _cdv;
+  if (!CdvPurchase || !_granter || !_user?.userId) return;
+
+  try {
+    const { store } = CdvPurchase;
+    const txns: any[] = store.localTransactions ?? [];
+    for (const tx of txns) {
+      const ownsSub = (tx.products ?? []).some((p: any) => isSubscriptionProductId(p.id));
+      const token: string | undefined = tx.purchaseToken ?? tx.nativePurchase?.purchaseToken;
+      if (!ownsSub || !token) continue;
+      if (_finishedTxns.has(token) || _processingTxns.has(token)) continue;
+
+      console.log('[GooglePlayBilling] restoring owned subscription:', token.slice(0, 12));
+      const res = await _granter({
+        productId: SUBSCRIPTION_PRODUCT_ID,
+        purchaseToken: token,
+        userId: _user.userId,
+        customerEmail: _user.customerEmail,
+      });
+      if (res.success) _finishedTxns.add(token); // once per app session is plenty
+      break; // only one subscription product exists
+    }
+  } catch (e: any) {
+    console.warn('[GooglePlayBilling] restoreOwnedSubscription failed:', e?.message);
+  }
+}
+
+/**
  * Initialize Google Play Billing once. Registers products, wires the approved
  * handler, and connects to the store. No-op on web. Safe to call repeatedly.
  */
@@ -327,6 +381,10 @@ export async function initializeBilling(): Promise<void> {
     await store.initialize([Platform.GOOGLE_PLAY]);
     _initialized = true;
     console.log('[GooglePlayBilling] Initialized with', BILLING_CONFIG);
+
+    // Fire-and-forget: replay the owned subscription (if any) against the
+    // backend so lapsed/never-stored server rows heal themselves on boot.
+    void restoreOwnedSubscription();
   })();
 
   try {

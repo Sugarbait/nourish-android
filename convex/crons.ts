@@ -11,6 +11,16 @@ crons.daily(
   internal.stripe.refreshYearlySubscribers,
 );
 
+// Google Play sends no server-side renewal events (no RTDN endpoint), so this
+// job re-validates purchase tokens near/past expiry: it extends renewed
+// subscriptions, grants monthly renewal credits, and deactivates lapsed ones.
+// Every 4 hours keeps the worst-case entitlement gap after a renewal small.
+crons.interval(
+  "reconcile google play subscriptions",
+  { hours: 4 },
+  internal.googlePlayBilling.reconcilePlaySubscriptions,
+);
+
 // ---------------------------------------------------------------------------
 // Data-retention jobs. Aim: store only what the app actually needs.
 // All staggered slightly to avoid running in the same tick.

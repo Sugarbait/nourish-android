@@ -128,7 +128,11 @@ export const getCredits = query({
       .query("subscriptions")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
-    const subActive = !!sub?.active && (!sub?.expiresAt || sub.expiresAt > Date.now());
+    // 24h grace on top of the recorded expiry: Play renewals are only picked up
+    // by the reconcile cron (every 4h), so without slack a paying subscriber
+    // would briefly show as lapsed between renewal and the next cron run.
+    const SUB_GRACE_MS = 24 * 60 * 60 * 1000;
+    const subActive = !!sub?.active && (!sub?.expiresAt || sub.expiresAt + SUB_GRACE_MS > Date.now());
     const subscription = sub
       ? { active: subActive, plan: sub.plan, expiresAt: sub.expiresAt ?? null }
       : null;
@@ -242,41 +246,6 @@ export const consumeAICredit = mutation({
       return { success: true };
     }
     return { success: false };
-  },
-});
-
-export const addCredits = mutation({
-  args: {
-    userId: v.id("users"),
-    amount: v.optional(v.number()),
-    mealCredits: v.optional(v.number()),
-    aiCredits: v.optional(v.number()),
-  },
-  handler: async (ctx, { userId, amount, mealCredits, aiCredits }) => {
-    const today = todayKey();
-    let row = await ctx.db
-      .query("credits")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .first();
-
-    const addAmount = (amount ?? 0) + (mealCredits ?? 0) + (aiCredits ?? 0);
-
-    if (!row) {
-      await ctx.db.insert("credits", {
-        userId,
-        credits: 0,
-        purchasedCredits: addAmount,
-        lastFreeDate: today,
-        dailyFreeMealUsed: false,
-        dailyFreeAIUsed: false,
-      });
-    } else {
-      await ctx.db.patch(row._id, {
-        purchasedCredits: (row.purchasedCredits ?? 0) + addAmount,
-        mealCredits: undefined,
-        aiCredits: undefined,
-      });
-    }
   },
 });
 

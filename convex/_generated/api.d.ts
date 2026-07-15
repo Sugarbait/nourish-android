@@ -31,7 +31,6 @@ import type * as notifications from "../notifications.js";
 import type * as recipes from "../recipes.js";
 import type * as retention from "../retention.js";
 import type * as stripe from "../stripe.js";
-import type * as stripeActions from "../stripeActions.js";
 import type * as users from "../users.js";
 import type * as verifyEmail from "../verifyEmail.js";
 import type * as waterLogs from "../waterLogs.js";
@@ -66,7 +65,6 @@ declare const fullApi: ApiFromModules<{
   recipes: typeof recipes;
   retention: typeof retention;
   stripe: typeof stripe;
-  stripeActions: typeof stripeActions;
   users: typeof users;
   verifyEmail: typeof verifyEmail;
   waterLogs: typeof waterLogs;

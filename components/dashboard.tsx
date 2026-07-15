@@ -1,6 +1,6 @@
 'use client';
 
-const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.83";
+const BUILD_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.84";
 
 async function saveWithRetry(fn: () => Promise<unknown>, maxAttempts = 3): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -1825,6 +1825,9 @@ export function Dashboard({ isGuest: _isGuestProp = false }: { isGuest?: boolean
     }
     saveCredits(updatedCredits);
     setCredits(updatedCredits);
+    // Keep the authoritative server pool in sync — without this the deducted
+    // credit bounces back on the next getCredits sync and recipes are free.
+    if (userId) convexConsumeAICredit({ userId: userId as any }).catch(() => {});
 
     setIsLoadingRecipes(true);
     setRecipeSuggestions([]);
