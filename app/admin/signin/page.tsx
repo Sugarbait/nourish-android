@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { useAction, useQuery } from 'convex/react';
+import { useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,13 +13,11 @@ import { goTo } from '@/lib/staticNav';
 
 function AdminSignInForm() {
   const searchParams = useSearchParams();
-  const verifyAdmin = useAction(api.admin.verifyAdmin);
-  const verifyTotpCode = useAction(api.adminTotp.verifyCode);
+  const adminLogin = useAction(api.admin.adminLogin);
 
   const [step, setStep] = useState<'credentials' | 'totp'>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [verifiedEmail, setVerifiedEmail] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState('');
   const [lockoutUnlockAt, setLockoutUnlockAt] = useState<number | null>(null);
@@ -28,10 +26,13 @@ function AdminSignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const totpRef = useRef<HTMLInputElement>(null);
 
-  const totpStatus = useQuery(
-    api.adminTotpDb.getStatus,
-    verifiedEmail ? { adminEmail: verifiedEmail } : 'skip'
-  );
+  // On success the server hands back a real session token — that token (not
+  // the email) is what every admin function requires from here on.
+  const completeLogin = (sessionToken: string, adminEmail: string) => {
+    localStorage.setItem('admin_token', sessionToken);
+    localStorage.setItem('admin_email', adminEmail);
+    goTo('/admin');
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -62,45 +63,33 @@ function AdminSignInForm() {
     return () => clearInterval(id);
   }, [lockoutUnlockAt]);
 
-  useEffect(() => {
-    if (!verifiedEmail || totpStatus === undefined) return;
-    if (totpStatus.enabled) {
-      setStep('totp');
-      setIsLoading(false);
-    } else {
-      fetch('/api/admin/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminEmail: verifiedEmail }),
-      }).then(() => {
-        localStorage.setItem('admin_token', verifiedEmail);
-        goTo('/admin');
-      });
-    }
-  }, [verifiedEmail, totpStatus]);
-
   const handleCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setAttemptsRemaining(null);
     setIsLoading(true);
     try {
-      const result: any = await verifyAdmin({ email, password });
-      if (!result.success) {
-        if (result.locked && result.unlockAt) {
-          setLockoutUnlockAt(result.unlockAt);
-          setNow(Date.now());
-          setError('Too many failed attempts.');
-        } else {
-          setError('Invalid admin credentials. Please try again.');
-          if (typeof result.attemptsRemaining === 'number') {
-            setAttemptsRemaining(result.attemptsRemaining);
-          }
-        }
+      const result: any = await adminLogin({ email, password });
+      if (result.success) {
+        completeLogin(result.sessionToken, result.email);
+        return;
+      }
+      if (result.totpRequired) {
+        setStep('totp');
         setIsLoading(false);
         return;
       }
-      setVerifiedEmail(result.email!);
+      if (result.locked && result.unlockAt) {
+        setLockoutUnlockAt(result.unlockAt);
+        setNow(Date.now());
+        setError('Too many failed attempts.');
+      } else {
+        setError('Invalid admin credentials. Please try again.');
+        if (typeof result.attemptsRemaining === 'number') {
+          setAttemptsRemaining(result.attemptsRemaining);
+        }
+      }
+      setIsLoading(false);
     } catch {
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
@@ -121,20 +110,23 @@ function AdminSignInForm() {
     setError('');
     setIsLoading(true);
     try {
-      const result = await verifyTotpCode({ adminEmail: verifiedEmail, code: totpCode });
-      if (!result.valid) {
-        setError('Invalid or expired code. Please try again.');
+      const result: any = await adminLogin({ email, password, totpCode });
+      if (result.success) {
+        completeLogin(result.sessionToken, result.email);
+        return;
+      }
+      if (result.locked && result.unlockAt) {
+        setStep('credentials');
+        setLockoutUnlockAt(result.unlockAt);
+        setNow(Date.now());
+        setError('Too many failed attempts.');
         setTotpCode('');
         setIsLoading(false);
         return;
       }
-      await fetch('/api/admin/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminEmail: verifiedEmail }),
-      });
-      localStorage.setItem('admin_token', verifiedEmail);
-      goTo('/admin');
+      setError('Invalid or expired code. Please try again.');
+      setTotpCode('');
+      setIsLoading(false);
     } catch {
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
@@ -184,7 +176,7 @@ function AdminSignInForm() {
         </Button>
         <button
           type="button"
-          onClick={() => { setStep('credentials'); setError(''); setTotpCode(''); setVerifiedEmail(''); setIsLoading(false); }}
+          onClick={() => { setStep('credentials'); setError(''); setTotpCode(''); setIsLoading(false); }}
           className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
         >
           ← Back to credentials

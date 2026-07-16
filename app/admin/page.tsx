@@ -19,11 +19,24 @@ const PAGE_SIZE = 25;
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [adminEmail, setAdminEmail] = useState('');
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
-  const rawUsers = useQuery(api.users.adminListUsers);
-  const rawSubs = useQuery(api.users.adminListSubscriptions);
-  const rawCredits = useQuery(api.users.adminListCredits);
-  const rawMealCounts = useQuery(api.meals.adminListMealCounts);
+  const sessionArgs = sessionToken ? { sessionToken } : ('skip' as const);
+  const rawUsers = useQuery(api.users.adminListUsers, sessionArgs);
+  const rawSubs = useQuery(api.users.adminListSubscriptions, sessionArgs);
+  const rawCredits = useQuery(api.users.adminListCredits, sessionArgs);
+  const rawMealCounts = useQuery(api.meals.adminListMealCounts, sessionArgs);
+
+  // Bounce to sign-in the moment the server stops honoring the session
+  // (expired, signed out elsewhere, or a stale/legacy token).
+  const sessionCheck = useQuery(api.adminSession.checkSession, sessionArgs);
+  useEffect(() => {
+    if (sessionCheck && !sessionCheck.valid) {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_email');
+      goTo('/admin/signin');
+    }
+  }, [sessionCheck]);
 
   // Join client-side
   const allUsers = rawUsers && rawSubs && rawCredits && rawMealCounts
@@ -37,6 +50,7 @@ export default function AdminPage() {
 
   const banUser = useMutation(api.users.banUser);
   const deleteUser = useMutation(api.users.deleteUser);
+  const deleteSession = useMutation(api.adminSession.deleteSession);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -50,13 +64,17 @@ export default function AdminPage() {
       goTo('/admin/signin');
     } else {
       setIsAuthenticated(true);
-      setAdminEmail(token);
+      setSessionToken(token);
+      setAdminEmail(localStorage.getItem('admin_email') ?? 'admin');
     }
   }, []);
 
   const handleSignOut = async () => {
-    await fetch('/api/admin/session', { method: 'DELETE' });
+    if (sessionToken) {
+      await deleteSession({ sessionToken }).catch(() => {});
+    }
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_email');
     goTo('/');
   };
 
@@ -369,7 +387,7 @@ export default function AdminPage() {
                 disabled={isWorking}
                 onClick={async () => {
                   setIsWorking(true);
-                  await banUser({ userId: confirmBan.id, banned: !confirmBan.banned });
+                  await banUser({ userId: confirmBan.id, banned: !confirmBan.banned, sessionToken: sessionToken! });
                   setConfirmBan(null);
                   setIsWorking(false);
                 }}
@@ -407,7 +425,7 @@ export default function AdminPage() {
                 disabled={isWorking}
                 onClick={async () => {
                   setIsWorking(true);
-                  await deleteUser({ userId: confirmDelete.id });
+                  await deleteUser({ userId: confirmDelete.id, sessionToken: sessionToken! });
                   setConfirmDelete(null);
                   setIsWorking(false);
                 }}

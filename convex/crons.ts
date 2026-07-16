@@ -49,4 +49,10 @@ crons.daily(
   internal.retention.pruneExpiredAuthTokens,
 );
 
+crons.daily(
+  "prune expired admin sessions",
+  { hourUTC: 3, minuteUTC: 40 },
+  internal.adminSession._pruneExpired,
+);
+
 export default crons;

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { ConvexError } from "convex/values";
+import { verifySessionEmail } from "./adminSession";
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -308,10 +309,12 @@ export const getTrackedDates = query({
   },
 });
 
-/** Admin: total meals logged per user, returned as { userId, count } rows. */
+/** Admin: total meals logged per user, returned as { userId, count } rows.
+ * Requires a live admin session; returns null on a bad token. */
 export const adminListMealCounts = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    if (!(await verifySessionEmail(ctx, sessionToken))) return null;
     const meals = await ctx.db.query("meals").collect();
     const counts = new Map<string, number>();
     for (const m of meals) {

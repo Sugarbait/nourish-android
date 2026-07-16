@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAction, useQuery } from 'convex/react';
+import { useAction, useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,24 +15,34 @@ import { goTo } from '@/lib/staticNav';
 type SetupState = 'idle' | 'pending' | 'done';
 
 export default function AdminSettingsPage() {
-  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) {
       goTo('/admin/signin');
     } else {
-      setAdminEmail(token);
+      setSessionToken(token);
     }
   }, []);
 
   const totpStatus = useQuery(
     api.adminTotpDb.getStatus,
-    adminEmail ? { adminEmail } : 'skip'
+    sessionToken ? { sessionToken } : 'skip'
   );
+
+  // getStatus returns null when the session is no longer valid — bounce to sign-in.
+  useEffect(() => {
+    if (totpStatus === null) {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_email');
+      goTo('/admin/signin');
+    }
+  }, [totpStatus]);
   const generateSetupData = useAction(api.adminTotp.generateSetupData);
   const verifyAndEnable = useAction(api.adminTotp.verifyAndEnable);
   const disableTotp = useAction(api.adminTotp.disable);
+  const deleteSession = useMutation(api.adminSession.deleteSession);
 
   const [setupState, setSetupState] = useState<SetupState>('idle');
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -45,7 +55,9 @@ export default function AdminSettingsPage() {
   const [copied, setCopied] = useState(false);
   const [showDisableForm, setShowDisableForm] = useState(false);
 
-  if (!adminEmail) {
+  const adminEmail = typeof window !== 'undefined' ? localStorage.getItem('admin_email') ?? 'admin' : 'admin';
+
+  if (!sessionToken) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
@@ -58,7 +70,7 @@ export default function AdminSettingsPage() {
     setSuccessMsg('');
     setIsWorking(true);
     try {
-      const data = await generateSetupData({ adminEmail });
+      const data = await generateSetupData({ sessionToken: sessionToken! });
       setQrDataUrl(data.qrDataUrl);
       setSecret(data.secret);
       setSetupState('pending');
@@ -75,7 +87,7 @@ export default function AdminSettingsPage() {
     setError('');
     setIsWorking(true);
     try {
-      const result = await verifyAndEnable({ adminEmail, code: verifyCode });
+      const result = await verifyAndEnable({ sessionToken: sessionToken!, code: verifyCode });
       if (!result.success) {
         setError(result.error ?? 'Verification failed.');
         setVerifyCode('');
@@ -97,7 +109,7 @@ export default function AdminSettingsPage() {
     setError('');
     setIsWorking(true);
     try {
-      const result = await disableTotp({ adminEmail, code: disableCode });
+      const result = await disableTotp({ sessionToken: sessionToken!, code: disableCode });
       if (!result.success) {
         setError(result.error ?? 'Failed to disable TOTP.');
         setDisableCode('');
@@ -134,8 +146,9 @@ export default function AdminSettingsPage() {
           </Button>
           <Button
             onClick={async () => {
-              await fetch('/api/admin/session', { method: 'DELETE' });
+              if (sessionToken) await deleteSession({ sessionToken }).catch(() => {});
               localStorage.removeItem('admin_token');
+              localStorage.removeItem('admin_email');
               goTo('/');
             }}
             variant="outline"

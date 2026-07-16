@@ -203,6 +203,15 @@ export default defineSchema({
     at: v.number(),
   }).index("by_email", ["email"]),
 
+  // Admin: server-side sessions for the admin console. Only the SHA-256 hash
+  // of the session token is stored; the raw token lives in the admin's browser.
+  adminSessions: defineTable({
+    tokenHash: v.string(),
+    email: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  }).index("by_tokenHash", ["tokenHash"]),
+
   // Admin: TOTP 2FA config per admin email
   adminTotpConfig: defineTable({
     adminEmail: v.string(),

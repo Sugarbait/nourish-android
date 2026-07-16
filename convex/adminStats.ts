@@ -1,8 +1,11 @@
+import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { verifySessionEmail } from "./adminSession";
 
 export const getAppStats = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    if (!(await verifySessionEmail(ctx, sessionToken))) return null;
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
     const since7 = now - 7 * day;

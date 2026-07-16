@@ -1,6 +1,7 @@
 // V8 runtime — database access only
 import { internalMutation, internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
+import { verifySessionEmail } from "./adminSession";
 
 export const _getConfig = internalQuery({
   args: { adminEmail: v.string() },
@@ -62,8 +63,10 @@ export const _disableConfig = internalMutation({
 });
 
 export const getStatus = query({
-  args: { adminEmail: v.string() },
-  handler: async (ctx, { adminEmail }) => {
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    const adminEmail = await verifySessionEmail(ctx, sessionToken);
+    if (!adminEmail) return null;
     const configs = await ctx.db
       .query("adminTotpConfig")
       .withIndex("by_email", (q) => q.eq("adminEmail", adminEmail))

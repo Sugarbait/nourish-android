@@ -13,6 +13,7 @@ import type * as accountDeletionInternal from "../accountDeletionInternal.js";
 import type * as admin from "../admin.js";
 import type * as adminAuth from "../adminAuth.js";
 import type * as adminBroadcast from "../adminBroadcast.js";
+import type * as adminSession from "../adminSession.js";
 import type * as adminStats from "../adminStats.js";
 import type * as adminTotp from "../adminTotp.js";
 import type * as adminTotpDb from "../adminTotpDb.js";
@@ -32,6 +33,7 @@ import type * as recipes from "../recipes.js";
 import type * as retention from "../retention.js";
 import type * as stripe from "../stripe.js";
 import type * as users from "../users.js";
+import type * as util_sha256 from "../util/sha256.js";
 import type * as verifyEmail from "../verifyEmail.js";
 import type * as waterLogs from "../waterLogs.js";
 
@@ -47,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   adminAuth: typeof adminAuth;
   adminBroadcast: typeof adminBroadcast;
+  adminSession: typeof adminSession;
   adminStats: typeof adminStats;
   adminTotp: typeof adminTotp;
   adminTotpDb: typeof adminTotpDb;
@@ -66,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   retention: typeof retention;
   stripe: typeof stripe;
   users: typeof users;
+  "util/sha256": typeof util_sha256;
   verifyEmail: typeof verifyEmail;
   waterLogs: typeof waterLogs;
 }>;

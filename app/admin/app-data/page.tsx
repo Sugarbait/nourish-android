@@ -41,14 +41,27 @@ function formatNumber(n: number) {
 
 export default function AppDataPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [tab, setTab] = useState<'overview' | 'users' | 'engagement'>('overview');
-  const stats = useQuery(api.adminStats.getAppStats);
+  const stats = useQuery(api.adminStats.getAppStats, sessionToken ? { sessionToken } : 'skip');
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
     if (!token) goTo('/admin/signin');
-    else setAuthed(true);
+    else {
+      setAuthed(true);
+      setSessionToken(token);
+    }
   }, []);
+
+  // getAppStats returns null when the session is invalid/expired.
+  useEffect(() => {
+    if (stats === null) {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_email');
+      goTo('/admin/signin');
+    }
+  }, [stats]);
 
   if (authed === null) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;

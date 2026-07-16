@@ -1,5 +1,6 @@
 import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { verifySessionEmail, requireAdminSession } from "./adminSession";
 
 const todayKey = () => {
   const d = new Date();
@@ -324,10 +325,14 @@ export const redeemCoupon = mutation({
 });
 
 // ── Admin queries ──────────────────────────────────────────────────────────
+// All of these require a live admin session (see convex/adminSession.ts).
+// Queries return null on a bad session (so the UI can bounce to sign-in);
+// mutations throw ADMIN_SESSION_INVALID.
 
 export const adminListUsers = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    if (!(await verifySessionEmail(ctx, sessionToken))) return null;
     const users = await ctx.db.query("users").collect();
     return users.map((u) => ({
       _id: u._id,
@@ -343,8 +348,9 @@ export const adminListUsers = query({
 });
 
 export const adminListSubscriptions = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    if (!(await verifySessionEmail(ctx, sessionToken))) return null;
     const subs = await ctx.db.query("subscriptions").collect();
     return subs.map((s) => ({
       userId: s.userId,
@@ -356,8 +362,9 @@ export const adminListSubscriptions = query({
 });
 
 export const adminListCredits = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    if (!(await verifySessionEmail(ctx, sessionToken))) return null;
     const creds = await ctx.db.query("credits").collect();
     return creds.map((c) => ({
       userId: c.userId,
@@ -368,8 +375,9 @@ export const adminListCredits = query({
 });
 
 export const banUser = mutation({
-  args: { userId: v.id("users"), banned: v.boolean() },
-  handler: async (ctx, { userId, banned }) => {
+  args: { userId: v.id("users"), banned: v.boolean(), sessionToken: v.string() },
+  handler: async (ctx, { userId, banned, sessionToken }) => {
+    await requireAdminSession(ctx, sessionToken);
     await ctx.db.patch(userId, {
       banned,
       bannedAt: banned ? Date.now() : undefined,
@@ -378,8 +386,9 @@ export const banUser = mutation({
 });
 
 export const deleteUser = mutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => {
+  args: { userId: v.id("users"), sessionToken: v.string() },
+  handler: async (ctx, { userId, sessionToken }) => {
+    await requireAdminSession(ctx, sessionToken);
     // Delete related data
     const meals = await ctx.db.query("meals").withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
     for (const m of meals) await ctx.db.delete(m._id);

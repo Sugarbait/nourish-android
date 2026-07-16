@@ -3,7 +3,7 @@
 
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import nodemailer from "nodemailer";
 
 const SITE_URL = process.env.SITE_URL || "https://nourish.neoncell.ca";
@@ -439,6 +439,7 @@ export const sendContactEmailInternal = internalAction({
 
 export const sendBroadcastEmail = action({
   args: {
+    sessionToken: v.string(),
     subject: v.string(),
     headline: v.string(),
     bodyText: v.string(),
@@ -447,6 +448,12 @@ export const sendBroadcastEmail = action({
     ctaUrl: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<{ sent: number; failed: number }> => {
+    // Emails the ENTIRE user base — a live admin session is mandatory.
+    const adminEmail = await ctx.runQuery(internal.adminSession._verifySession, {
+      sessionToken: args.sessionToken,
+    });
+    if (!adminEmail) throw new ConvexError("ADMIN_SESSION_INVALID");
+
     const users = await ctx.runQuery(internal.adminBroadcast._getAllEmails);
     const host = process.env.SMTP_HOST || "smtp.hostinger.com";
     const port = parseInt(process.env.SMTP_PORT || "465", 10);

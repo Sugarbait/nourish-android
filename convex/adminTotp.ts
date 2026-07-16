@@ -1,15 +1,31 @@
 "use node";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { generateSecret, verify, generateURI } from "otplib";
 import QRCode from "qrcode";
 
 const ISSUER = "Nourish Admin";
 
+/**
+ * TOTP management. Every action here requires a live admin session token and
+ * derives the admin email from the session — the caller cannot manage TOTP
+ * for an arbitrary email. Login-time TOTP *verification* lives inside
+ * admin.adminLogin so codes can never be brute-forced without the password.
+ */
+
+async function requireSessionEmail(ctx: any, sessionToken: string): Promise<string> {
+  const email: string | null = await ctx.runQuery(internal.adminSession._verifySession, {
+    sessionToken,
+  });
+  if (!email) throw new ConvexError("ADMIN_SESSION_INVALID");
+  return email;
+}
+
 export const generateSetupData = action({
-  args: { adminEmail: v.string() },
-  handler: async (ctx, { adminEmail }): Promise<{ secret: string; otpauthUrl: string; qrDataUrl: string }> => {
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }): Promise<{ secret: string; otpauthUrl: string; qrDataUrl: string }> => {
+    const adminEmail = await requireSessionEmail(ctx, sessionToken);
     const secret = generateSecret({ length: 20 });
     const otpauthUrl = generateURI({ issuer: ISSUER, label: adminEmail, secret });
     const qrDataUrl = await QRCode.toDataURL(otpauthUrl, { width: 220, margin: 2 });
@@ -19,8 +35,9 @@ export const generateSetupData = action({
 });
 
 export const verifyAndEnable = action({
-  args: { adminEmail: v.string(), code: v.string() },
-  handler: async (ctx, { adminEmail, code }): Promise<{ success: boolean; error?: string }> => {
+  args: { sessionToken: v.string(), code: v.string() },
+  handler: async (ctx, { sessionToken, code }): Promise<{ success: boolean; error?: string }> => {
+    const adminEmail = await requireSessionEmail(ctx, sessionToken);
     const config = await ctx.runQuery(internal.adminTotpDb._getConfig, { adminEmail });
     if (!config) return { success: false, error: "No pending TOTP setup found. Please regenerate." };
     const result = await verify({ token: code.trim(), secret: config.secret });
@@ -30,19 +47,10 @@ export const verifyAndEnable = action({
   },
 });
 
-export const verifyCode = action({
-  args: { adminEmail: v.string(), code: v.string() },
-  handler: async (ctx, { adminEmail, code }): Promise<{ valid: boolean }> => {
-    const config = await ctx.runQuery(internal.adminTotpDb._getConfig, { adminEmail });
-    if (!config || !config.enabled || !config.verified) return { valid: true };
-    const result = await verify({ token: code.trim(), secret: config.secret });
-    return { valid: !!(result && result.valid) };
-  },
-});
-
 export const disable = action({
-  args: { adminEmail: v.string(), code: v.string() },
-  handler: async (ctx, { adminEmail, code }): Promise<{ success: boolean; error?: string }> => {
+  args: { sessionToken: v.string(), code: v.string() },
+  handler: async (ctx, { sessionToken, code }): Promise<{ success: boolean; error?: string }> => {
+    const adminEmail = await requireSessionEmail(ctx, sessionToken);
     const config = await ctx.runQuery(internal.adminTotpDb._getConfig, { adminEmail });
     if (!config || !config.enabled) return { success: false, error: "TOTP is not currently enabled." };
     const result = await verify({ token: code.trim(), secret: config.secret });

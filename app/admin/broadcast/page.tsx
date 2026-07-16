@@ -13,6 +13,7 @@ import { goTo } from '@/lib/staticNav';
 export default function BroadcastEmailPage() {
   const sendBroadcastEmail = useAction(api.emails.sendBroadcastEmail);
 
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{ sent: number; failed: number } | null>(null);
   const [error, setError] = useState('');
@@ -26,6 +27,7 @@ export default function BroadcastEmailPage() {
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) goTo('/admin/signin');
+    else setSessionToken(token);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +45,7 @@ export default function BroadcastEmailPage() {
     setIsLoading(true);
     try {
       const response = await sendBroadcastEmail({
+        sessionToken: sessionToken ?? '',
         subject: subject.trim(),
         headline: headline.trim(),
         bodyText: bodyText.trim(),
